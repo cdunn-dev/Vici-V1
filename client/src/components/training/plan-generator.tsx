@@ -30,7 +30,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, ChevronRight, ChevronLeft, CalendarIcon } from "lucide-react";
-import { format, addWeeks } from "date-fns";
+import { format, addWeeks, nextMonday } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -98,6 +98,7 @@ const TOTAL_SCREENS = 12;
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [currentScreen, setCurrentScreen] = useState(1);
+  const [selectedStartOption, setSelectedStartOption] = useState<'today' | 'next-week' | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -181,7 +182,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
   const handleSubmit = (data: PlanGeneratorFormData) => {
-    // When submitting the form, pass the data to preview
     if (onPreview) {
       const endDate = data.targetRace?.date
         ? new Date(data.targetRace.date)
@@ -588,16 +588,25 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                               <div className="flex gap-4 mb-6">
                                 <Button
                                   type="button"
-                                  variant="outline"
-                                  onClick={() => field.onChange(new Date().toISOString())}
+                                  variant={selectedStartOption === 'today' ? "default" : "outline"}
+                                  onClick={() => {
+                                    const today = new Date();
+                                    field.onChange(today.toISOString());
+                                    setSelectedStartOption('today');
+                                  }}
+                                  className={selectedStartOption === 'today' ? "bg-primary text-primary-foreground" : ""}
                                 >
                                   Start Today
                                 </Button>
                                 <Button
                                   type="button"
-                                  variant="outline"
-                                  className="gap-2"
-                                  onClick={() => field.onChange(addWeeks(new Date(), 1).toISOString())}
+                                  variant={selectedStartOption === 'next-week' ? "default" : "outline"}
+                                  className={`gap-2 ${selectedStartOption === 'next-week' ? "bg-primary text-primary-foreground" : ""}`}
+                                  onClick={() => {
+                                    const nextMondayDate = nextMonday(new Date());
+                                    field.onChange(nextMondayDate.toISOString());
+                                    setSelectedStartOption('next-week');
+                                  }}
                                 >
                                   Start Next Week
                                   <CalendarIcon className="h-4 w-4" />
@@ -607,7 +616,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                                 <Calendar
                                   mode="single"
                                   selected={field.value ? new Date(field.value) : undefined}
-                                  onSelect={(date) => field.onChange(date?.toISOString())}
+                                  onSelect={(date) => {
+                                    if (date) {
+                                      field.onChange(date.toISOString());
+                                      setSelectedStartOption(null);
+                                    }
+                                  }}
                                   disabled={(date) => date < new Date()}
                                   className="rounded-md border shadow"
                                 />
