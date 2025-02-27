@@ -68,10 +68,7 @@ export default function Training() {
     distance: selectedDayWorkout.distance,
     description: selectedDayWorkout.description,
     options: [
-      {
-        title: "Recommended Workout",
-        description: selectedDayWorkout.description,
-      },
+      { title: "Recommended Workout", description: selectedDayWorkout.description },
       ...(selectedDayWorkout.type.toLowerCase().includes("easy") ||
         selectedDayWorkout.type.toLowerCase().includes("recovery") ? [] : [
         {
@@ -118,11 +115,30 @@ export default function Training() {
         title: "AI Coach Response",
         description: data.reasoning,
         action: data.suggestedPlan ? (
-          <Button onClick={() => {
-            toast({
-              title: "Success",
-              description: "Training plan updated successfully",
-            });
+          <Button onClick={async () => {
+            try {
+              const updateResponse = await fetch(`/api/training-plans/${trainingPlan?.id}`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data.suggestedPlan),
+              });
+
+              if (!updateResponse.ok) throw new Error('Failed to update plan');
+
+              queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+              toast({
+                title: "Success",
+                description: "Training plan updated successfully",
+              });
+            } catch (error) {
+              toast({
+                title: "Error",
+                description: "Failed to update training plan",
+                variant: "destructive",
+              });
+            }
           }}>
             Apply Changes
           </Button>
