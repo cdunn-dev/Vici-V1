@@ -10,6 +10,11 @@ export const users = pgTable("users", {
   gender: text("gender").notNull(),
   personalBests: json("personal_bests").$type<Record<string, number>>(),
   connectedApps: json("connected_apps").$type<string[]>(),
+  stravaTokens: json("strava_tokens").$type<{
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+  } | null>(),
 });
 
 export const workouts = pgTable("workouts", {
