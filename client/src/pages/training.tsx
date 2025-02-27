@@ -20,13 +20,17 @@ export default function Training() {
   const [aiQuery, setAiQuery] = useState("");
   const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
+  const [activeTab, setActiveTab] = useState('current'); // Added state for active tab
+  const [expandedWeeks, setExpandedWeeks] = useState([]); // Added state for expanded weeks in ProgramOverview
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Reset to current week when component mounts
+  // Update the useEffect hook to handle initial state and tab changes
   useEffect(() => {
-    setSelectedDate(new Date());
-  }, []);
+    const today = new Date();
+    setSelectedDate(today);
+  }, []); // Only run once on mount
 
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
     queryKey: ["/api/training-plans", { userId: 1 }],
@@ -40,7 +44,7 @@ export default function Training() {
     },
   });
 
-  // Find the current week's workouts based on today's date
+  // Get current week's workouts
   const getCurrentWeek = () => {
     if (!trainingPlan?.weeklyPlans) return null;
     const today = new Date();
@@ -58,18 +62,7 @@ export default function Training() {
     });
   };
 
-  // Find the selected week's workouts based on selected date
-  const getSelectedWeek = () => {
-    if (!trainingPlan?.weeklyPlans) return null;
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return selectedDate >= firstDay && selectedDate <= lastDay;
-    });
-  };
-
-  // Handle date selection, ensuring it's within the plan's date range
+  // Handle date selection
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
 
@@ -82,6 +75,19 @@ export default function Training() {
     }
 
     setSelectedDate(date);
+    // Find and expand the corresponding week
+    const weekNumber = trainingPlan.weeklyPlans.findIndex(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return date >= firstDay && date <= lastDay;
+    }) + 1;
+
+    // Switch to the Training Program tab and expand the selected week
+    if (weekNumber > 0) {
+      setActiveTab("overall");
+      setExpandedWeeks(prev => [...new Set([...prev, `week-${weekNumber}`])]);
+    }
   };
 
   const calculateWorkoutIntensity = (workout: {
@@ -247,7 +253,7 @@ export default function Training() {
         </div>
       </div>
 
-      <Tabs defaultValue="current" className="space-y-8">
+      <Tabs defaultValue={activeTab} className="space-y-8" onValueChange={setActiveTab}>
         <div className="flex justify-center">
           <TabsList className="w-full max-w-[280px]">
             <TabsTrigger value="current" className="flex-1">This Week</TabsTrigger>
@@ -310,6 +316,8 @@ export default function Training() {
                 goal={trainingPlan.goal}
                 endDate={new Date(trainingPlan.endDate)}
                 targetRace={trainingPlan.targetRace}
+                expandedWeeks={expandedWeeks} // Pass expandedWeeks prop
+                setExpandedWeeks={setExpandedWeeks} // Pass setExpandedWeeks prop
               />
             </div>
 
