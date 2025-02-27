@@ -34,7 +34,6 @@ import { format, addWeeks, nextMonday } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const planGeneratorSchema = z.object({
   goal: z.enum(["First Race", "Personal Best", "Run Fast", "Run Far", "Get Fit", "Be Healthy"]),
@@ -68,7 +67,7 @@ type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
 interface PlanGeneratorProps {
   existingPlan?: boolean;
-  onPreview?: (plan: any) => void;
+  onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
 }
 
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
@@ -76,7 +75,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [currentScreen, setCurrentScreen] = useState(1);
   const [selectedStartOption, setSelectedStartOption] = useState<'today' | 'next-week' | null>(null);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
@@ -123,7 +121,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
   const onSubmit = (data: PlanGeneratorFormData) => {
-    console.log("Form submitted with data:", data); // Debug log
+    console.log("Form submitted with data:", data);
 
     if (onPreview) {
       const endDate = data.targetRace?.date
@@ -132,11 +130,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
       const planData = {
         ...data,
-        startDate: new Date(data.startDate),
         endDate,
       };
 
-      console.log("Calling onPreview with planData:", planData); // Debug log
+      console.log("Calling onPreview with planData:", planData);
       onPreview(planData);
       setOpen(false);
     }
@@ -164,7 +161,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+              <form 
+                onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                  console.log("Form validation errors:", errors);
+                })} 
+                className="flex-1 flex flex-col"
+              >
                 <div className="flex-1 p-6">
                   <div className="max-w-2xl mx-auto space-y-8">
                     <div className="space-y-2">
@@ -597,7 +599,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button type="submit" onClick={() => console.log("Submit button clicked")}>
+                      <Button 
+                        type="submit"
+                        className="bg-primary hover:bg-primary/90"
+                      >
                         Preview Plan
                       </Button>
                     )}
@@ -611,6 +616,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     </>
   );
 }
+
+const TOTAL_SCREENS = 12;
 
 const experienceLevelDescriptions = {
   Beginner: "New to running or just starting structured training",
@@ -632,5 +639,3 @@ const coachingStyleDescriptions = {
   Collaborative: "Interactive style working together to achieve goals",
   Hybrid: "Flexible combination of different coaching approaches",
 };
-
-const TOTAL_SCREENS = 12;
