@@ -66,6 +66,11 @@ export default function Training() {
   // Handle preview plan
   const handlePreviewPlan = (plan: any) => {
     console.log("Preview plan called with:", plan); // Debug log
+    if (!plan) {
+      console.error("No plan data received");
+      return;
+    }
+
     setPreviewPlan(plan);
     setShowPreview(true);
     setActiveTab("overall"); // Switch to Training Program tab
