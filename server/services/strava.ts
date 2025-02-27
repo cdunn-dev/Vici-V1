@@ -21,7 +21,9 @@ const REDIRECT_URI = `${getAppDomain()}/api/strava/callback`;
 // Log the callback URL at startup
 console.log("\nStrava Configuration:");
 console.log("====================");
-console.log("Callback URL to use in Strava API settings:");
+console.log("Website URL to use in Strava API settings:");
+console.log(getAppDomain());
+console.log("\nCallback URL to use in Strava API settings:");
 console.log(REDIRECT_URI);
 console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
 console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
