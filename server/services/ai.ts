@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
 type TrainingPreferences = {
   goal: string;
   currentLevel: string;
@@ -98,7 +100,14 @@ function generateBasicTrainingPlan(preferences: TrainingPreferences) {
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
   try {
     console.log("Generating training plan with preferences:", preferences);
-
+    
+    // Make sure the API key is set properly
+    if (!process.env.GOOGLE_API_KEY) {
+      console.error("GOOGLE_API_KEY is not set");
+      return generateBasicTrainingPlan(preferences);
+    }
+    
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `Generate a detailed running training plan with the following requirements:
@@ -251,6 +260,13 @@ export async function generateTrainingPlanAdjustments(
   currentPlan: any
 ) {
   try {
+    // Make sure the API key is set properly
+    if (!process.env.GOOGLE_API_KEY) {
+      console.error("GOOGLE_API_KEY is not set");
+      throw new Error("Google API key not configured");
+    }
+    
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `Review this training plan feedback and suggest appropriate adjustments:
