@@ -96,30 +96,30 @@ export default function ProgramOverview({
             <div className="flex items-center gap-2 text-primary">
               <Target className="h-5 w-5" />
               <div className="font-medium">
-                Training Goal
+                What I'm Training For
                 <div className="text-sm text-muted-foreground">
                   {goal}
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-primary">
-              <CalendarClock className="h-5 w-5" />
-              <div className="font-medium">
-                Program Completion
-                <div className="text-sm text-muted-foreground">
-                  {format(endDate, "MMMM d, yyyy")}
-                </div>
-              </div>
-            </div>
-
-            {targetRace && (
+            {targetRace ? (
               <div className="flex items-center gap-2 text-primary">
                 <Medal className="h-5 w-5" />
                 <div className="font-medium">
                   Target Race: {targetRace.distance}
                   <div className="text-sm text-muted-foreground">
                     {format(new Date(targetRace.date), "MMMM d, yyyy")}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-primary">
+                <CalendarClock className="h-5 w-5" />
+                <div className="font-medium">
+                  Program Completion
+                  <div className="text-sm text-muted-foreground">
+                    {format(endDate, "MMMM d, yyyy")}
                   </div>
                 </div>
               </div>
