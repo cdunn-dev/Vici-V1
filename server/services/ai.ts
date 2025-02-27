@@ -15,6 +15,14 @@ type TrainingPreferences = {
   };
 };
 
+type WorkoutAnalysis = {
+  perceivedEffort: number;
+  actualPace: number;    // minutes per km
+  targetPace: number;    // minutes per km
+  distance: number;      // in meters
+  notes?: string;
+};
+
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
   const prompt = `Generate a detailed running training plan with the following requirements:
 - Goal: ${preferences.goal}
@@ -58,5 +66,51 @@ Format the response as a JSON object with the following structure:
   });
 
   const response = completion.choices[0].message.content;
-  return JSON.parse(response);
+  return JSON.parse(response || "{}");
+}
+
+export async function analyzeWorkoutAndSuggestAdjustments(
+  recentWorkouts: WorkoutAnalysis[],
+  currentPlan: {
+    goal: string;
+    weeklyMileage: number;
+    currentPhase: string;
+  }
+) {
+  const prompt = `Analyze the following recent workouts and suggest adjustments to the training plan:
+
+Recent Workouts:
+${recentWorkouts.map(w => `
+- Distance: ${w.distance}m
+- Actual Pace: ${w.actualPace} min/km
+- Target Pace: ${w.targetPace} min/km
+- Perceived Effort: ${w.perceivedEffort}/10
+${w.notes ? `- Notes: ${w.notes}` : ''}`).join('\n')}
+
+Current Training Plan:
+- Goal: ${currentPlan.goal}
+- Weekly Mileage: ${currentPlan.weeklyMileage} miles
+- Current Phase: ${currentPlan.currentPhase}
+
+Provide recommendations in JSON format:
+{
+  "analysis": "Brief analysis of performance trends",
+  "adjustments": [
+    {
+      "type": "pace|distance|intensity",
+      "recommendation": "Specific adjustment recommendation",
+      "reason": "Reasoning behind the recommendation"
+    }
+  ],
+  "confidenceScore": 0.85
+}`;
+
+  const completion = await openai.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    model: "gpt-3.5-turbo",
+    response_format: { type: "json_object" },
+  });
+
+  const response = completion.choices[0].message.content;
+  return JSON.parse(response || "{}");
 }

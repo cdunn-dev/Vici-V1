@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
+import PlanGenerator from "@/components/training/plan-generator";
+import PlanRecommendations from "@/components/training/plan-recommendations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import PlanGenerator from "@/components/training/plan-generator";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -15,7 +16,24 @@ export default function Training() {
     queryKey: ["/api/training-plans", 1], // Assuming user ID 1 for now
   });
 
-  // Mock data for now
+  // Mock data for demonstration
+  const mockWorkouts = [
+    {
+      distance: 5000,
+      actualPace: 5.5,
+      targetPace: 5.3,
+      perceivedEffort: 7,
+      notes: "Felt strong but pace was slightly slower than target",
+    },
+    {
+      distance: 8000,
+      actualPace: 5.2,
+      targetPace: 5.3,
+      perceivedEffort: 8,
+      notes: "Good session, maintained target pace throughout",
+    },
+  ];
+
   const mockWeek = {
     phase: "Base Building",
     workouts: [
@@ -76,6 +94,12 @@ export default function Training() {
             onSelect={(date) => date && setSelectedDate(date)}
             events={[]}
           />
+          <div className="mt-8">
+            <PlanRecommendations
+              planId={1} // Replace with actual plan ID
+              recentWorkouts={mockWorkouts}
+            />
+          </div>
         </div>
         <Card>
           <CardContent className="p-6">
