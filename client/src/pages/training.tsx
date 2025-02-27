@@ -74,14 +74,14 @@ export default function Training() {
   const handleAdjustPlan = async (feedback: string) => {
     try {
       setIsSubmittingQuery(true);
-      const response = await fetch(`/api/training-plans/${trainingPlan?.id}/adjust`, {
+      const response = await fetch(`/api/training-plans/adjust`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           feedback,
-          currentPlan: previewPlan || trainingPlan,
+          currentPlan: previewPlan,
         }),
       });
 
@@ -110,35 +110,38 @@ export default function Training() {
 
   const handleConfirmPlan = async () => {
     try {
-      const response = await fetch(`/api/training-plans/${trainingPlan?.id}`, {
-        method: 'PATCH',
+      const response = await fetch(`/api/training-plans/generate`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(previewPlan),
+        body: JSON.stringify({
+          ...previewPlan,
+          userId: 1,
+        }),
       });
+
       if (!response.ok) {
-        throw new Error("Failed to confirm plan");
+        throw new Error("Failed to generate plan");
       }
+
       queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
       toast({
         title: "Success",
-        description: "Training plan updated successfully",
+        description: "Training plan has been created",
         duration: 3000,
       });
       setShowPreview(false);
-
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update training plan",
+        description: "Failed to create training plan. Please try again.",
         variant: "destructive",
       });
     }
   };
 
 
-  // Find the selected week's workouts based on selected date
   const getSelectedWeek = () => {
     if (!trainingPlan?.weeklyPlans) return null;
     return trainingPlan.weeklyPlans.find(week => {
