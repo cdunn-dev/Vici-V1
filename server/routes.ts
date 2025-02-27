@@ -163,6 +163,9 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
+      // Add a small delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       console.log("Exchanging code for tokens...");
       const tokens = await exchangeStravaCode(code as string);
       console.log("Successfully obtained Strava tokens");

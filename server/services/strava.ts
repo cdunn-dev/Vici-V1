@@ -21,9 +21,13 @@ export interface StravaTokens {
   expires_at: number;
 }
 
-export function getStravaAuthUrl(state: string): string {
+export function getStravaAuthUrl(userId: string): string {
   if (!STRAVA_CLIENT_ID) {
     throw new Error("STRAVA_CLIENT_ID is not configured");
+  }
+
+  if (!userId) {
+    throw new Error("User ID is required for Strava authentication");
   }
 
   const params = new URLSearchParams({
@@ -31,7 +35,7 @@ export function getStravaAuthUrl(state: string): string {
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: "activity:read_all",
-    state,
+    state: userId, // Ensure we're passing the userId as state
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
@@ -42,6 +46,10 @@ export function getStravaAuthUrl(state: string): string {
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
     console.log("Attempting to exchange Strava code for tokens...");
+
+    // Add a small delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
@@ -57,6 +65,12 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
+
+    // Check for rate limiting errors
+    if (error.response?.status === 429) {
+      throw new Error("Too many requests. Please wait a moment and try again.");
+    }
+
     throw error;
   }
 }

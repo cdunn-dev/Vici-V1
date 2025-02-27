@@ -43,17 +43,22 @@ export default function Profile() {
 
     try {
       setIsConnecting(true);
+      // Clear any existing error states before attempting connection
+      localStorage.removeItem('strava_auth_error');
+
       const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
       if (!res.ok) throw new Error('Failed to get auth URL');
 
       const { url } = await res.json();
-      // Clear any existing error states before redirecting
-      localStorage.removeItem('strava_auth_error');
+
+      // Add a small delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       window.location.href = url;
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to connect to Strava. Please try again in a few moments.",
+        description: "Failed to connect to Strava. Please wait a few moments and try again.",
         variant: "destructive",
       });
     } finally {
@@ -94,7 +99,10 @@ export default function Profile() {
     if (error) {
       let errorMessage = "Failed to connect to Strava";
       if (error.includes("challenge")) {
-        errorMessage = "Too many connection attempts. Please wait a few moments and try again.";
+        errorMessage = "Too many connection attempts. Please wait 30 seconds and try again.";
+        // Clear any cached state
+        localStorage.removeItem('strava_auth_error');
+        sessionStorage.clear();
       }
       toast({
         title: "Error",
@@ -194,10 +202,10 @@ export default function Profile() {
                   disabled={user?.connectedApps?.includes("strava") || isConnecting}
                 >
                   <SiStrava className="h-8 w-8 mr-2" />
-                  {isConnecting 
-                    ? "Connecting..." 
-                    : user?.connectedApps?.includes("strava") 
-                      ? "Connected to Strava" 
+                  {isConnecting
+                    ? "Connecting..."
+                    : user?.connectedApps?.includes("strava")
+                      ? "Connected to Strava"
                       : "Connect Strava"
                   }
                 </Button>
