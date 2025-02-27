@@ -295,6 +295,13 @@ export default function Training() {
     }
   };
 
+  // Add this function before the return statement
+  const calculateCompletedMiles = () => {
+    if (!currentWeek) return 0;
+    // TODO: In the future, this will come from completed workouts
+    return 0; // For now, returning 0 as we haven't implemented workout completion
+  };
+
   // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
