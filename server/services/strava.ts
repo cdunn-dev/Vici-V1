@@ -8,6 +8,13 @@ const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 const REDIRECT_URI = `${process.env.REPLIT_URL || "http://localhost:5000"}/api/strava/callback`;
 
+// Log the callback URL at startup
+console.log("\nStrava Configuration:");
+console.log("====================");
+console.log("Callback URL to use in Strava API settings:");
+console.log(REDIRECT_URI);
+console.log("====================\n");
+
 export interface StravaTokens {
   access_token: string;
   refresh_token: string;
