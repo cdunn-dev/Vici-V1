@@ -53,11 +53,16 @@ export function getStravaAuthUrl(userId: string): string {
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: "activity:read_all",
-    state: userId, // Ensure we're passing the userId as state
+    state: userId, // Using userId as state for verification
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
-  console.log("Generated Strava auth URL:", authUrl);
+  console.log("Generated Strava auth URL with params:", {
+    client_id: STRAVA_CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    state: userId,
+    scope: "activity:read_all"
+  });
   return authUrl;
 }
 
@@ -101,18 +106,23 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
 }
 
 export async function refreshStravaToken(refreshToken: string): Promise<StravaTokens> {
-  const response = await axios.post(STRAVA_TOKEN_URL, {
-    client_id: STRAVA_CLIENT_ID,
-    client_secret: STRAVA_CLIENT_SECRET,
-    refresh_token: refreshToken,
-    grant_type: "refresh_token",
-  });
+  try {
+    const response = await axios.post(STRAVA_TOKEN_URL, {
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    });
 
-  return {
-    access_token: response.data.access_token,
-    refresh_token: response.data.refresh_token,
-    expires_at: response.data.expires_at,
-  };
+    return {
+      access_token: response.data.access_token,
+      refresh_token: response.data.refresh_token,
+      expires_at: response.data.expires_at,
+    };
+  } catch (error: any) {
+    console.error("Error refreshing Strava token:", error.response?.data || error.message);
+    throw error;
+  }
 }
 
 export async function getStravaActivities(accessToken: string, after?: number): Promise<any[]> {

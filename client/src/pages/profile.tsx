@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { insertUserSchema } from "@shared/schema";
 import { SiStrava, SiGarmin, SiNike } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react"; 
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
@@ -38,7 +38,7 @@ export default function Profile() {
     },
   });
 
-  const handleStravaConnect = async () => {
+  async function handleStravaConnect() {
     if (isConnecting) return;
 
     try {
@@ -46,21 +46,27 @@ export default function Profile() {
       // Clear any existing error states before attempting connection
       localStorage.removeItem('strava_auth_error');
       localStorage.removeItem('strava_auth_state');
+      localStorage.removeItem('strava_auth_challenge');
       sessionStorage.clear();
 
       // Add a small delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
-      if (!res.ok) throw new Error('Failed to get auth URL');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get auth URL');
+      }
 
       const { url } = await res.json();
+      console.log("Received Strava auth URL, redirecting...");
 
       // Add a small delay before redirect
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       window.location.href = url;
     } catch (error) {
+      console.error("Strava connection error:", error);
       toast({
         title: "Error",
         description: "Failed to connect to Strava. Please wait 30 seconds and try again.",
@@ -69,7 +75,7 @@ export default function Profile() {
     } finally {
       setIsConnecting(false);
     }
-  };
+  }
 
   const onSubmit = async (data: any) => {
     try {
@@ -97,10 +103,12 @@ export default function Profile() {
     }
   };
 
-  // Check for errors in URL params when component mounts
+  // Update the useEffect to handle errors better
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
+    const code = urlParams.get('code');
+
     if (error) {
       let errorMessage = "Failed to connect to Strava";
       if (error.includes("challenge")) {
@@ -108,6 +116,7 @@ export default function Profile() {
         // Clear any cached state
         localStorage.removeItem('strava_auth_error');
         localStorage.removeItem('strava_auth_state');
+        localStorage.removeItem('strava_auth_challenge');
         sessionStorage.clear();
       }
       toast({
@@ -116,6 +125,9 @@ export default function Profile() {
         variant: "destructive",
       });
       // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (code) {
+      // Successfully got a code, clean up the URL
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, [toast]);
