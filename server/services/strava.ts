@@ -11,20 +11,20 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 function getAppDomain() {
   if (process.env.REPL_ID && process.env.REPL_OWNER) {
     // We're on Replit - construct the URL using Replit's domain format
-    return `https://${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co`;
+    return `${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co`;
   }
-  return "http://localhost:5000"; // Local development fallback
+  return "localhost:5000"; // Local development fallback
 }
 
-const REDIRECT_URI = `${getAppDomain()}/api/strava/callback`;
+const REDIRECT_URI = `https://${getAppDomain()}/api/strava/callback`;
 
 // Log the callback URL at startup
 console.log("\nStrava Configuration:");
 console.log("====================");
 console.log("Website URL to use in Strava API settings:");
+console.log(`https://${getAppDomain()}`);
+console.log("\nCallback Domain to use in Strava API settings:");
 console.log(getAppDomain());
-console.log("\nCallback URL to use in Strava API settings:");
-console.log(REDIRECT_URI);
 console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
 console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
 console.log("Running on Replit:", process.env.REPL_ID ? "Yes" : "No");
