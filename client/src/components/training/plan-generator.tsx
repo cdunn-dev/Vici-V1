@@ -1,9 +1,4 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Dialog,
   DialogContent,
@@ -12,16 +7,6 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -42,16 +27,20 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Wand2, ChevronRight, ChevronLeft, CalendarIcon } from "lucide-react";
+import { format, addWeeks } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const planGeneratorSchema = z.object({
-  goal: z.enum(["Personal Best", "Run Fast", "Run Far", "First Race", "Get Fit", "Be Healthy"]),
+  goal: z.enum(["First Race", "Personal Best", "Run Fast", "Run Far", "Get Fit", "Be Healthy"]),
   goalDescription: z.string().min(1, "Please describe your goal"),
+  startDate: z.string().min(1, "Please select a start date"),
   targetRace: z.object({
     distance: z.enum(["5k", "10k", "Half-Marathon", "Marathon", "50k", "100k", "Other"]).optional(),
     customDistance: z.string().optional(),
@@ -80,6 +69,7 @@ type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
 interface PlanGeneratorProps {
   existingPlan?: boolean;
+  onPreview?: (plan: any) => void;
 }
 
 const experienceLevelDescriptions = {
@@ -103,18 +93,18 @@ const coachingStyleDescriptions = {
   Hybrid: "Flexible combination of different coaching approaches",
 };
 
-const TOTAL_SCREENS = 11;
+const TOTAL_SCREENS = 12;
 
-export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
+export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [currentScreen, setCurrentScreen] = useState(1);
-  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
+      startDate: new Date().toISOString(),
       runningExperience: {
         level: "Beginner",
         fitnessLevel: "Solid base",
@@ -131,6 +121,15 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
 
   const generatePlan = useMutation({
     mutationFn: async (data: PlanGeneratorFormData) => {
+      if (existingPlan) {
+        const confirmed = window.confirm(
+          "This will replace your current training plan. Are you sure you want to continue?"
+        );
+        if (!confirmed) {
+          return null;
+        }
+      }
+
       const res = await apiRequest("POST", "/api/training-plans/generate", {
         ...data,
         userId: 1,
@@ -159,7 +158,7 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
 
     if (currentScreen === 2 && !targetRaceSelected) {
-      setCurrentScreen(4);
+      setCurrentScreen(6);
     } else if (currentScreen === 2 && targetRaceSelected === "Other") {
       setCurrentScreen(3);
     } else if (currentScreen === 2 && targetRaceSelected) {
@@ -172,7 +171,7 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   const handleBack = () => {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
 
-    if (currentScreen === 4 && !targetRaceSelected) {
+    if (currentScreen === 6 && !targetRaceSelected) {
       setCurrentScreen(2);
     } else if (currentScreen === 4 && targetRaceSelected === "Other") {
       setCurrentScreen(3);
@@ -182,14 +181,21 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   };
 
   const handleSubmit = (data: PlanGeneratorFormData) => {
-    setShowPreview(true);
-  };
+    if (onPreview) {
+      const endDate = data.targetRace?.date
+        ? new Date(data.targetRace.date)
+        : addWeeks(new Date(data.startDate), 12);
 
-  const handleConfirmPlan = () => {
-    if (existingPlan) {
-      setShowConfirmDialog(true);
+      const planData = {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate,
+      };
+
+      onPreview(planData);
+      setOpen(false);
     } else {
-      generatePlan.mutate(form.getValues());
+      generatePlan.mutate(data);
     }
   };
 
@@ -259,6 +265,7 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
       case 9:
       case 10:
       case 11:
+      case 12:
         return (
           <div className="space-y-8">
             <div className="space-y-2">
@@ -529,38 +536,67 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-            </div>
-          </div>
-        );
-      case 4:
-        return (
-          <div className="space-y-8">
-            <div className="space-y-2">
-              <Progress value={(currentScreen / TOTAL_SCREENS) * 100} className="w-full" />
-              <p className="text-sm text-muted-foreground text-center">
-                Step {currentScreen} of {TOTAL_SCREENS}
-              </p>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="targetRace.date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col items-center">
-                  <FormLabel className="text-center text-lg mb-4">When is your race?</FormLabel>
-                  <div className="w-full max-w-sm mx-auto">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => field.onChange(date?.toISOString())}
-                      disabled={(date) => date < new Date()}
-                      className="rounded-md border shadow"
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
+              {currentScreen === 4 && (
+                <FormField
+                  control={form.control}
+                  name="targetRace.date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col items-center">
+                      <FormLabel className="text-center text-lg mb-4">When is your race?</FormLabel>
+                      <div className="w-full max-w-sm mx-auto">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date?.toISOString())}
+                          disabled={(date) => date < new Date()}
+                          className="rounded-md border shadow"
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+              {currentScreen === 12 && (
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col items-center">
+                      <FormLabel className="text-center text-lg mb-4">When would you like to start?</FormLabel>
+                      <div className="flex gap-4 mb-6">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => field.onChange(new Date().toISOString())}
+                        >
+                          Start Today
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => field.onChange(addWeeks(new Date(), 1).toISOString())}
+                        >
+                          Start Next Week
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="w-full max-w-sm mx-auto">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date?.toISOString())}
+                          disabled={(date) => date < new Date()}
+                          className="rounded-md border shadow"
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
           </div>
         );
       default:
@@ -572,8 +608,8 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <Wand2 className="h-4 w-4" />
+          <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
+            <Wand2 className="h-5 w-5" />
             Create New Training Plan
           </Button>
         </DialogTrigger>
@@ -593,6 +629,13 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
               <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 flex flex-col">
                 <div className="flex-1 p-6">
                   <div className="max-w-2xl mx-auto space-y-8">
+                    <div className="space-y-2">
+                      <Progress value={(currentScreen / TOTAL_SCREENS) * 100} className="w-full" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        Step {currentScreen} of {TOTAL_SCREENS}
+                      </p>
+                    </div>
+
                     <div className="text-center space-y-2">
                       <h2 className="text-2xl font-bold">
                         {currentScreen === 1 && "What's your training goal?"}
@@ -604,8 +647,9 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                         {currentScreen === 7 && "How fit are you currently?"}
                         {currentScreen === 8 && "How many days can you run per week?"}
                         {currentScreen === 9 && "What's your target weekly mileage?"}
-                        {currentScreen === 10 && "How many workout sessions do you want?"}
-                        {currentScreen === 11 && "What coaching style do you prefer?"}
+                        {currentScreen === 10 && "How many workouts do you want per week?"}
+                        {currentScreen === 11 && "Which coaching style do you prefer?"}
+                        {currentScreen === 12 && "When do you want to start your plan?"}
                       </h2>
                     </div>
 
@@ -631,8 +675,8 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button type="submit">
-                        Preview Plan
+                      <Button type="submit" disabled={generatePlan.isPending}>
+                        {generatePlan.isPending ? "Generating..." : "Preview Plan"}
                       </Button>
                     )}
                   </div>
@@ -642,29 +686,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
           </div>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Replace Existing Plan?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will replace your current training plan. This action cannot be
-              undone. Are you sure you want to continue?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowConfirmDialog(false);
-                generatePlan.mutate(form.getValues());
-              }}
-            >
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

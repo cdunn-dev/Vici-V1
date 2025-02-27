@@ -89,8 +89,10 @@ export async function registerRoutes(app: Express) {
         name: `AI Generated Plan - ${preferences.goal}`,
         goal: preferences.goal,
         goalDescription: preferences.goalDescription,
-        startDate: new Date(),
-        endDate: preferences.targetRace ? new Date(preferences.targetRace.date) : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
+        startDate: new Date(preferences.startDate),
+        endDate: preferences.targetRace?.date 
+          ? new Date(preferences.targetRace.date)
+          : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
         weeklyPlans: generatedPlan.weeklyPlans,
         targetRace: preferences.targetRace || null,
