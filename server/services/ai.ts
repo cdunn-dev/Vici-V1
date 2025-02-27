@@ -244,3 +244,54 @@ Return only the JSON object, no additional text.`;
     };
   }
 }
+
+// Add this new function after the existing ones
+export async function generateTrainingPlanAdjustments(
+  feedback: string,
+  currentPlan: any
+) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `Review this training plan feedback and suggest appropriate adjustments:
+
+Feedback: "${feedback}"
+
+Current Training Plan:
+${JSON.stringify(currentPlan, null, 2)}
+
+Analyze the feedback and provide adjustments in this JSON format:
+{
+  "reasoning": "Detailed explanation of why these changes are recommended",
+  "suggestedPlan": {
+    "weeklyPlans": [
+      // Modified weekly plans following the same structure as the current plan
+    ]
+  }
+}
+
+Consider these factors when suggesting adjustments:
+1. Maintain overall training progression
+2. Address the specific concerns in the feedback
+3. Keep the adjustments realistic and achievable
+4. Preserve the basic structure while modifying specific aspects
+5. Include clear explanations for recommended changes
+
+Return only the JSON object, no additional text.`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("Error parsing Gemini response:", parseError);
+      console.log("Raw response:", text);
+      throw new Error("Failed to generate plan adjustments");
+    }
+  } catch (error) {
+    console.error("Error generating plan adjustments:", error);
+    throw error;
+  }
+}
