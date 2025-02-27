@@ -6,7 +6,17 @@ const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
-const REDIRECT_URI = `${process.env.REPLIT_URL || "http://localhost:5000"}/api/strava/callback`;
+
+// Get the correct domain based on environment
+function getAppDomain() {
+  if (process.env.REPLIT_SLUG && process.env.REPLIT_OWNER) {
+    // We're on Replit - use the Replit URL format
+    return `https://${process.env.REPLIT_SLUG}.${process.env.REPLIT_OWNER}.repl.co`;
+  }
+  return "http://localhost:5000"; // Local development fallback
+}
+
+const REDIRECT_URI = `${getAppDomain()}/api/strava/callback`;
 
 // Log the callback URL at startup
 console.log("\nStrava Configuration:");
@@ -15,7 +25,10 @@ console.log("Callback URL to use in Strava API settings:");
 console.log(REDIRECT_URI);
 console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
 console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
-console.log("Running on Replit:", process.env.REPLIT_URL ? "Yes" : "No");
+console.log("Running on Replit:", process.env.REPLIT_SLUG ? "Yes" : "No");
+if (process.env.REPLIT_SLUG) {
+  console.log("Replit Domain:", getAppDomain());
+}
 console.log("====================\n");
 
 export interface StravaTokens {
