@@ -103,7 +103,7 @@ const coachingStyleDescriptions = {
   Hybrid: "Flexible combination of different coaching approaches",
 };
 
-const TOTAL_SCREENS = 11; 
+const TOTAL_SCREENS = 11;
 
 export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
@@ -117,12 +117,12 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     defaultValues: {
       runningExperience: {
         level: "Beginner",
-        fitnessLevel: "Out of shape",
+        fitnessLevel: "Solid base",
       },
       trainingPreferences: {
-        weeklyRunningDays: 4, 
-        maxWeeklyMileage: 20, 
-        weeklyWorkouts: 1, 
+        weeklyRunningDays: 4,
+        maxWeeklyMileage: 20,
+        weeklyWorkouts: 1,
         preferredLongRunDay: "Saturday",
         coachingStyle: "Collaborative",
       },
@@ -143,7 +143,7 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
       toast({
         title: "Success!",
         description: "Your AI training plan has been generated.",
-        duration: 3000, 
+        duration: 3000,
       });
     },
     onError: () => {
@@ -159,11 +159,11 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
 
     if (currentScreen === 2 && !targetRaceSelected) {
-      setCurrentScreen(4); 
+      setCurrentScreen(4);
     } else if (currentScreen === 2 && targetRaceSelected === "Other") {
-      setCurrentScreen(3); 
+      setCurrentScreen(3);
     } else if (currentScreen === 2 && targetRaceSelected) {
-      setCurrentScreen(4); 
+      setCurrentScreen(4);
     } else {
       setCurrentScreen(currentScreen + 1);
     }
@@ -173,9 +173,9 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
 
     if (currentScreen === 4 && !targetRaceSelected) {
-      setCurrentScreen(2); 
+      setCurrentScreen(2);
     } else if (currentScreen === 4 && targetRaceSelected === "Other") {
-      setCurrentScreen(3); 
+      setCurrentScreen(3);
     } else {
       setCurrentScreen(currentScreen - 1);
     }
@@ -196,9 +196,62 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   const renderScreen = () => {
     switch (currentScreen) {
       case 1:
+        return (
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <Progress value={(currentScreen / TOTAL_SCREENS) * 100} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                Step {currentScreen} of {TOTAL_SCREENS}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>What's your training goal?</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your goal" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="First Race">Complete My First Race</SelectItem>
+                        <SelectItem value="Personal Best">Set a Personal Best</SelectItem>
+                        <SelectItem value="Run Fast">Run Fast</SelectItem>
+                        <SelectItem value="Run Far">Run Far</SelectItem>
+                        <SelectItem value="Get Fit">Get Fit</SelectItem>
+                        <SelectItem value="Be Healthy">Be Healthy</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="goalDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tell us more about your goal</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="E.g., I want to complete my first marathon in under 4 hours"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        );
       case 2:
       case 3:
-      case 4:
       case 5:
       case 6:
       case 7:
@@ -216,52 +269,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
             </div>
 
             <div className="space-y-4">
-              {currentScreen === 1 && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="goal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What's your training goal?</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your goal" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Personal Best">Set a Personal Best</SelectItem>
-                            <SelectItem value="Run Fast">Run Fast</SelectItem>
-                            <SelectItem value="Run Far">Run Far</SelectItem>
-                            <SelectItem value="First Race">Complete My First Race</SelectItem>
-                            <SelectItem value="Get Fit">Get Fit</SelectItem>
-                            <SelectItem value="Be Healthy">Be Healthy</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="goalDescription"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tell us more about your goal</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="E.g., I want to complete my first marathon in under 4 hours"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
               {currentScreen === 2 && (
                 <FormField
                   control={form.control}
@@ -307,92 +314,62 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
-              {currentScreen === 4 && (
-                <FormField
-                  control={form.control}
-                  name="targetRace.date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Race Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={
-                                "w-full pl-3 text-left font-normal"
-                              }
-                            >
-                              {field.value ? (
-                                format(new Date(field.value), "PPP")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => field.onChange(date?.toISOString())}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
               {currentScreen === 5 && (
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="targetRace.previousBest"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Previous Best Time (Optional)</FormLabel>
-                        <FormDescription>Enter your best time for this distance (HH:MM:SS)</FormDescription>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            step="1"
-                            {...field}
-                            className="text-center text-lg"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-6">
+                  <h3 className="text-center text-lg font-medium mb-4">Time Goals</h3>
+                  <div className="grid grid-cols-1 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="targetRace.previousBest"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col items-center">
+                          <FormLabel className="text-center">Previous Best Time</FormLabel>
+                          <FormDescription className="text-center mb-2">
+                            Enter your best time for this distance
+                          </FormDescription>
+                          <div className="w-64">
+                            <FormControl>
+                              <Input
+                                type="time"
+                                step="1"
+                                {...field}
+                                className="text-center text-2xl h-12"
+                                placeholder="HH:MM:SS"
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="targetRace.goalTime"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Goal Time (Optional)</FormLabel>
-                        <FormDescription>Enter your target time for this race (HH:MM:SS)</FormDescription>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            step="1"
-                            {...field}
-                            className="text-center text-lg"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="targetRace.goalTime"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col items-center">
+                          <FormLabel className="text-center">Goal Time</FormLabel>
+                          <FormDescription className="text-center mb-2">
+                            Enter your target time for this race
+                          </FormDescription>
+                          <div className="w-64">
+                            <FormControl>
+                              <Input
+                                type="time"
+                                step="1"
+                                {...field}
+                                className="text-center text-2xl h-12"
+                                placeholder="HH:MM:SS"
+                              />
+                            </FormControl>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               )}
-
               {currentScreen === 6 && (
                 <FormField
                   control={form.control}
@@ -418,7 +395,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
               {currentScreen === 7 && (
                 <FormField
                   control={form.control}
@@ -445,7 +421,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
               {currentScreen === 8 && (
                 <FormField
                   control={form.control}
@@ -471,7 +446,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
               {currentScreen === 9 && (
                 <FormField
                   control={form.control}
@@ -499,7 +473,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
               {currentScreen === 10 && (
                 <FormField
                   control={form.control}
@@ -529,7 +502,6 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                   )}
                 />
               )}
-
               {currentScreen === 11 && (
                 <FormField
                   control={form.control}
@@ -558,6 +530,37 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                 />
               )}
             </div>
+          </div>
+        );
+      case 4:
+        return (
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <Progress value={(currentScreen / TOTAL_SCREENS) * 100} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                Step {currentScreen} of {TOTAL_SCREENS}
+              </p>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="targetRace.date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col items-center">
+                  <FormLabel className="text-center text-lg mb-4">When is your race?</FormLabel>
+                  <div className="w-full max-w-sm mx-auto">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ? new Date(field.value) : undefined}
+                      onSelect={(date) => field.onChange(date?.toISOString())}
+                      disabled={(date) => date < new Date()}
+                      className="rounded-md border shadow"
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         );
       default:
