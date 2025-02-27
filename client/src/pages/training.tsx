@@ -9,9 +9,15 @@ import PlanRecommendations from "@/components/training/plan-recommendations";
 import PlanReview from "@/components/training/plan-review";
 import ProgramOverview from "@/components/training/program-overview";
 import { isAfter, isBefore, startOfDay } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [aiQuery, setAiQuery] = useState("");
+  const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
   const queryClient = useQueryClient();
 
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
@@ -22,7 +28,6 @@ export default function Training() {
         throw new Error("Failed to fetch training plan");
       }
       const plans = await response.json();
-      // Return the most recent plan
       return plans[plans.length - 1];
     },
   });
@@ -96,55 +101,99 @@ export default function Training() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <CalendarView
-            selectedDate={selectedDate}
-            onSelect={handleDateSelect}
-            events={trainingPlan?.weeklyPlans?.flatMap(week => 
-              week.workouts.map(workout => ({
-                date: new Date(workout.day),
-                title: `${workout.type} - ${workout.distance} miles`,
-              }))
-            ) || []}
-          />
-          <div className="mt-8">
-            <ProgramOverview
-              weeklyPlans={trainingPlan?.weeklyPlans || []}
-              onSelectWeek={(weekNumber) => {
-                const week = trainingPlan?.weeklyPlans.find(w => w.week === weekNumber);
-                if (week) {
-                  setSelectedDate(new Date(week.workouts[0].day));
-                }
-              }}
-              onSelectDay={handleDateSelect}
-              selectedDate={selectedDate}
-            />
-          </div>
-          <div className="mt-8">
-            <PlanRecommendations
-              planId={trainingPlan?.id || 1}
-              recentWorkouts={[]} // This would be populated with actual workout data
-            />
-          </div>
-        </div>
+      <Tabs defaultValue="overall" className="space-y-8">
+        <TabsList>
+          <TabsTrigger value="overall">Training Program Overview</TabsTrigger>
+          <TabsTrigger value="current">This Week's Training</TabsTrigger>
+        </TabsList>
 
-        <div className="space-y-8">
-          {currentWeek && (
-            <WeeklyOverview
-              week={currentWeek}
-              onSelectDay={handleDateSelect}
-              selectedDate={selectedDate}
-            />
-          )}
-          {workoutOptions && (
-            <DailyWorkout
-              date={selectedDate}
-              workout={workoutOptions}
-            />
-          )}
-        </div>
-      </div>
+        <TabsContent value="overall" className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <CalendarView
+                selectedDate={selectedDate}
+                onSelect={handleDateSelect}
+                events={trainingPlan?.weeklyPlans?.flatMap(week =>
+                  week.workouts.map(workout => ({
+                    date: new Date(workout.day),
+                    title: `${workout.type} - ${workout.distance} miles`,
+                  }))
+                ) || []}
+              />
+              <div className="mt-8">
+                <ProgramOverview
+                  weeklyPlans={trainingPlan?.weeklyPlans || []}
+                  onSelectWeek={(weekNumber) => {
+                    const week = trainingPlan?.weeklyPlans.find(w => w.week === weekNumber);
+                    if (week) {
+                      setSelectedDate(new Date(week.workouts[0].day));
+                    }
+                  }}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium">Ask Your AI Coach</h3>
+              <Textarea
+                placeholder="Ask about adjusting your overall training plan, long-term goals, or training philosophy..."
+                value={aiQuery}
+                onChange={(e) => setAiQuery(e.target.value)}
+                className="min-h-[100px]"
+              />
+              <Button className="w-full gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Get AI Coaching Advice
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="current" className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              {currentWeek && (
+                <WeeklyOverview
+                  week={currentWeek}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
+                />
+              )}
+              <div className="mt-8">
+                <PlanRecommendations
+                  planId={trainingPlan?.id || 1}
+                  recentWorkouts={[]} // This would be populated with actual workout data
+                />
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {workoutOptions && (
+                <DailyWorkout
+                  date={selectedDate}
+                  workout={workoutOptions}
+                />
+              )}
+
+              <div className="space-y-4">
+                <h3 className="font-medium">Ask About Today's Training</h3>
+                <Textarea
+                  placeholder="Ask about today's workout, this week's focus, or request modifications..."
+                  value={weeklyAiQuery}
+                  onChange={(e) => setWeeklyAiQuery(e.target.value)}
+                  className="min-h-[100px]"
+                />
+                <Button className="w-full gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Get Workout Advice
+                </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

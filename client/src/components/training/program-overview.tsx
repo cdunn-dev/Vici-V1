@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Check } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -24,11 +24,21 @@ export default function ProgramOverview({
   onSelectDay,
   selectedDate,
 }: ProgramOverviewProps) {
+  const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
+
+  const today = new Date();
+
   return (
-    <Accordion type="single" className="space-y-4">
+    <Accordion 
+      type="multiple" 
+      value={expandedWeeks}
+      onValueChange={setExpandedWeeks}
+      className="space-y-4"
+    >
       {weeklyPlans.map((week) => {
         const firstDay = new Date(week.workouts[0].day);
         const lastDay = new Date(week.workouts[week.workouts.length - 1].day);
+        const isWeekCompleted = lastDay < today;
 
         return (
           <AccordionItem
@@ -44,9 +54,14 @@ export default function ProgramOverview({
                     {format(firstDay, "MMM d")} - {format(lastDay, "MMM d, yyyy")}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">{week.totalMileage} miles</p>
-                  <p className="text-sm text-muted-foreground">{week.phase}</p>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-medium">{week.totalMileage} miles</p>
+                    <p className="text-sm text-muted-foreground">{week.phase}</p>
+                  </div>
+                  {isWeekCompleted && (
+                    <Check className="h-5 w-5 text-green-500" />
+                  )}
                 </div>
               </div>
             </AccordionTrigger>
