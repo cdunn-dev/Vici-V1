@@ -222,8 +222,8 @@ export default function Training() {
       <Tabs defaultValue="current" className="space-y-8">
         <div className="flex justify-center">
           <TabsList className="w-full max-w-[280px]">
-            <TabsTrigger value="current">This Week</TabsTrigger>
-            <TabsTrigger value="overall">Training Program</TabsTrigger>
+            <TabsTrigger value="current" className="flex-1">This Week</TabsTrigger>
+            <TabsTrigger value="overall" className="flex-1">Training Program</TabsTrigger>
           </TabsList>
         </div>
 
