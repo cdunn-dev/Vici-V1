@@ -1,21 +1,31 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanRecommendations from "@/components/training/plan-recommendations";
+import PlanReview from "@/components/training/plan-review";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import PlanReview from "@/components/training/plan-review";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const queryClient = useQueryClient();
 
-  const { data: trainingPlan, isLoading } = useQuery({
-    queryKey: ["/api/training-plans", 1], // Assuming user ID 1 for now
+  const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
+    queryKey: ["/api/training-plans", { userId: 1 }],
+    queryFn: async () => {
+      const response = await fetch(`/api/training-plans?userId=1`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch training plan");
+      }
+      const plans = await response.json();
+      // Return the most recent plan
+      return plans[plans.length - 1];
+    },
   });
 
   // Find the current week's workouts based on selected date
