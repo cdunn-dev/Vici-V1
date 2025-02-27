@@ -14,10 +14,7 @@ type CalendarViewProps = {
 export default function CalendarView({ selectedDate, onSelect, events }: CalendarViewProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{format(selectedDate, "MMMM yyyy")}</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <Calendar
           mode="single"
           selected={selectedDate}
