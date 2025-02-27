@@ -25,6 +25,7 @@ export const trainingPlans = pgTable("training_plans", {
   }[]>(),
   targetRace: json("target_race").$type<{
     distance: string;
+    customDistance?: string;
     date: string;
     previousBest?: string;
     goalTime?: string;
@@ -45,7 +46,7 @@ export const trainingPlans = pgTable("training_plans", {
 
 export const insertTrainingPlanSchema = createInsertSchema(trainingPlans).omit({ id: true });
 
-// Existing user and workout schemas remain unchanged
+// Existing schemas unchanged
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -66,9 +67,9 @@ export const workouts = pgTable("workouts", {
   userId: integer("user_id").notNull(),
   date: timestamp("date").notNull(),
   type: text("type").notNull(),
-  distance: integer("distance").notNull(), // in meters
-  duration: integer("duration").notNull(), // in seconds
-  perceivedEffort: integer("perceived_effort"), // 1-10 scale
+  distance: integer("distance").notNull(),
+  duration: integer("duration").notNull(),
+  perceivedEffort: integer("perceived_effort"),
   notes: text("notes"),
 });
 
