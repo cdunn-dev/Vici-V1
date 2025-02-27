@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { insertUserSchema } from "@shared/schema";
 import { SiStrava, SiGarmin, SiNike } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery({
@@ -36,6 +37,29 @@ export default function Profile() {
       connectedApps: user?.connectedApps || [],
     },
   });
+
+  const handleStravaConnect = async () => {
+    if (isConnecting) return;
+
+    try {
+      setIsConnecting(true);
+      const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
+      if (!res.ok) throw new Error('Failed to get auth URL');
+
+      const { url } = await res.json();
+      // Clear any existing error states before redirecting
+      localStorage.removeItem('strava_auth_error');
+      window.location.href = url;
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to connect to Strava. Please try again in a few moments.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const onSubmit = async (data: any) => {
     try {
@@ -62,6 +86,25 @@ export default function Profile() {
       });
     }
   };
+
+  // Check for errors in URL params when component mounts
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+      let errorMessage = "Failed to connect to Strava";
+      if (error.includes("challenge")) {
+        errorMessage = "Too many connection attempts. Please wait a few moments and try again.";
+      }
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      // Clean up the URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [toast]);
 
   if (isLoading) {
     return (
@@ -147,23 +190,16 @@ export default function Profile() {
                 <Button
                   variant="outline"
                   className="h-20"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
-                      const { url } = await res.json();
-                      window.location.href = url;
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to connect to Strava",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  disabled={user?.connectedApps?.includes("strava")}
+                  onClick={handleStravaConnect}
+                  disabled={user?.connectedApps?.includes("strava") || isConnecting}
                 >
                   <SiStrava className="h-8 w-8 mr-2" />
-                  {user?.connectedApps?.includes("strava") ? "Connected to Strava" : "Connect Strava"}
+                  {isConnecting 
+                    ? "Connecting..." 
+                    : user?.connectedApps?.includes("strava") 
+                      ? "Connected to Strava" 
+                      : "Connect Strava"
+                  }
                 </Button>
                 <Button variant="outline" className="h-20" disabled>
                   <SiGarmin className="h-8 w-8 mr-2" />
