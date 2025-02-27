@@ -129,28 +129,47 @@ export async function registerRoutes(app: Express) {
   // Add this new route after the existing training plan routes
   app.post("/api/training-plans/:id/adjust", async (req, res) => {
     try {
+      console.log("Received adjustment request:", {
+        planId: req.params.id,
+        feedback: req.body.feedback,
+        currentPlan: req.body.currentPlan ? "Present" : "Missing"
+      });
+
       const { feedback, currentPlan } = req.body;
       const planId = parseInt(req.params.id);
 
       if (!feedback || !currentPlan) {
+        console.error("Missing required fields:", { feedback: !!feedback, currentPlan: !!currentPlan });
         return res.status(400).json({ error: "Missing required fields" });
       }
 
       const plan = await storage.getTrainingPlan(planId);
       if (!plan) {
+        console.error("Training plan not found:", planId);
         return res.status(404).json({ error: "Training plan not found" });
       }
 
-      // Get AI suggestions for plan adjustments
-      const adjustments = await generateTrainingPlanAdjustments(
-        feedback,
-        currentPlan
-      );
-
-      res.json(adjustments);
+      try {
+        // Get AI suggestions for plan adjustments
+        const adjustments = await generateTrainingPlanAdjustments(
+          feedback,
+          currentPlan
+        );
+        console.log("AI adjustments generated successfully");
+        res.json(adjustments);
+      } catch (aiError) {
+        console.error("AI service error:", aiError);
+        res.status(500).json({ 
+          error: "Failed to generate AI adjustments",
+          details: aiError.message 
+        });
+      }
     } catch (error) {
       console.error("Error adjusting training plan:", error);
-      res.status(500).json({ error: "Failed to adjust training plan" });
+      res.status(500).json({ 
+        error: "Failed to adjust training plan",
+        details: error.message 
+      });
     }
   });
 

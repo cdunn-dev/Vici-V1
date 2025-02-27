@@ -107,9 +107,11 @@ export default function Training() {
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to get AI response');
-
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Failed to get AI response');
+      }
 
       toast({
         title: "AI Coach Response",
@@ -125,7 +127,10 @@ export default function Training() {
                 body: JSON.stringify(data.suggestedPlan),
               });
 
-              if (!updateResponse.ok) throw new Error('Failed to update plan');
+              if (!updateResponse.ok) {
+                const errorData = await updateResponse.json();
+                throw new Error(errorData.details || errorData.error || 'Failed to update plan');
+              }
 
               queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
               toast({
@@ -133,9 +138,10 @@ export default function Training() {
                 description: "Training plan updated successfully",
               });
             } catch (error) {
+              console.error('Plan update error:', error);
               toast({
                 title: "Error",
-                description: "Failed to update training plan",
+                description: error.message || "Failed to update training plan",
                 variant: "destructive",
               });
             }
@@ -145,9 +151,10 @@ export default function Training() {
         ) : undefined,
       });
     } catch (error) {
+      console.error('AI query error:', error);
       toast({
         title: "Error",
-        description: "Failed to get AI coach response",
+        description: error.message || "Failed to get AI coach response",
         variant: "destructive",
       });
     } finally {
