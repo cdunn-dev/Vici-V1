@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan } from "./services/ai";
+import { generateTrainingPlan, analyzeWorkoutAndSuggestAdjustments } from "./services/ai";
 
 export async function registerRoutes(app: Express) {
   // User routes
@@ -95,6 +95,33 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error generating training plan:", error);
       res.status(500).json({ error: "Failed to generate training plan" });
+    }
+  });
+
+  // Real-time Plan Adjustments
+  app.post("/api/training-plans/:id/analyze", async (req, res) => {
+    try {
+      const planId = parseInt(req.params.id);
+      const { recentWorkouts } = req.body;
+
+      const plan = await storage.getTrainingPlan(planId);
+      if (!plan) {
+        return res.status(404).json({ error: "Training plan not found" });
+      }
+
+      const recommendations = await analyzeWorkoutAndSuggestAdjustments(
+        recentWorkouts,
+        {
+          goal: plan.name,
+          weeklyMileage: plan.weeklyMileage,
+          currentPhase: "Current", // You might want to calculate this based on the plan's progress
+        }
+      );
+
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error analyzing workouts:", error);
+      res.status(500).json({ error: "Failed to analyze workouts" });
     }
   });
 
