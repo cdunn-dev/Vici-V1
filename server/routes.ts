@@ -79,18 +79,23 @@ export async function registerRoutes(app: Express) {
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       const preferences = req.body;
+      console.log("Generating training plan with preferences:", preferences);
+
       const generatedPlan = await generateTrainingPlan(preferences);
 
       // Convert the AI response into a training plan
       const trainingPlan = {
         userId: parseInt(req.body.userId),
         name: `AI Generated Plan - ${preferences.goal}`,
-        goal: preferences.goal, // Add this line to include the goal
+        goal: preferences.goal,
+        goalDescription: preferences.goalDescription,
         startDate: new Date(),
         endDate: preferences.targetRace ? new Date(preferences.targetRace.date) : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
-        weeklyMileage: preferences.weeklyMileage,
+        weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
         weeklyPlans: generatedPlan.weeklyPlans,
-        targetRace: preferences.targetRace || null // Ensure targetRace is properly set
+        targetRace: preferences.targetRace || null,
+        runningExperience: preferences.runningExperience,
+        trainingPreferences: preferences.trainingPreferences,
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
