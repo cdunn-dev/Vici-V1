@@ -52,21 +52,12 @@ export default function CalendarView({
             modifiers={{
               training: (date) => isWithinTrainingPeriod(date),
               event: events.map(e => e.date),
-              race: isRaceDay
+              race: (date) => isRaceDay(date)
             }}
-            modifiersStyles={{
-              training: {
-                backgroundColor: 'var(--primary-light)',
-              },
-              event: {
-                color: 'var(--primary)',
-                fontWeight: 'bold',
-              },
-              race: {
-                backgroundColor: 'var(--primary)',
-                color: 'white',
-                fontWeight: 'bold',
-              }
+            modifiersClassNames={{
+              selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground text-white",
+              training: "bg-primary/10 hover:bg-primary/20",
+              race: "bg-primary text-primary-foreground font-bold"
             }}
             disabled={(date) => !isWithinTrainingPeriod(date)}
           />
