@@ -32,6 +32,7 @@ export const trainingPlans = pgTable("training_plans", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   name: text("name").notNull(),
+  goal: text("goal").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   weeklyMileage: integer("weekly_mileage").notNull(),
@@ -46,6 +47,10 @@ export const trainingPlans = pgTable("training_plans", {
       description: string;
     }[];
   }[]>(),
+  targetRace: json("target_race").$type<{
+    distance: string;
+    date: string;
+  } | null>(),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
