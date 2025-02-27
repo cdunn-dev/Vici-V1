@@ -1,8 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 type TrainingPreferences = {
   goal: string;
@@ -100,14 +98,13 @@ function generateBasicTrainingPlan(preferences: TrainingPreferences) {
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
   try {
     console.log("Generating training plan with preferences:", preferences);
-    
+
     // Make sure the API key is set properly
-    if (!process.env.GOOGLE_API_KEY) {
-      console.error("GOOGLE_API_KEY is not set");
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not set");
       return generateBasicTrainingPlan(preferences);
     }
-    
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `Generate a detailed running training plan with the following requirements:
@@ -147,12 +144,6 @@ The response must be a valid JSON object with this exact structure:
     }
   ]
 }
-
-Ensure the plan follows these guidelines:
-1. Progressive overload principle
-2. Adequate recovery between hard workouts
-3. Appropriate intensity distribution (80/20 rule)
-4. Periodization based on experience level and goals
 
 Return only the JSON object, no additional text.`;
 
@@ -254,19 +245,17 @@ Return only the JSON object, no additional text.`;
   }
 }
 
-// Add this new function after the existing ones
 export async function generateTrainingPlanAdjustments(
   feedback: string,
   currentPlan: any
 ) {
   try {
     // Make sure the API key is set properly
-    if (!process.env.GOOGLE_API_KEY) {
-      console.error("GOOGLE_API_KEY is not set");
-      throw new Error("Google API key not configured");
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not set");
+      throw new Error("Gemini API key not configured");
     }
-    
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `Review this training plan feedback and suggest appropriate adjustments:
@@ -304,7 +293,7 @@ Return only the JSON object, no additional text.`;
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
       console.log("Raw response:", text);
-      throw new Error("Failed to generate plan adjustments");
+      throw new Error("Failed to parse AI response");
     }
   } catch (error) {
     console.error("Error generating plan adjustments:", error);
