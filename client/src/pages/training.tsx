@@ -5,6 +5,7 @@ import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
+import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
 import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,6 +22,8 @@ export default function Training() {
   const [aiQuery, setAiQuery] = useState("");
   const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -58,6 +61,80 @@ export default function Training() {
       );
     });
   };
+
+  // Handle preview plan
+  const handlePreviewPlan = (plan) => {
+    setPreviewPlan(plan);
+    setShowPreview(true);
+  };
+
+  // Handle plan adjustments
+  const handleAdjustPlan = async (feedback: string) => {
+    try {
+      setIsSubmittingQuery(true);
+      const response = await fetch(`/api/training-plans/${trainingPlan?.id}/adjust`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feedback,
+          currentPlan: previewPlan || trainingPlan,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to adjust plan");
+      }
+
+      const adjustedPlan = await response.json();
+      setPreviewPlan(adjustedPlan);
+
+      toast({
+        title: "Plan Adjusted",
+        description: "Your training plan has been updated based on your feedback.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to adjust the training plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingQuery(false);
+    }
+  };
+
+
+  const handleConfirmPlan = async () => {
+    try {
+      const response = await fetch(`/api/training-plans/${trainingPlan?.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(previewPlan),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to confirm plan");
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+      toast({
+        title: "Success",
+        description: "Training plan updated successfully",
+      });
+      setShowPreview(false);
+
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update training plan",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   // Find the selected week's workouts based on selected date
   const getSelectedWeek = () => {
@@ -316,51 +393,65 @@ export default function Training() {
         </TabsContent>
 
         <TabsContent value="overall" className="space-y-8">
-          {trainingPlan && (
-            <ProgramProgressTracker
-              completedWeeks={getCompletedWeeks()}
-              totalWeeks={trainingPlan.weeklyPlans.length}
+          {showPreview ? (
+            <PlanPreview
+              planDetails={previewPlan}
+              onConfirm={handleConfirmPlan}
+              onAdjust={handleAdjustPlan}
+              onBack={() => setShowPreview(false)}
             />
-          )}
-          <div className="flex justify-end">
-            <PlanGenerator existingPlan={true} />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <ProgramOverview
-                weeklyPlans={trainingPlan.weeklyPlans}
-                onSelectWeek={(weekNumber) => {
-                  const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                  if (week) {
-                    setSelectedDate(new Date(week.workouts[0].day));
-                  }
-                }}
-                onSelectDay={handleDateSelect}
-                selectedDate={selectedDate}
-                goal={trainingPlan.goal || "No goal set"}
-                endDate={new Date(trainingPlan.endDate)}
-                targetRace={trainingPlan.targetRace}
-              />
-            </div>
+          ) : (
+            <>
+              {trainingPlan && (
+                <ProgramProgressTracker
+                  completedWeeks={getCompletedWeeks()}
+                  totalWeeks={trainingPlan.weeklyPlans.length}
+                />
+              )}
+              <div className="flex justify-end">
+                <PlanGenerator
+                  existingPlan={!!trainingPlan}
+                  onPreview={handlePreviewPlan}
+                />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                  <ProgramOverview
+                    weeklyPlans={trainingPlan.weeklyPlans}
+                    onSelectWeek={(weekNumber) => {
+                      const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                      if (week) {
+                        setSelectedDate(new Date(week.workouts[0].day));
+                      }
+                    }}
+                    onSelectDay={handleDateSelect}
+                    selectedDate={selectedDate}
+                    goal={trainingPlan.goal || "No goal set"}
+                    endDate={new Date(trainingPlan.endDate)}
+                    targetRace={trainingPlan.targetRace}
+                  />
+                </div>
 
-            <div className="space-y-4 lg:sticky lg:top-8">
-              <h3 className="font-medium">Ask Your AI Coach</h3>
-              <Textarea
-                placeholder="Ask about adjusting your overall training plan, long-term goals, or training philosophy..."
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                className="min-h-[100px] resize-none"
-              />
-              <Button
-                className="w-full gap-2"
-                onClick={() => handleAIQuery(aiQuery, 'overall')}
-                disabled={!aiQuery || isSubmittingQuery}
-              >
-                <MessageCircle className="h-4 w-4" />
-                Get AI Coaching Advice
-              </Button>
-            </div>
-          </div>
+                <div className="space-y-4 lg:sticky lg:top-8">
+                  <h3 className="font-medium">Ask Your AI Coach</h3>
+                  <Textarea
+                    placeholder="Ask about adjusting your overall training plan, long-term goals, or training philosophy..."
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    className="min-h-[100px] resize-none"
+                  />
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => handleAIQuery(aiQuery, 'overall')}
+                    disabled={!aiQuery || isSubmittingQuery}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Get AI Coaching Advice
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
