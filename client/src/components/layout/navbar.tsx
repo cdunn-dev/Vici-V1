@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Home, Calendar, User, BookOpen } from "lucide-react";
+import { Calendar, BookOpen, User } from "lucide-react";
 
 export default function Navbar() {
   const [location] = useLocation();
@@ -17,9 +17,9 @@ export default function Navbar() {
         <div className="flex h-16 items-center justify-around">
           {links.map(({ href, icon: Icon, label }) => (
             <Link key={href} href={href}>
-              <a
+              <div
                 className={cn(
-                  "flex flex-col items-center gap-1 text-sm font-medium transition-colors hover:text-primary",
+                  "flex flex-col items-center gap-1 text-sm font-medium transition-colors hover:text-primary cursor-pointer",
                   location === href
                     ? "text-primary"
                     : "text-muted-foreground"
@@ -27,7 +27,7 @@ export default function Navbar() {
               >
                 <Icon className="h-5 w-5" />
                 <span className="text-xs">{label}</span>
-              </a>
+              </div>
             </Link>
           ))}
         </div>
