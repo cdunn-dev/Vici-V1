@@ -35,11 +35,16 @@ export const trainingPlans = pgTable("training_plans", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   weeklyMileage: integer("weekly_mileage").notNull(),
-  workouts: json("workouts").$type<{
-    day: string;
-    type: string;
-    distance: number;
-    description: string;
+  weeklyPlans: json("weekly_plans").$type<{
+    week: number;
+    phase: string;
+    totalMileage: number;
+    workouts: {
+      day: string;
+      type: string;
+      distance: number;
+      description: string;
+    }[];
   }[]>(),
 });
 
@@ -53,3 +58,20 @@ export type Workout = typeof workouts.$inferSelect;
 export type InsertWorkout = z.infer<typeof insertWorkoutSchema>;
 export type TrainingPlan = typeof trainingPlans.$inferSelect;
 export type InsertTrainingPlan = z.infer<typeof insertTrainingPlanSchema>;
+
+// Add new type for training plan data
+export type WeeklyPlan = {
+  week: number;
+  phase: string;
+  totalMileage: number;
+  workouts: {
+    day: string;
+    type: string;
+    distance: number;
+    description: string;
+  }[];
+};
+
+export type TrainingPlanWithWeeklyPlans = TrainingPlan & {
+  weeklyPlans: WeeklyPlan[];
+};

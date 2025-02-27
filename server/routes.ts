@@ -41,10 +41,17 @@ export async function registerRoutes(app: Express) {
 
   // Training plan routes
   app.get("/api/training-plans", async (req, res) => {
-    const userId = parseInt(req.query.userId as string);
-    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
-    const plans = await storage.getTrainingPlans(userId);
-    res.json(plans);
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      const plans = await storage.getTrainingPlans(userId);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching training plans:", error);
+      res.status(500).json({ error: "Failed to fetch training plans" });
+    }
   });
 
   app.post("/api/training-plans", async (req, res) => {
@@ -81,14 +88,7 @@ export async function registerRoutes(app: Express) {
         startDate: new Date(),
         endDate: preferences.targetRace ? new Date(preferences.targetRace.date) : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.weeklyMileage,
-        workouts: generatedPlan.weeklyPlans.flatMap(week =>
-          week.workouts.map(workout => ({
-            day: workout.day,
-            type: workout.type,
-            distance: workout.distance,
-            description: workout.description
-          }))
-        ),
+        weeklyPlans: generatedPlan.weeklyPlans,
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
