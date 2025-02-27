@@ -107,9 +107,9 @@ export default function ProgramOverview({
               <div className="flex items-center gap-2 text-primary">
                 <Medal className="h-5 w-5" />
                 <div className="font-medium">
-                  Target Race: {targetRace.distance}
+                  Race Date
                   <div className="text-sm text-muted-foreground">
-                    {format(new Date(targetRace.date), "MMMM d, yyyy")}
+                    {targetRace.distance} on {format(new Date(targetRace.date), "MMMM d, yyyy")}
                   </div>
                 </div>
               </div>
