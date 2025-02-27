@@ -120,41 +120,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     },
   });
 
-  const generatePlan = useMutation({
-    mutationFn: async (data: PlanGeneratorFormData) => {
-      if (existingPlan) {
-        const confirmed = window.confirm(
-          "This will replace your current training plan. Are you sure you want to continue?"
-        );
-        if (!confirmed) {
-          return null;
-        }
-      }
-
-      const res = await apiRequest("POST", "/api/training-plans/generate", {
-        ...data,
-        userId: 1,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-      setOpen(false);
-      toast({
-        title: "Success!",
-        description: "Your AI training plan has been generated.",
-        duration: 3000,
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to generate training plan. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleNext = () => {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
 
@@ -181,7 +146,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  const handleSubmit = (data: PlanGeneratorFormData) => {
+  const handleSubmit = form.handleSubmit((data) => {
     if (onPreview) {
       const endDate = data.targetRace?.date
         ? new Date(data.targetRace.date)
@@ -196,7 +161,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       onPreview(planData);
       setOpen(false);
     }
-  };
+  });
 
   return (
     <>
@@ -220,7 +185,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 flex flex-col">
+              <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
                 <div className="flex-1 p-6">
                   <div className="max-w-2xl mx-auto space-y-8">
                     <div className="space-y-2">
@@ -653,8 +618,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button type="submit" disabled={generatePlan.isPending}>
-                        {generatePlan.isPending ? "Generating..." : "Preview Plan"}
+                      <Button type="submit">
+                        Preview Plan
                       </Button>
                     )}
                   </div>
