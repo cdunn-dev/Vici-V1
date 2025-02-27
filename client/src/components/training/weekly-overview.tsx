@@ -27,34 +27,39 @@ export default function WeeklyOverview({ week, onSelectDay, selectedDate }: Week
   return (
     <Card className="bg-card">
       <CardHeader className="pb-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-            <CardTitle>Week {week.week} - {week.phase}</CardTitle>
+        <div className="flex justify-between items-start">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+              <CardTitle>Week {week.week} - {week.phase}</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {format(firstWorkoutDate, "MMM d")} - {format(lastWorkoutDate, "MMM d, yyyy")}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {format(firstWorkoutDate, "MMM d")} - {format(lastWorkoutDate, "MMM d, yyyy")}
-          </p>
           <div className="flex items-center gap-2 text-sm font-medium">
             <Activity className="h-4 w-4 text-primary" />
-            <span>Total: {week.totalMileage} miles</span>
+            <span>{week.totalMileage} miles</span>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {Array.from({ length: 7 }).map((_, index) => {
           const currentDate = addDays(weekStart, index);
-          const workout = week.workouts.find(w => 
+          const workout = week.workouts.find(w =>
             isSameDay(new Date(w.day), currentDate)
           );
+
+          const isToday = isSameDay(currentDate, today);
+          const isSelected = selectedDate && isSameDay(currentDate, selectedDate);
 
           return (
             <div
               key={index}
               className={`flex flex-col p-4 border rounded-lg transition-colors cursor-pointer
-                ${isSameDay(currentDate, today) ? 'bg-accent/20' : 'hover:bg-accent/10'}
+                ${isToday ? 'bg-accent/20 border-primary/50' : 'hover:bg-accent/10'}
                 ${workout && onSelectDay ? 'cursor-pointer' : 'cursor-default opacity-50'}
-                ${selectedDate && isSameDay(currentDate, selectedDate) ? 'ring-2 ring-primary' : ''}
+                ${isSelected ? 'ring-2 ring-primary' : ''}
               `}
               onClick={() => workout && onSelectDay?.(currentDate)}
             >

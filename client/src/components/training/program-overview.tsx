@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronDown, ChevronRight, Check, Medal, Target, CalendarClock } from "lucide-react";
 import {
   Accordion,
@@ -34,7 +34,6 @@ export default function ProgramOverview({
   targetRace,
 }: ProgramOverviewProps) {
   const [expandedWeeks, setExpandedWeeks] = useState<string[]>([]);
-
   const today = new Date();
 
   return (
@@ -47,8 +46,9 @@ export default function ProgramOverview({
       >
         {weeklyPlans.map((week) => {
           const firstDay = new Date(week.workouts[0].day);
-          const lastDay = new Date(week.workouts[week.workouts.length - 1].day);
-          const isWeekCompleted = lastDay < today;
+          const weekStart = startOfWeek(firstDay, { weekStartsOn: 1 });
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+          const isWeekCompleted = weekEnd < today;
 
           return (
             <AccordionItem
@@ -56,18 +56,22 @@ export default function ProgramOverview({
               value={`week-${week.week}`}
               className="border rounded-lg overflow-hidden"
             >
-              <AccordionTrigger className="px-6 py-4 hover:bg-accent/50">
+              <AccordionTrigger className="px-4 py-3 hover:bg-accent/50">
                 <div className="flex justify-between items-center w-full">
                   <div>
-                    <h3 className="font-semibold">Week {week.week}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {format(firstDay, "MMM d")} - {format(lastDay, "MMM d, yyyy")}
+                    <h3 className="font-semibold flex items-center gap-2">
+                      Week {week.week}
+                      <span className="text-primary/80 text-sm font-normal">
+                        {week.phase}
+                      </span>
+                    </h3>
+                    <p className="text-sm text-muted-foreground text-left">
+                      {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="font-medium">{week.totalMileage} miles</p>
-                      <p className="text-sm text-muted-foreground">{week.phase}</p>
                     </div>
                     {isWeekCompleted && (
                       <Check className="h-5 w-5 text-green-500" />
