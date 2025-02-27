@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { insertUserSchema } from "@shared/schema";
 import { SiStrava, SiGarmin, SiNike } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react"; // Added useEffect
+import { useState, useEffect } from "react"; 
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
@@ -45,20 +45,25 @@ export default function Profile() {
       setIsConnecting(true);
       // Clear any existing error states before attempting connection
       localStorage.removeItem('strava_auth_error');
+      localStorage.removeItem('strava_auth_state');
+      sessionStorage.clear();
+
+      // Add a small delay to prevent rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
       if (!res.ok) throw new Error('Failed to get auth URL');
 
       const { url } = await res.json();
 
-      // Add a small delay to prevent rate limiting
+      // Add a small delay before redirect
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       window.location.href = url;
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to connect to Strava. Please wait a few moments and try again.",
+        description: "Failed to connect to Strava. Please wait 30 seconds and try again.",
         variant: "destructive",
       });
     } finally {
@@ -102,6 +107,7 @@ export default function Profile() {
         errorMessage = "Too many connection attempts. Please wait 30 seconds and try again.";
         // Clear any cached state
         localStorage.removeItem('strava_auth_error');
+        localStorage.removeItem('strava_auth_state');
         sessionStorage.clear();
       }
       toast({

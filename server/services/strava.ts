@@ -61,7 +61,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       redirect_uri: REDIRECT_URI, // Added this to ensure it matches
     });
 
-    console.log("Successfully exchanged code for tokens");
+    console.log("Successfully obtained Strava tokens");
     return {
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,

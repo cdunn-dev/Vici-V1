@@ -134,6 +134,7 @@ export async function registerRoutes(app: Express) {
     }
 
     try {
+      console.log("Generating Strava auth URL for user:", userId);
       const authUrl = getStravaAuthUrl(userId);
       console.log("Generated Strava auth URL:", authUrl);
       res.json({ url: authUrl });
