@@ -22,19 +22,26 @@ export interface StravaTokens {
 }
 
 export function getStravaAuthUrl(state: string): string {
+  if (!STRAVA_CLIENT_ID) {
+    throw new Error("STRAVA_CLIENT_ID is not configured");
+  }
+
   const params = new URLSearchParams({
-    client_id: STRAVA_CLIENT_ID!,
+    client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: "activity:read_all",
     state,
   });
 
-  return `${STRAVA_AUTH_URL}?${params.toString()}`;
+  const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
+  console.log("Generated Strava auth URL:", authUrl);
+  return authUrl;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
+    console.log("Attempting to exchange Strava code for tokens...");
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
@@ -42,12 +49,13 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       grant_type: "authorization_code",
     });
 
+    console.log("Successfully exchanged code for tokens");
     return {
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
       expires_at: response.data.expires_at,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
     throw error;
   }
@@ -69,16 +77,21 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
 }
 
 export async function getStravaActivities(accessToken: string, after?: number): Promise<any[]> {
-  const params = new URLSearchParams();
-  if (after) {
-    params.append("after", after.toString());
+  try {
+    const params = new URLSearchParams();
+    if (after) {
+      params.append("after", after.toString());
+    }
+
+    const response = await axios.get(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching Strava activities:", error.response?.data || error.message);
+    throw error;
   }
-
-  const response = await axios.get(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  return response.data;
 }
