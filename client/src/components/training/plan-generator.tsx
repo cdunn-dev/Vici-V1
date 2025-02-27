@@ -181,6 +181,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
   const handleSubmit = (data: PlanGeneratorFormData) => {
+    // When submitting the form, pass the data to preview
     if (onPreview) {
       const endDate = data.targetRace?.date
         ? new Date(data.targetRace.date)
@@ -194,8 +195,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
       onPreview(planData);
       setOpen(false);
-    } else {
-      generatePlan.mutate(data);
     }
   };
 
