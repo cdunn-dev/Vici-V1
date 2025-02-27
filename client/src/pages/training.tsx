@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import HeatMapCalendar from "@/components/training/heat-map-calendar";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -165,6 +166,24 @@ export default function Training() {
     }
   };
 
+  const calculateWorkoutIntensity = (workout: {
+    type: string;
+    distance: number;
+    description: string;
+  }): number => {
+    // Base intensity on workout type and distance
+    const typeIntensity = workout.type.toLowerCase().includes('interval') ? 1 :
+                         workout.type.toLowerCase().includes('tempo') ? 0.8 :
+                         workout.type.toLowerCase().includes('long') ? 0.6 :
+                         workout.type.toLowerCase().includes('easy') ? 0.3 : 0;
+
+    // Combine with distance factor (normalized to max ~20 miles)
+    const distanceIntensity = Math.min(1, workout.distance / 20);
+
+    // Weight type more heavily than distance
+    return (typeIntensity * 0.7) + (distanceIntensity * 0.3);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -250,19 +269,19 @@ export default function Training() {
         <TabsContent value="overall" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <CalendarView
+              <HeatMapCalendar
                 selectedDate={selectedDate}
                 onSelect={handleDateSelect}
-                events={trainingPlan.weeklyPlans.flatMap(week =>
+                workouts={trainingPlan.weeklyPlans.flatMap(week =>
                   week.workouts.map(workout => ({
                     date: new Date(workout.day),
-                    title: `${workout.type} - ${workout.distance} miles`,
+                    intensity: calculateWorkoutIntensity(workout),
                     type: workout.type,
+                    distance: workout.distance
                   }))
                 )}
                 startDate={new Date(trainingPlan.startDate)}
                 endDate={new Date(trainingPlan.endDate)}
-                targetRace={trainingPlan.targetRace}
               />
               <ProgramOverview
                 weeklyPlans={trainingPlan.weeklyPlans}
