@@ -1,37 +1,6 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// Implement exponential backoff retry
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
-): Promise<T> {
-  let lastError: any;
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-
-      // If it's not a rate limit error, throw immediately
-      if (error?.status !== 429) {
-        throw error;
-      }
-
-      // Wait with exponential backoff
-      const delay = baseDelay * Math.pow(2, i);
-      console.log(`Rate limited, retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-
-  throw lastError;
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 type TrainingPreferences = {
   goal: string;
@@ -44,8 +13,95 @@ type TrainingPreferences = {
   };
 };
 
+// Fallback training plan generator
+function generateBasicTrainingPlan(preferences: TrainingPreferences) {
+  const workoutTypes = {
+    easy: "Easy Run",
+    long: "Long Run",
+    tempo: "Tempo Run",
+    intervals: "Interval Training",
+    rest: "Rest Day"
+  };
+
+  // Calculate base distances based on weekly mileage
+  const easyDistance = Math.round(preferences.weeklyMileage * 0.15);
+  const longDistance = Math.round(preferences.weeklyMileage * 0.3);
+  const tempoDistance = Math.round(preferences.weeklyMileage * 0.2);
+  const intervalDistance = Math.round(preferences.weeklyMileage * 0.15);
+
+  // Generate 12 weeks of basic training
+  const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
+    const weekNumber = weekIndex + 1;
+    const phase = weekNumber <= 4 ? "Base Building" :
+                 weekNumber <= 8 ? "Peak Training" : "Taper";
+
+    // Adjust mileage based on phase
+    const multiplier = phase === "Taper" ? 0.8 :
+                      phase === "Peak Training" ? 1.1 : 1.0;
+
+    const workouts = [];
+    for (let day = 0; day < 7; day++) {
+      const date = new Date();
+      date.setDate(date.getDate() + (weekIndex * 7) + day);
+
+      let workout;
+      if (day === 0 || day === 2 || day === 4) { // Mon, Wed, Fri
+        workout = {
+          day: date.toISOString().split('T')[0],
+          type: workoutTypes.easy,
+          distance: Math.round(easyDistance * multiplier),
+          description: "Easy-paced run to build aerobic base. Keep heart rate in Zone 2."
+        };
+      } else if (day === 1) { // Tuesday
+        workout = {
+          day: date.toISOString().split('T')[0],
+          type: workoutTypes.intervals,
+          distance: Math.round(intervalDistance * multiplier),
+          description: "8-10 x 400m intervals at 5K race pace with 200m easy jog recovery."
+        };
+      } else if (day === 3) { // Thursday
+        workout = {
+          day: date.toISOString().split('T')[0],
+          type: workoutTypes.tempo,
+          distance: Math.round(tempoDistance * multiplier),
+          description: "20-30 minutes at half marathon pace, with warm-up and cool-down."
+        };
+      } else if (day === 5) { // Saturday
+        workout = {
+          day: date.toISOString().split('T')[0],
+          type: workoutTypes.long,
+          distance: Math.round(longDistance * multiplier),
+          description: "Long run at conversational pace. Focus on time on feet."
+        };
+      } else { // Sunday
+        workout = {
+          day: date.toISOString().split('T')[0],
+          type: workoutTypes.rest,
+          distance: 0,
+          description: "Rest and recovery day. Light stretching or cross-training optional."
+        };
+      }
+      workouts.push(workout);
+    }
+
+    return {
+      week: weekNumber,
+      phase,
+      totalMileage: Math.round(preferences.weeklyMileage * multiplier),
+      workouts
+    };
+  });
+
+  return { weeklyPlans };
+}
+
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
-  const prompt = `Generate a detailed running training plan with the following requirements:
+  try {
+    console.log("Generating training plan with preferences:", preferences);
+
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `Generate a detailed running training plan with the following requirements:
 - Goal: ${preferences.goal}
 - Current Level: ${preferences.currentLevel}
 - Weekly Mileage: ${preferences.weeklyMileage} miles
@@ -64,7 +120,7 @@ Generate a structured training plan that includes:
 5. Recovery weeks every 3-4 weeks
 6. Detailed workout descriptions with pacing guidance
 
-Format the response as a JSON object with the following structure:
+The response must be a valid JSON object with this exact structure:
 {
   "weeklyPlans": [
     {
@@ -87,35 +143,34 @@ Ensure the plan follows these guidelines:
 1. Progressive overload principle
 2. Adequate recovery between hard workouts
 3. Appropriate intensity distribution (80/20 rule)
-4. Periodization based on experience level and goals`;
+4. Periodization based on experience level and goals
 
-  try {
-    console.log("Generating training plan with preferences:", preferences);
+Return only the JSON object, no additional text.`;
 
-    const completion = await withRetry(() => 
-      openai.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
-        model: "gpt-3.5-turbo",
-        response_format: { type: "json_object" },
-      })
-    );
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
 
-    console.log("Successfully generated training plan");
-    const response = completion.choices[0].message.content;
-    return JSON.parse(response || "{}");
-  } catch (error: any) {
-    console.error("Error generating training plan:", error);
-
-    // Provide more specific error messages
-    if (error?.status === 429) {
-      throw new Error("Service is temporarily busy. Please try again in a few minutes.");
-    } else if (error?.status === 401) {
-      throw new Error("API authentication failed. Please contact support.");
-    } else {
-      throw new Error("Failed to generate training plan. Please try again.");
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("Error parsing Gemini response:", parseError);
+      console.log("Raw response:", text);
+      return generateBasicTrainingPlan(preferences);
     }
+  } catch (error) {
+    console.error("Error generating training plan:", error);
+    return generateBasicTrainingPlan(preferences);
   }
 }
+
+type WorkoutAnalysis = {
+  perceivedEffort: number;
+  actualPace: number;    // minutes per km
+  targetPace: number;    // minutes per km
+  distance: number;      // in meters
+  notes?: string;
+};
 
 export async function analyzeWorkoutAndSuggestAdjustments(
   recentWorkouts: WorkoutAnalysis[],
@@ -125,7 +180,10 @@ export async function analyzeWorkoutAndSuggestAdjustments(
     currentPhase: string;
   }
 ) {
-  const prompt = `Analyze the following recent workouts and suggest adjustments to the training plan:
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `Analyze the following recent workouts and suggest adjustments to the training plan:
 
 Recent Workouts:
 ${recentWorkouts.map(w => `
@@ -158,22 +216,31 @@ Consider these factors in your analysis:
 2. Progress towards target paces
 3. Recovery patterns
 4. Training load management
-5. Risk of overtraining`;
+5. Risk of overtraining
 
-  const completion = await openai.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    model: "gpt-3.5-turbo",
-    response_format: { type: "json_object" },
-  });
+Return only the JSON object, no additional text.`;
 
-  const response = completion.choices[0].message.content;
-  return JSON.parse(response || "{}");
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text();
+
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      console.error("Error parsing Gemini response:", parseError);
+      console.log("Raw response:", text);
+      return {
+        analysis: "Unable to analyze workouts at this time.",
+        adjustments: [],
+        confidenceScore: 0
+      };
+    }
+  } catch (error) {
+    console.error("Error analyzing workouts:", error);
+    return {
+      analysis: "Unable to analyze workouts at this time.",
+      adjustments: [],
+      confidenceScore: 0
+    };
+  }
 }
-
-type WorkoutAnalysis = {
-  perceivedEffort: number;
-  actualPace: number;    // minutes per km
-  targetPace: number;    // minutes per km
-  distance: number;      // in meters
-  notes?: string;
-};
