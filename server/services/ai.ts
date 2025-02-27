@@ -4,23 +4,44 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Implement exponential backoff retry
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      // If it's not a rate limit error, throw immediately
+      if (error?.status !== 429) {
+        throw error;
+      }
+
+      // Wait with exponential backoff
+      const delay = baseDelay * Math.pow(2, i);
+      console.log(`Rate limited, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 type TrainingPreferences = {
-  goal: string;          // e.g. "Complete first marathon", "Improve 5K time"
-  currentLevel: string;  // e.g. "Beginner", "Intermediate", "Advanced"
+  goal: string;
+  currentLevel: string;
   weeklyMileage: number;
   daysPerWeek: number;
   targetRace?: {
     distance: string;
     date: string;
   };
-};
-
-type WorkoutAnalysis = {
-  perceivedEffort: number;
-  actualPace: number;    // minutes per km
-  targetPace: number;    // minutes per km
-  distance: number;      // in meters
-  notes?: string;
 };
 
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
@@ -68,14 +89,32 @@ Ensure the plan follows these guidelines:
 3. Appropriate intensity distribution (80/20 rule)
 4. Periodization based on experience level and goals`;
 
-  const completion = await openai.chat.completions.create({
-    messages: [{ role: "user", content: prompt }],
-    model: "gpt-3.5-turbo",
-    response_format: { type: "json_object" },
-  });
+  try {
+    console.log("Generating training plan with preferences:", preferences);
 
-  const response = completion.choices[0].message.content;
-  return JSON.parse(response || "{}");
+    const completion = await withRetry(() => 
+      openai.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "gpt-3.5-turbo",
+        response_format: { type: "json_object" },
+      })
+    );
+
+    console.log("Successfully generated training plan");
+    const response = completion.choices[0].message.content;
+    return JSON.parse(response || "{}");
+  } catch (error: any) {
+    console.error("Error generating training plan:", error);
+
+    // Provide more specific error messages
+    if (error?.status === 429) {
+      throw new Error("Service is temporarily busy. Please try again in a few minutes.");
+    } else if (error?.status === 401) {
+      throw new Error("API authentication failed. Please contact support.");
+    } else {
+      throw new Error("Failed to generate training plan. Please try again.");
+    }
+  }
 }
 
 export async function analyzeWorkoutAndSuggestAdjustments(
@@ -130,3 +169,11 @@ Consider these factors in your analysis:
   const response = completion.choices[0].message.content;
   return JSON.parse(response || "{}");
 }
+
+type WorkoutAnalysis = {
+  perceivedEffort: number;
+  actualPace: number;    // minutes per km
+  targetPace: number;    // minutes per km
+  distance: number;      // in meters
+  notes?: string;
+};
