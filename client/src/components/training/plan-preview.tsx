@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import ProgramOverview from "./program-overview";
-import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock } from "lucide-react";
+import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity } from "lucide-react";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -36,7 +36,7 @@ interface PlanPreviewProps {
       preferredLongRunDay: string;
       coachingStyle: string;
     };
-    weeklyPlans?: any[]; // Will be populated after AI generates the plan
+    weeklyPlans?: any[];
   };
   onConfirm: () => void;
   onAdjust: (feedback: string) => void;
@@ -125,35 +125,87 @@ export default function PlanPreview({
 
           <Card className="shadow-md border-primary/20 bg-primary/5">
             <CardContent className="pt-6 pb-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <Target className="h-5 w-5" />
-                  <div className="font-medium">
-                    Training Goal
-                    <div className="text-sm text-muted-foreground">
-                      {planDetails.goal}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Goal and Race Information */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Target className="h-5 w-5" />
+                    <div className="font-medium">
+                      Training Goal
+                      <div className="text-sm text-muted-foreground">
+                        {planDetails.goal}
+                        <div className="text-xs mt-1">{planDetails.goalDescription}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {planDetails.targetRace && (
+                    <div className="flex items-center gap-2 text-primary">
+                      <Medal className="h-5 w-5" />
+                      <div className="font-medium">
+                        Target Race
+                        <div className="text-sm text-muted-foreground">
+                          {planDetails.targetRace.customDistance || planDetails.targetRace.distance}
+                          <div className="text-xs mt-1">
+                            Date: {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
+                            {planDetails.targetRace.goalTime && (
+                              <div>Goal Time: {planDetails.targetRace.goalTime}</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 text-primary">
+                    <CalendarClock className="h-5 w-5" />
+                    <div className="font-medium">
+                      Program Timeline
+                      <div className="text-sm text-muted-foreground">
+                        {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(planDetails.endDate, "MMMM d, yyyy")}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {planDetails.targetRace && (
+                {/* Training Preferences and Experience */}
+                <div className="space-y-4">
                   <div className="flex items-center gap-2 text-primary">
-                    <Medal className="h-5 w-5" />
+                    <Users className="h-5 w-5" />
                     <div className="font-medium">
-                      Race Date
+                      Experience Level
                       <div className="text-sm text-muted-foreground">
-                        {planDetails.targetRace.distance} on {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
+                        {planDetails.runningExperience.level} Runner
+                        <div className="text-xs mt-1">
+                          Fitness Level: {planDetails.runningExperience.fitnessLevel}
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
 
-                <div className="flex items-center gap-2 text-primary">
-                  <CalendarClock className="h-5 w-5" />
-                  <div className="font-medium">
-                    Program Timeline
-                    <div className="text-sm text-muted-foreground">
-                      {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(planDetails.endDate, "MMMM d, yyyy")}
+                  <div className="flex items-center gap-2 text-primary">
+                    <Calendar className="h-5 w-5" />
+                    <div className="font-medium">
+                      Weekly Schedule
+                      <div className="text-sm text-muted-foreground">
+                        {planDetails.trainingPreferences.weeklyRunningDays} running days per week
+                        <div className="text-xs mt-1">
+                          Long runs on {planDetails.trainingPreferences.preferredLongRunDay}s
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-primary">
+                    <Activity className="h-5 w-5" />
+                    <div className="font-medium">
+                      Training Volume
+                      <div className="text-sm text-muted-foreground">
+                        Up to {planDetails.trainingPreferences.maxWeeklyMileage} miles per week
+                        <div className="text-xs mt-1">
+                          {planDetails.trainingPreferences.weeklyWorkouts} quality workouts per week
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

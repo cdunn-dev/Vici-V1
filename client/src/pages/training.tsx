@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import ProgramProgressTracker from "@/components/training/program-progress-tracker";
 import ProgressTracker from "@/components/training/progress-tracker";
 
 // Define helper functions first
@@ -83,7 +82,41 @@ export default function Training() {
 
     setPreviewPlan(plan);
     setShowPreview(true);
-    setActiveTab("overall");
+  };
+
+  // Handle plan confirmation
+  const handleConfirmPlan = async () => {
+    try {
+      const response = await fetch(`/api/training-plans/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...previewPlan,
+          userId: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate plan");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+      toast({
+        title: "Success",
+        description: "Training plan has been created",
+        duration: 3000,
+      });
+      setShowPreview(false);
+      setActiveTab("current"); // Switch to This Week view after approval
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create training plan. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle plan adjustments
@@ -124,39 +157,6 @@ export default function Training() {
     }
   };
 
-  const handleConfirmPlan = async () => {
-    try {
-      const response = await fetch(`/api/training-plans/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...previewPlan,
-          userId: 1,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate plan");
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-      toast({
-        title: "Success",
-        description: "Training plan has been created",
-        duration: 3000,
-      });
-      setShowPreview(false);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create training plan. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   // Display loading state
   if (isLoading) {
     return (
@@ -167,19 +167,6 @@ export default function Training() {
             <Skeleton className="h-[200px] w-full" />
             <Skeleton className="h-[400px] w-full" />
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Display empty state with plan generator
-  if (!trainingPlan && !showPreview) {
-    return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Training</h1>
-          <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
-          <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
         </div>
       </div>
     );
@@ -238,24 +225,6 @@ export default function Training() {
     setSelectedDate(date);
   };
 
-  const calculateWorkoutIntensity = (workout: {
-    type: string;
-    distance: number;
-    description: string;
-  }): number => {
-    // Base intensity on workout type and distance
-    const typeIntensity = workout.type.toLowerCase().includes('interval') ? 1 :
-                         workout.type.toLowerCase().includes('tempo') ? 0.8 :
-                         workout.type.toLowerCase().includes('long') ? 0.6 :
-                         workout.type.toLowerCase().includes('easy') ? 0.3 : 0;
-
-    // Combine with distance factor (normalized to max ~20 miles)
-    const distanceIntensity = Math.min(1, workout.distance / 20);
-
-    // Weight type more heavily than distance
-    return (typeIntensity * 0.7) + (distanceIntensity * 0.3);
-  };
-
   const handleAIQuery = async (query: string, type: 'overall' | 'weekly') => {
     try {
       setIsSubmittingQuery(true);
@@ -271,7 +240,6 @@ export default function Training() {
       });
 
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.details || data.error || 'Failed to get AI response');
       }
@@ -327,135 +295,116 @@ export default function Training() {
     }
   };
 
-  // Calculate completed miles for current week
-  const calculateCompletedMiles = () => {
-    if (!currentWeek) return 0;
-    // TODO: In the future, this will come from completed workouts
-    return 0; // For now, returning 0 as we haven't implemented workout completion
-  };
+  // If in preview mode or no plan exists, show the preview/creation flow
+  if (showPreview || !trainingPlan) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Training</h1>
+        </div>
 
-  // Calculate completed weeks
-  const getCompletedWeeks = () => {
-    if (!trainingPlan?.weeklyPlans) return 0;
-    const today = new Date();
-    return trainingPlan.weeklyPlans.filter(week => {
-      const lastDay = new Date(week.workouts[week.workouts.length - 1].day);
-      return lastDay < today;
-    }).length;
-  };
+        {showPreview ? (
+          <PlanPreview
+            planDetails={previewPlan}
+            onConfirm={handleConfirmPlan}
+            onAdjust={handleAdjustPlan}
+            onBack={() => setShowPreview(false)}
+          />
+        ) : (
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
+            <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
+          </div>
+        )}
+      </div>
+    );
+  }
 
-
+  // Show the main training interface with tabs
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Training</h1>
       </div>
 
-      {showPreview ? (
-        <PlanPreview
-          planDetails={previewPlan}
-          onConfirm={handleConfirmPlan}
-          onAdjust={handleAdjustPlan}
-          onBack={() => setShowPreview(false)}
-        />
-      ) : trainingPlan ? (
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex justify-center">
-            <TabsList className="w-full max-w-[240px] h-9">
-              <TabsTrigger value="current">This Week</TabsTrigger>
-              <TabsTrigger value="overall">Training Program</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="mt-6">
-            <TabsContent value="current" className="space-y-6">
-              {currentWeek && (
-                <ProgressTracker
-                  completedMiles={calculateCompletedMiles()}
-                  totalMiles={currentWeek.totalMileage}
-                />
-              )}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                  {workoutOptions && (
-                    <DailyWorkout
-                      date={selectedDate}
-                      workout={workoutOptions}
-                    />
-                  )}
-
-                  {currentWeek && (
-                    <WeeklyOverview
-                      week={currentWeek}
-                      onSelectDay={handleDateSelect}
-                      selectedDate={selectedDate}
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium">Ask About Today's Training</h3>
-                  <Textarea
-                    placeholder="Ask about today's workout, this week's focus, or request modifications..."
-                    value={weeklyAiQuery}
-                    onChange={(e) => setWeeklyAiQuery(e.target.value)}
-                    className="min-h-[100px] resize-none"
-                  />
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
-                    disabled={!weeklyAiQuery || isSubmittingQuery}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Get Workout Advice
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="overall" className="space-y-6">
-              {showPreview ? (
-                <PlanPreview
-                  planDetails={previewPlan}
-                  onConfirm={handleConfirmPlan}
-                  onAdjust={handleAdjustPlan}
-                  onBack={() => setShowPreview(false)}
-                />
-              ) : (
-                <>
-                  <div className="flex justify-end">
-                    <PlanGenerator
-                      existingPlan={!!trainingPlan}
-                      onPreview={handlePreviewPlan}
-                    />
-                  </div>
-                  {trainingPlan && (
-                    <ProgramOverview
-                      weeklyPlans={trainingPlan.weeklyPlans}
-                      onSelectWeek={(weekNumber) => {
-                        const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                        if (week) {
-                          setSelectedDate(new Date(week.workouts[0].day));
-                        }
-                      }}
-                      onSelectDay={handleDateSelect}
-                      selectedDate={selectedDate}
-                      goal={trainingPlan.goal || "No goal set"}
-                      endDate={new Date(trainingPlan.endDate)}
-                      targetRace={trainingPlan.targetRace}
-                    />
-                  )}
-                </>
-              )}
-            </TabsContent>
-          </div>
-        </Tabs>
-      ) : (
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
-          <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex justify-center">
+          <TabsList className="w-full max-w-[240px] h-9">
+            <TabsTrigger value="current">This Week</TabsTrigger>
+            <TabsTrigger value="overall">Training Program</TabsTrigger>
+          </TabsList>
         </div>
-      )}
+
+        <div className="mt-6">
+          <TabsContent value="current" className="space-y-6">
+            {currentWeek && (
+              <ProgressTracker
+                completedMiles={calculateCompletedMiles()}
+                totalMiles={currentWeek.totalMileage}
+              />
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                {workoutOptions && (
+                  <DailyWorkout
+                    date={selectedDate}
+                    workout={workoutOptions}
+                  />
+                )}
+
+                {currentWeek && (
+                  <WeeklyOverview
+                    week={currentWeek}
+                    onSelectDay={handleDateSelect}
+                    selectedDate={selectedDate}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium">Ask About Today's Training</h3>
+                <Textarea
+                  placeholder="Ask about today's workout, this week's focus, or request modifications..."
+                  value={weeklyAiQuery}
+                  onChange={(e) => setWeeklyAiQuery(e.target.value)}
+                  className="min-h-[100px] resize-none"
+                />
+                <Button
+                  className="w-full gap-2"
+                  onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
+                  disabled={!weeklyAiQuery || isSubmittingQuery}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Get Workout Advice
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="overall" className="space-y-6">
+            <div className="flex justify-end">
+              <PlanGenerator
+                existingPlan={!!trainingPlan}
+                onPreview={handlePreviewPlan}
+              />
+            </div>
+            <ProgramOverview
+              weeklyPlans={trainingPlan.weeklyPlans}
+              onSelectWeek={(weekNumber) => {
+                const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                if (week) {
+                  setSelectedDate(new Date(week.workouts[0].day));
+                }
+              }}
+              onSelectDay={handleDateSelect}
+              selectedDate={selectedDate}
+              goal={trainingPlan.goal || "No goal set"}
+              endDate={new Date(trainingPlan.endDate)}
+              targetRace={trainingPlan.targetRace}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
