@@ -201,10 +201,12 @@ export default function Training() {
       </div>
 
       <Tabs defaultValue="current" className="space-y-8">
-        <TabsList className="w-full justify-center">
-          <TabsTrigger value="current">This Week</TabsTrigger>
-          <TabsTrigger value="overall">Training Program</TabsTrigger>
-        </TabsList>
+        <div className="flex justify-center">
+          <TabsList className="w-full max-w-md">
+            <TabsTrigger value="current">This Week</TabsTrigger>
+            <TabsTrigger value="overall">Training Program</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="current" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -258,6 +260,9 @@ export default function Training() {
                     type: workout.type,
                   }))
                 )}
+                startDate={new Date(trainingPlan.startDate)}
+                endDate={new Date(trainingPlan.endDate)}
+                targetRace={trainingPlan.targetRace}
               />
               <ProgramOverview
                 weeklyPlans={trainingPlan.weeklyPlans}
@@ -269,6 +274,7 @@ export default function Training() {
                 }}
                 onSelectDay={handleDateSelect}
                 selectedDate={selectedDate}
+                targetRace={trainingPlan.targetRace}
               />
             </div>
 
