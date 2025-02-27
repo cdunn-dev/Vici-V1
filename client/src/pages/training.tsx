@@ -67,17 +67,30 @@ export default function Training() {
     description: selectedDayWorkout.description,
     options: [
       {
-        title: "Original Plan",
+        title: "Recommended Workout",
         description: selectedDayWorkout.description,
       },
-      {
-        title: "Alternative 1",
-        description: `Modified ${selectedDayWorkout.type.toLowerCase()} with different intensity: ${selectedDayWorkout.description.replace(/\d+/g, num => Math.round(Number(num) * 0.9))}`,
-      },
-      {
-        title: "Alternative 2",
-        description: `Alternative ${selectedDayWorkout.type.toLowerCase()} workout: ${selectedDayWorkout.description.replace(/\d+/g, num => Math.round(Number(num) * 1.1))}`,
-      },
+      ...(selectedDayWorkout.type.toLowerCase().includes("easy") ||
+        selectedDayWorkout.type.toLowerCase().includes("recovery") ? [] : [
+        {
+          title: "Alternative 1",
+          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
+            selectedDayWorkout.description
+              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
+              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
+          }`,
+        },
+        {
+          title: "Alternative 2",
+          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
+            selectedDayWorkout.type.includes("Interval") ?
+              selectedDayWorkout.description
+                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
+              selectedDayWorkout.description
+                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
+          }`,
+        },
+      ]),
     ],
   } : null;
 
@@ -164,7 +177,7 @@ export default function Training() {
               <div className="mt-8">
                 <PlanRecommendations
                   planId={trainingPlan?.id || 1}
-                  recentWorkouts={[]} // This would be populated with actual workout data
+                  recentWorkouts={[]}
                 />
               </div>
             </div>
