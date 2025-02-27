@@ -33,9 +33,9 @@ const getCurrentWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
         (lastDay >= weekStart && lastDay <= weekEnd)
       );
     });
-  };
+};
 
-  const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
+const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null, selectedDate: Date) => {
     if (!trainingPlan?.weeklyPlans) return null;
     return trainingPlan.weeklyPlans.find(week => {
       const workoutDates = week.workouts.map(w => new Date(w.day));
@@ -43,7 +43,7 @@ const getCurrentWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
       const lastDay = workoutDates[workoutDates.length - 1];
       return selectedDate >= firstDay && selectedDate <= lastDay;
     });
-  };
+};
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -186,7 +186,7 @@ export default function Training() {
   }
 
   const currentWeek = getCurrentWeek(trainingPlan);
-  const selectedWeek = getSelectedWeek(trainingPlan);
+  const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
 
   // Find the selected day's workout
   const selectedDayWorkout = selectedWeek?.workouts.find(
