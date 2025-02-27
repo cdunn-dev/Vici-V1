@@ -30,7 +30,7 @@ export default function Training() {
         throw new Error("Failed to fetch training plan");
       }
       const plans = await response.json();
-      return plans[plans.length - 1];
+      return plans.length > 0 ? plans[plans.length - 1] : null;
     },
   });
 
@@ -119,7 +119,6 @@ export default function Training() {
         description: data.reasoning,
         action: data.suggestedPlan ? (
           <Button onClick={() => {
-            // Implement plan update logic
             toast({
               title: "Success",
               description: "Training plan updated successfully",
@@ -146,14 +145,26 @@ export default function Training() {
     return <div>Loading training plan...</div>;
   }
 
+  if (!trainingPlan) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Training</h1>
+          <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
+          <PlanGenerator existingPlan={false} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Training</h1>
         <div className="flex justify-center gap-4">
-          <PlanGenerator existingPlan={!!trainingPlan} />
+          <PlanGenerator existingPlan={true} />
           <PlanReview
-            planId={trainingPlan?.id}
+            planId={trainingPlan.id}
             currentPlan={trainingPlan}
             onPlanUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] })}
           />
@@ -213,18 +224,18 @@ export default function Training() {
               <CalendarView
                 selectedDate={selectedDate}
                 onSelect={handleDateSelect}
-                events={trainingPlan?.weeklyPlans?.flatMap(week =>
+                events={trainingPlan.weeklyPlans.flatMap(week =>
                   week.workouts.map(workout => ({
                     date: new Date(workout.day),
                     title: `${workout.type} - ${workout.distance} miles`,
                   }))
-                ) || []}
+                )}
               />
               <div className="mt-8">
                 <ProgramOverview
-                  weeklyPlans={trainingPlan?.weeklyPlans || []}
+                  weeklyPlans={trainingPlan.weeklyPlans}
                   onSelectWeek={(weekNumber) => {
-                    const week = trainingPlan?.weeklyPlans.find(w => w.week === weekNumber);
+                    const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
                     if (week) {
                       setSelectedDate(new Date(week.workouts[0].day));
                     }
