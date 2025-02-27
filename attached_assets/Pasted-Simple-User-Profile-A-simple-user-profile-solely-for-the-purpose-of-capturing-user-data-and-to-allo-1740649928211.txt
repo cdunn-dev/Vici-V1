@@ -1,0 +1,23 @@
+Simple User Profile
+A simple user profile solely for the purpose of capturing user data, and to allow expanded user/community functionality later.
+Name
+DOB (Age)
+Gender
+Personal bests by distance
+App connections
+Strava, Garmin, Coros, Whoop, etc
+Personalised Training Plan Creation
+A personalised training plan creation widget informed by historical running data from Strava or other platforms, and a series of runner responses to questions about their training. Runners will be able to review and adjust the overall plan to ensure it meets their needs before approving and getting started.
+Training Home
+A dashboard to view your training plan with the ability to “zoom in” and “zoom out.” This hub should provide an overarching view of where the athlete is at in their training cycle, get a preview of what is coming in the days/weeks ahead, and dive deep into their planned run/workout for the day. Athletes should also be able to see their training program through the lens of training “phases” (ie, base building, strength building, speed development/refinement, tapering) and develop a deep understanding of the “why” behind specific runs/workouts each day. Runners should also be able to make “lightweight” adjustments to their training program in real time based on things like upcoming travel, illness, injury, fatigue, etc.
+Training Plan Overview (Calendar + Week + Day)
+Weekly Overview
+Daily Overview (with some optionality?)
+Runner Input field to make plan adjustments
+Training Log/Runner Journal
+A simple daily log of runner activities + journal entries. Ideally we bring run data over directly from Strava (Garmin, Coros, etc), and give runners the ability to log things like “perceived effort” and create “journal” entries describing how the run went. This behaviour could build loyalty to the app, but also inform future “AI” components to our paid coaching product.
+Activity tile with KPIs (ie, miles, pace, HR, laps, etc) via API
+Daily workout “completion” check-mark
+Perceived effort slider
+Journal Entry/Notes
+Training Log (aggregated view of activity tiles by date - a feed)
