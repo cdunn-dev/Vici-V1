@@ -169,7 +169,7 @@ export async function registerRoutes(app: Express) {
 
       console.log("Exchanging code for tokens...");
       const tokens = await exchangeStravaCode(code as string);
-      console.log("Successfully obtained Strava tokens");
+      console.log("Successfully obtained Strava tokens:", tokens); //Added more detailed logging
 
       const user = await storage.getUser(parseInt(userId as string));
       if (!user) {
