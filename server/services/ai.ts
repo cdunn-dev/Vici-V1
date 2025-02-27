@@ -32,13 +32,16 @@ export async function generateTrainingPlan(preferences: TrainingPreferences) {
 ${preferences.targetRace ? `- Target Race: ${preferences.targetRace.distance} on ${preferences.targetRace.date}` : ''}
 
 Generate a structured training plan that includes:
-1. Weekly mileage targets
-2. Daily workouts with:
-   - Type (easy run, tempo, intervals, etc.)
-   - Distance
-   - Description
-3. Training phases
-4. Recovery periods
+1. Weekly mileage targets that gradually increase
+2. Daily workouts incorporating:
+   - Easy runs for recovery
+   - Speed work (intervals, tempo runs)
+   - Long runs for endurance
+   - Rest/cross-training days
+3. Training phases (base building, peak training, taper)
+4. Progression that follows the 10% rule for weekly mileage increases
+5. Recovery weeks every 3-4 weeks
+6. Detailed workout descriptions with pacing guidance
 
 Format the response as a JSON object with the following structure:
 {
@@ -49,15 +52,21 @@ Format the response as a JSON object with the following structure:
       "totalMileage": 25,
       "workouts": [
         {
-          "day": "Monday",
+          "day": "2024-03-01",
           "type": "Easy Run",
           "distance": 5,
-          "description": "Easy-paced run to build aerobic base"
+          "description": "Easy-paced run to build aerobic base. Keep heart rate in Zone 2 (60-70% max HR)."
         }
       ]
     }
   ]
-}`;
+}
+
+Ensure the plan follows these guidelines:
+1. Progressive overload principle
+2. Adequate recovery between hard workouts
+3. Appropriate intensity distribution (80/20 rule)
+4. Periodization based on experience level and goals`;
 
   const completion = await openai.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
@@ -92,7 +101,7 @@ Current Training Plan:
 - Weekly Mileage: ${currentPlan.weeklyMileage} miles
 - Current Phase: ${currentPlan.currentPhase}
 
-Provide recommendations in JSON format:
+Analyze the data and provide recommendations in JSON format:
 {
   "analysis": "Brief analysis of performance trends",
   "adjustments": [
@@ -103,7 +112,14 @@ Provide recommendations in JSON format:
     }
   ],
   "confidenceScore": 0.85
-}`;
+}
+
+Consider these factors in your analysis:
+1. Perceived effort vs actual pace relationship
+2. Progress towards target paces
+3. Recovery patterns
+4. Training load management
+5. Risk of overtraining`;
 
   const completion = await openai.chat.completions.create({
     messages: [{ role: "user", content: prompt }],
