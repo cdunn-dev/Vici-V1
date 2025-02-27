@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 type TrainingPreferences = {
   goal: string;
@@ -99,32 +103,26 @@ export async function generateTrainingPlan(preferences: TrainingPreferences) {
   try {
     console.log("Generating training plan with preferences:", preferences);
 
-    // Make sure the API key is set properly
-    if (!process.env.GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is not set");
+    if (!process.env.OPENAI_API_KEY) {
+      console.error("OPENAI_API_KEY is not set");
       return generateBasicTrainingPlan(preferences);
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `Generate a detailed running training plan with the following requirements:
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert running coach who creates detailed training plans."
+        },
+        {
+          role: "user",
+          content: `Generate a detailed running training plan with the following requirements:
 - Goal: ${preferences.goal}
 - Current Level: ${preferences.currentLevel}
 - Weekly Mileage: ${preferences.weeklyMileage} miles
 - Training Days: ${preferences.daysPerWeek} days per week
 ${preferences.targetRace ? `- Target Race: ${preferences.targetRace.distance} on ${preferences.targetRace.date}` : ''}
-
-Generate a structured training plan that includes:
-1. Weekly mileage targets that gradually increase
-2. Daily workouts incorporating:
-   - Easy runs for recovery
-   - Speed work (intervals, tempo runs)
-   - Long runs for endurance
-   - Rest/cross-training days
-3. Training phases (base building, peak training, taper)
-4. Progression that follows the 10% rule for weekly mileage increases
-5. Recovery weeks every 3-4 weeks
-6. Detailed workout descriptions with pacing guidance
 
 The response must be a valid JSON object with this exact structure:
 {
@@ -138,24 +136,22 @@ The response must be a valid JSON object with this exact structure:
           "day": "2024-03-01",
           "type": "Easy Run",
           "distance": 5,
-          "description": "Easy-paced run to build aerobic base. Keep heart rate in Zone 2 (60-70% max HR)."
+          "description": "Easy-paced run to build aerobic base. Keep heart rate in Zone 2."
         }
       ]
     }
   ]
-}
-
-Return only the JSON object, no additional text.`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
     try {
-      return JSON.parse(text);
+      return JSON.parse(response.choices[0].message.content);
     } catch (parseError) {
-      console.error("Error parsing Gemini response:", parseError);
-      console.log("Raw response:", text);
+      console.error("Error parsing OpenAI response:", parseError);
+      console.log("Raw response:", response.choices[0].message.content);
       return generateBasicTrainingPlan(preferences);
     }
   } catch (error) {
@@ -181,9 +177,20 @@ export async function analyzeWorkoutAndSuggestAdjustments(
   }
 ) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
+    }
 
-    const prompt = `Analyze the following recent workouts and suggest adjustments to the training plan:
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert running coach analyzing workout data and providing training recommendations."
+        },
+        {
+          role: "user",
+          content: `Analyze these recent workouts and suggest adjustments:
 
 Recent Workouts:
 ${recentWorkouts.map(w => `
@@ -198,7 +205,7 @@ Current Training Plan:
 - Weekly Mileage: ${currentPlan.weeklyMileage} miles
 - Current Phase: ${currentPlan.currentPhase}
 
-Analyze the data and provide recommendations in JSON format:
+Provide recommendations in JSON format:
 {
   "analysis": "Brief analysis of performance trends",
   "adjustments": [
@@ -209,32 +216,13 @@ Analyze the data and provide recommendations in JSON format:
     }
   ],
   "confidenceScore": 0.85
-}
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-Consider these factors in your analysis:
-1. Perceived effort vs actual pace relationship
-2. Progress towards target paces
-3. Recovery patterns
-4. Training load management
-5. Risk of overtraining
-
-Return only the JSON object, no additional text.`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-
-    try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      console.error("Error parsing Gemini response:", parseError);
-      console.log("Raw response:", text);
-      return {
-        analysis: "Unable to analyze workouts at this time.",
-        adjustments: [],
-        confidenceScore: 0
-      };
-    }
+    return JSON.parse(response.choices[0].message.content);
   } catch (error) {
     console.error("Error analyzing workouts:", error);
     return {
@@ -250,22 +238,27 @@ export async function generateTrainingPlanAdjustments(
   currentPlan: any
 ) {
   try {
-    // Make sure the API key is set properly
-    if (!process.env.GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY is not set");
-      throw new Error("Gemini API key not configured");
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    const prompt = `Review this training plan feedback and suggest appropriate adjustments:
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert running coach reviewing training plan feedback and suggesting appropriate adjustments."
+        },
+        {
+          role: "user",
+          content: `Review this training plan feedback and suggest appropriate adjustments:
 
 Feedback: "${feedback}"
 
 Current Training Plan:
 ${JSON.stringify(currentPlan, null, 2)}
 
-Analyze the feedback and provide adjustments in this JSON format:
+Provide adjustments in JSON format:
 {
   "reasoning": "Detailed explanation of why these changes are recommended",
   "suggestedPlan": {
@@ -273,28 +266,13 @@ Analyze the feedback and provide adjustments in this JSON format:
       // Modified weekly plans following the same structure as the current plan
     ]
   }
-}
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-Consider these factors when suggesting adjustments:
-1. Maintain overall training progression
-2. Address the specific concerns in the feedback
-3. Keep the adjustments realistic and achievable
-4. Preserve the basic structure while modifying specific aspects
-5. Include clear explanations for recommended changes
-
-Return only the JSON object, no additional text.`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-
-    try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      console.error("Error parsing Gemini response:", parseError);
-      console.log("Raw response:", text);
-      throw new Error("Failed to parse AI response");
-    }
+    return JSON.parse(response.choices[0].message.content);
   } catch (error) {
     console.error("Error generating plan adjustments:", error);
     throw error;
