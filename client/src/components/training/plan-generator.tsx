@@ -41,13 +41,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, ChevronRight, ChevronLeft } from "lucide-react";
 
 const planGeneratorSchema = z.object({
   goal: z.enum(["Personal Best", "Run Fast", "Run Far", "First Race", "Get Fit", "Be Healthy"]),
   goalDescription: z.string().min(1, "Please describe your goal"),
-
   targetRace: z.object({
     distance: z.enum(["5k", "10k", "Half-Marathon", "Marathon", "50k", "100k", "Other"]).optional(),
     customDistance: z.string().optional(),
@@ -55,16 +59,13 @@ const planGeneratorSchema = z.object({
     previousBest: z.string().optional(),
     goalTime: z.string().optional(),
   }).optional(),
-
   runningExperience: z.object({
     level: z.enum(["Beginner", "Intermediate", "Advanced"]),
     fitnessLevel: z.enum(["Very fit", "Solid base", "Out of shape", "Never run before"]),
-    personalBests: z.record(z.string()),
   }),
-
   trainingPreferences: z.object({
     weeklyRunningDays: z.number().min(1).max(7),
-    maxWeeklyMileage: z.number().min(1).max(150),
+    maxWeeklyMileage: z.number().min(5).max(150),
     weeklyWorkouts: z.number().min(0).max(3),
     preferredLongRunDay: z.enum([
       "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
@@ -102,10 +103,13 @@ const coachingStyleDescriptions = {
   Hybrid: "Flexible combination of different coaching approaches",
 };
 
+const TOTAL_SCREENS = 11; 
+
 export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [currentScreen, setCurrentScreen] = useState(1);
+  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<PlanGeneratorFormData>({
@@ -114,12 +118,11 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
       runningExperience: {
         level: "Beginner",
         fitnessLevel: "Out of shape",
-        personalBests: {},
       },
       trainingPreferences: {
-        weeklyRunningDays: 4,
-        maxWeeklyMileage: 20,
-        weeklyWorkouts: 1,
+        weeklyRunningDays: 4, 
+        maxWeeklyMileage: 20, 
+        weeklyWorkouts: 1, 
         preferredLongRunDay: "Saturday",
         coachingStyle: "Collaborative",
       },
@@ -130,7 +133,7 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
     mutationFn: async (data: PlanGeneratorFormData) => {
       const res = await apiRequest("POST", "/api/training-plans/generate", {
         ...data,
-        userId: 1, 
+        userId: 1,
       });
       return res.json();
     },
@@ -140,9 +143,10 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
       toast({
         title: "Success!",
         description: "Your AI training plan has been generated.",
+        duration: 3000, 
       });
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to generate training plan. Please try again.",
@@ -153,12 +157,13 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
 
   const handleNext = () => {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
-    const hasRaceDate = form.getValues("targetRace")?.date;
 
     if (currentScreen === 2 && !targetRaceSelected) {
-      setCurrentScreen(6); 
-    } else if (currentScreen === 8 && (!targetRaceSelected || !hasRaceDate)) {
-      setCurrentScreen(9); 
+      setCurrentScreen(4); 
+    } else if (currentScreen === 2 && targetRaceSelected === "Other") {
+      setCurrentScreen(3); 
+    } else if (currentScreen === 2 && targetRaceSelected) {
+      setCurrentScreen(4); 
     } else {
       setCurrentScreen(currentScreen + 1);
     }
@@ -166,22 +171,25 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
 
   const handleBack = () => {
     const targetRaceSelected = form.getValues("targetRace")?.distance;
-    const hasRaceDate = form.getValues("targetRace")?.date;
 
-    if (currentScreen === 6 && !targetRaceSelected) {
+    if (currentScreen === 4 && !targetRaceSelected) {
       setCurrentScreen(2); 
-    } else if (currentScreen === 9 && (!targetRaceSelected || !hasRaceDate)) {
-      setCurrentScreen(7); 
+    } else if (currentScreen === 4 && targetRaceSelected === "Other") {
+      setCurrentScreen(3); 
     } else {
       setCurrentScreen(currentScreen - 1);
     }
   };
 
   const handleSubmit = (data: PlanGeneratorFormData) => {
+    setShowPreview(true);
+  };
+
+  const handleConfirmPlan = () => {
     if (existingPlan) {
       setShowConfirmDialog(true);
     } else {
-      generatePlan.mutate(data);
+      generatePlan.mutate(form.getValues());
     }
   };
 
@@ -198,337 +206,358 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
       case 9:
       case 10:
       case 11:
-      case 12:
-      case 13:
         return (
-          <div className="space-y-4">
-            {/* Screen components */}
-            {currentScreen === 1 && (
-              <>
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <Progress value={(currentScreen / TOTAL_SCREENS) * 100} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                Step {currentScreen} of {TOTAL_SCREENS}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {currentScreen === 1 && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="goal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>What's your training goal?</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your goal" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Personal Best">Set a Personal Best</SelectItem>
+                            <SelectItem value="Run Fast">Run Fast</SelectItem>
+                            <SelectItem value="Run Far">Run Far</SelectItem>
+                            <SelectItem value="First Race">Complete My First Race</SelectItem>
+                            <SelectItem value="Get Fit">Get Fit</SelectItem>
+                            <SelectItem value="Be Healthy">Be Healthy</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="goalDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tell us more about your goal</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="E.g., I want to complete my first marathon in under 4 hours"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {currentScreen === 2 && (
                 <FormField
                   control={form.control}
-                  name="goal"
+                  name="targetRace.distance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>What's your training goal?</FormLabel>
+                      <FormLabel>Are you training for a specific race distance?</FormLabel>
+                      <FormDescription>Optional - select if you're targeting a specific race</FormDescription>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select your goal" />
+                            <SelectValue placeholder="Select race distance" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Personal Best">Set a Personal Best</SelectItem>
-                          <SelectItem value="Run Fast">Run Fast</SelectItem>
-                          <SelectItem value="Run Far">Run Far</SelectItem>
-                          <SelectItem value="First Race">Complete My First Race</SelectItem>
-                          <SelectItem value="Get Fit">Get Fit</SelectItem>
-                          <SelectItem value="Be Healthy">Be Healthy</SelectItem>
+                          <SelectItem value="5k">5K</SelectItem>
+                          <SelectItem value="10k">10K</SelectItem>
+                          <SelectItem value="Half-Marathon">Half Marathon</SelectItem>
+                          <SelectItem value="Marathon">Marathon</SelectItem>
+                          <SelectItem value="50k">50K</SelectItem>
+                          <SelectItem value="100k">100K</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="goalDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tell us more about your goal</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="E.g., I want to complete my first marathon in under 4 hours"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
-            {currentScreen === 2 && (
-              <FormField
-                control={form.control}
-                name="targetRace.distance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Are you training for a specific race distance?</FormLabel>
-                    <FormDescription>Optional - select if you're targeting a specific race</FormDescription>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select race distance" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="5k">5K</SelectItem>
-                        <SelectItem value="10k">10K</SelectItem>
-                        <SelectItem value="Half-Marathon">Half Marathon</SelectItem>
-                        <SelectItem value="Marathon">Marathon</SelectItem>
-                        <SelectItem value="50k">50K</SelectItem>
-                        <SelectItem value="100k">100K</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 3 && (
-              <FormField
-                control={form.control}
-                name="targetRace.customDistance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Custom Race Distance</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter custom distance" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 4 && (
-              <FormField
-                control={form.control}
-                name="targetRace.date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Race Date (Optional)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 5 && (
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="targetRace.previousBest"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Previous Best Time (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          step="1"
-                          {...field}
-                          placeholder="HH:MM:SS"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              )}
 
+              {currentScreen === 3 && (
                 <FormField
                   control={form.control}
-                  name="targetRace.goalTime"
+                  name="targetRace.customDistance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Goal Time (Optional)</FormLabel>
+                      <FormLabel>Custom Race Distance</FormLabel>
                       <FormControl>
-                        <Input
-                          type="time"
-                          step="1"
-                          {...field}
-                          placeholder="HH:MM:SS"
-                        />
+                        <Input placeholder="Enter custom distance" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            )}
-            {currentScreen === 6 && (
-              <FormField
-                control={form.control}
-                name="runningExperience.level"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Running Experience Level</FormLabel>
-                    <FormDescription>{experienceLevelDescriptions[field.value as keyof typeof experienceLevelDescriptions]}</FormDescription>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+              )}
+
+              {currentScreen === 4 && (
+                <FormField
+                  control={form.control}
+                  name="targetRace.date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Race Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={
+                                "w-full pl-3 text-left font-normal"
+                              }
+                            >
+                              {field.value ? (
+                                format(new Date(field.value), "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value ? new Date(field.value) : undefined}
+                            onSelect={(date) => field.onChange(date?.toISOString())}
+                            disabled={(date) => date < new Date()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 5 && (
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="targetRace.previousBest"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Previous Best Time (Optional)</FormLabel>
+                        <FormDescription>Enter your best time for this distance (HH:MM:SS)</FormDescription>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            step="1"
+                            {...field}
+                            className="text-center text-lg"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="targetRace.goalTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Goal Time (Optional)</FormLabel>
+                        <FormDescription>Enter your target time for this race (HH:MM:SS)</FormDescription>
+                        <FormControl>
+                          <Input
+                            type="time"
+                            step="1"
+                            {...field}
+                            className="text-center text-lg"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {currentScreen === 6 && (
+                <FormField
+                  control={form.control}
+                  name="runningExperience.level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Running Experience Level</FormLabel>
+                      <FormDescription>{experienceLevelDescriptions[field.value as keyof typeof experienceLevelDescriptions]}</FormDescription>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Beginner">Beginner</SelectItem>
+                          <SelectItem value="Intermediate">Intermediate</SelectItem>
+                          <SelectItem value="Advanced">Advanced</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 7 && (
+                <FormField
+                  control={form.control}
+                  name="runningExperience.fitnessLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Fitness Level</FormLabel>
+                      <FormDescription>{fitnessLevelDescriptions[field.value as keyof typeof fitnessLevelDescriptions]}</FormDescription>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your fitness level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Very fit">Very fit</SelectItem>
+                          <SelectItem value="Solid base">Solid base</SelectItem>
+                          <SelectItem value="Out of shape">Out of shape</SelectItem>
+                          <SelectItem value="Never run before">Never run before</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 8 && (
+                <FormField
+                  control={form.control}
+                  name="trainingPreferences.weeklyRunningDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weekly Running Days</FormLabel>
+                      <FormDescription>How many days per week would you like to run?</FormDescription>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your level" />
-                        </SelectTrigger>
+                        <Slider
+                          min={1}
+                          max={7}
+                          step={1}
+                          value={[field.value]}
+                          onValueChange={(vals) => field.onChange(vals[0])}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Beginner">Beginner</SelectItem>
-                        <SelectItem value="Intermediate">Intermediate</SelectItem>
-                        <SelectItem value="Advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 7 && (
-              <FormField
-                control={form.control}
-                name="runningExperience.fitnessLevel"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Fitness Level</FormLabel>
-                    <FormDescription>{fitnessLevelDescriptions[field.value as keyof typeof fitnessLevelDescriptions]}</FormDescription>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <div className="text-sm text-muted-foreground text-center">
+                        {field.value} days per week
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 9 && (
+                <FormField
+                  control={form.control}
+                  name="trainingPreferences.maxWeeklyMileage"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Maximum Weekly Mileage</FormLabel>
+                      <FormDescription>
+                        What's the highest weekly mileage you'd like to reach during training?
+                      </FormDescription>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your fitness level" />
-                        </SelectTrigger>
+                        <Slider
+                          min={5}
+                          max={150}
+                          step={5}
+                          value={[field.value]}
+                          onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Very fit">Very fit</SelectItem>
-                        <SelectItem value="Solid base">Solid base</SelectItem>
-                        <SelectItem value="Out of shape">Out of shape</SelectItem>
-                        <SelectItem value="Never run before">Never run before</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 8 && (
-              <div>
-                {/* Personal Bests section (to be implemented) */}
-              </div>
-            )}
-            {currentScreen === 9 && (
-              <FormField
-                control={form.control}
-                name="trainingPreferences.weeklyRunningDays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Weekly Running Days</FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={1}
-                        max={7}
-                        step={1}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
-                    </FormControl>
-                    <div className="text-sm text-muted-foreground text-center">
-                      {field.value} days per week
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 10 && (
-              <FormField
-                control={form.control}
-                name="trainingPreferences.maxWeeklyMileage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Weekly Mileage</FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={1}
-                        max={150}
-                        step={5}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
-                    </FormControl>
-                    <div className="text-sm text-muted-foreground text-center">
-                      {field.value} miles per week
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 11 && (
-              <FormField
-                control={form.control}
-                name="trainingPreferences.weeklyWorkouts"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Weekly Workouts/Sessions</FormLabel>
-                    <FormControl>
-                      <Slider
-                        min={0}
-                        max={3}
-                        step={1}
-                        value={[field.value]}
-                        onValueChange={(vals) => field.onChange(vals[0])}
-                      />
-                    </FormControl>
-                    <div className="text-sm text-muted-foreground text-center">
-                      {field.value} workouts per week
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 12 && (
-              <FormField
-                control={form.control}
-                name="trainingPreferences.preferredLongRunDay"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preferred Long Run Day</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <div className="text-sm text-muted-foreground text-center">
+                        {field.value} miles per week
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 10 && (
+                <FormField
+                  control={form.control}
+                  name="trainingPreferences.weeklyWorkouts"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Weekly Workouts/Sessions</FormLabel>
+                      <FormDescription>
+                        How many workout sessions would you like per week? A workout session is a harder
+                        effort like a fartlek or threshold run where you will be running at a higher
+                        pace/heart rate.
+                      </FormDescription>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select day" />
-                        </SelectTrigger>
+                        <Slider
+                          min={0}
+                          max={3}
+                          step={1}
+                          value={[field.value]}
+                          onValueChange={(vals) => field.onChange(vals[0])}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                          <SelectItem key={day} value={day}>
-                            {day}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {currentScreen === 13 && (
-              <FormField
-                control={form.control}
-                name="trainingPreferences.coachingStyle"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Desired Coaching Style</FormLabel>
-                    <FormDescription>{coachingStyleDescriptions[field.value as keyof typeof coachingStyleDescriptions]}</FormDescription>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select coaching style" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Authoritative">Authoritative</SelectItem>
-                        <SelectItem value="Directive">Directive</SelectItem>
-                        <SelectItem value="Motivational">Motivational</SelectItem>
-                        <SelectItem value="Collaborative">Collaborative</SelectItem>
-                        <SelectItem value="Hybrid">Hybrid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+                      <div className="text-sm text-muted-foreground text-center">
+                        {field.value} workouts per week
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {currentScreen === 11 && (
+                <FormField
+                  control={form.control}
+                  name="trainingPreferences.coachingStyle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Desired Coaching Style</FormLabel>
+                      <FormDescription>{coachingStyleDescriptions[field.value as keyof typeof coachingStyleDescriptions]}</FormDescription>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select coaching style" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Authoritative">Authoritative</SelectItem>
+                          <SelectItem value="Directive">Directive</SelectItem>
+                          <SelectItem value="Motivational">Motivational</SelectItem>
+                          <SelectItem value="Collaborative">Collaborative</SelectItem>
+                          <SelectItem value="Hybrid">Hybrid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
           </div>
         );
       default:
@@ -570,16 +599,11 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                         {currentScreen === 5 && "What are your time goals?"}
                         {currentScreen === 6 && "What's your running experience?"}
                         {currentScreen === 7 && "How fit are you currently?"}
-                        {currentScreen === 8 && "What are your personal bests?"}
-                        {currentScreen === 9 && "How many days can you run per week?"}
-                        {currentScreen === 10 && "What's your target weekly mileage?"}
-                        {currentScreen === 11 && "How many workouts can you handle?"}
-                        {currentScreen === 12 && "Which day works best for long runs?"}
-                        {currentScreen === 13 && "What coaching style do you prefer?"}
+                        {currentScreen === 8 && "How many days can you run per week?"}
+                        {currentScreen === 9 && "What's your target weekly mileage?"}
+                        {currentScreen === 10 && "How many workout sessions do you want?"}
+                        {currentScreen === 11 && "What coaching style do you prefer?"}
                       </h2>
-                      <p className="text-muted-foreground">
-                        {currentScreen}/{13}
-                      </p>
                     </div>
 
                     {renderScreen()}
@@ -598,14 +622,14 @@ export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
                       Back
                     </Button>
 
-                    {currentScreen < 13 ? (
+                    {currentScreen < TOTAL_SCREENS ? (
                       <Button type="button" onClick={handleNext}>
                         Next
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button type="submit" disabled={generatePlan.isPending}>
-                        {generatePlan.isPending ? "Generating..." : "Generate Plan"}
+                      <Button type="submit">
+                        Preview Plan
                       </Button>
                     )}
                   </div>
