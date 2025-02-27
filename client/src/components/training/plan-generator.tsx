@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Wand2 } from "lucide-react";
 
 const planGeneratorSchema = z.object({
   goal: z.string().min(1, "Please specify your goal"),
@@ -84,7 +85,10 @@ export default function PlanGenerator() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Generate AI Training Plan</Button>
+        <Button size="lg" className="gap-2">
+          <Wand2 className="h-5 w-5" />
+          Generate AI Training Plan
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
