@@ -197,18 +197,13 @@ export default function Training() {
         <h1 className="text-2xl font-bold mb-4">Training</h1>
         <div className="flex justify-center gap-4 flex-wrap">
           <PlanGenerator existingPlan={true} />
-          <PlanReview
-            planId={trainingPlan.id}
-            currentPlan={trainingPlan}
-            onPlanUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] })}
-          />
         </div>
       </div>
 
       <Tabs defaultValue="current" className="space-y-8">
         <TabsList className="w-full justify-center">
-          <TabsTrigger value="current">This Week's Training</TabsTrigger>
-          <TabsTrigger value="overall">Training Program Overview</TabsTrigger>
+          <TabsTrigger value="current">This Week</TabsTrigger>
+          <TabsTrigger value="overall">Training Program</TabsTrigger>
         </TabsList>
 
         <TabsContent value="current" className="space-y-8">
