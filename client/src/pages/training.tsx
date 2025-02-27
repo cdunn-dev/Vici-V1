@@ -64,7 +64,8 @@ export default function Training() {
   };
 
   // Handle preview plan
-  const handlePreviewPlan = (plan) => {
+  const handlePreviewPlan = (plan: any) => {
+    console.log("Preview plan called with:", plan); // Debug log
     setPreviewPlan(plan);
     setShowPreview(true);
     setActiveTab("overall"); // Switch to Training Program tab
@@ -347,8 +348,8 @@ export default function Training() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <div className="flex justify-center">
           <TabsList className="w-full max-w-[280px]">
-            <TabsTrigger value="current" className="flex-1">This Week</TabsTrigger>
-            <TabsTrigger value="overall" className="flex-1">Training Program</TabsTrigger>
+            <TabsTrigger value="current">This Week</TabsTrigger>
+            <TabsTrigger value="overall">Training Program</TabsTrigger>
           </TabsList>
         </div>
 
