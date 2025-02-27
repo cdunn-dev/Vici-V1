@@ -6,6 +6,7 @@ import DailyWorkout from "@/components/training/daily-workout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import PlanGenerator from "@/components/training/plan-generator";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -60,28 +61,34 @@ export default function Training() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <CalendarView
-            selectedDate={selectedDate}
-            onSelect={(date) => date && setSelectedDate(date)}
-            events={[]}
-          />
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="font-medium mb-4">Adjust Training Plan</h3>
-            <div className="space-y-4">
-              <Input placeholder="Add notes or adjustments..." />
-              <Button className="w-full">Save Changes</Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Training</h1>
+        <PlanGenerator />
       </div>
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <CalendarView
+              selectedDate={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              events={[]}
+            />
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-medium mb-4">Adjust Training Plan</h3>
+              <div className="space-y-4">
+                <Input placeholder="Add notes or adjustments..." />
+                <Button className="w-full">Save Changes</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <WeeklyOverview week={mockWeek} />
-      <DailyWorkout date={selectedDate} workout={mockWorkout} />
+        <WeeklyOverview week={mockWeek} />
+        <DailyWorkout date={selectedDate} workout={mockWorkout} />
+      </div>
     </div>
   );
 }

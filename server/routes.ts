@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
+import { generateTrainingPlan } from "./services/ai";
 
 export async function registerRoutes(app: Express) {
   // User routes
@@ -57,12 +58,43 @@ export async function registerRoutes(app: Express) {
   app.patch("/api/training-plans/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid plan ID" });
-    
+
     try {
       const plan = await storage.updateTrainingPlan(id, req.body);
       res.json(plan);
     } catch (error) {
       res.status(404).json({ error: "Training plan not found" });
+    }
+  });
+
+  // AI Training Plan Generation
+  app.post("/api/training-plans/generate", async (req, res) => {
+    try {
+      const preferences = req.body;
+      const generatedPlan = await generateTrainingPlan(preferences);
+
+      // Convert the AI response into a training plan
+      const trainingPlan = {
+        userId: parseInt(req.body.userId),
+        name: `AI Generated Plan - ${preferences.goal}`,
+        startDate: new Date(),
+        endDate: preferences.targetRace ? new Date(preferences.targetRace.date) : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
+        weeklyMileage: preferences.weeklyMileage,
+        workouts: generatedPlan.weeklyPlans.flatMap(week =>
+          week.workouts.map(workout => ({
+            day: workout.day,
+            type: workout.type,
+            distance: workout.distance,
+            description: workout.description
+          }))
+        ),
+      };
+
+      const plan = await storage.createTrainingPlan(trainingPlan);
+      res.json(plan);
+    } catch (error) {
+      console.error("Error generating training plan:", error);
+      res.status(500).json({ error: "Failed to generate training plan" });
     }
   });
 
