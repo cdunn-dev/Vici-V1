@@ -10,7 +10,18 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -44,8 +55,13 @@ const planGeneratorSchema = z.object({
 
 type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
-export default function PlanGenerator() {
+interface PlanGeneratorProps {
+  existingPlan?: boolean;
+}
+
+export default function PlanGenerator({ existingPlan }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<PlanGeneratorFormData>({
@@ -82,139 +98,177 @@ export default function PlanGenerator() {
     },
   });
 
+  const handlePlanGeneration = (data: PlanGeneratorFormData) => {
+    if (existingPlan) {
+      setShowConfirmDialog(true);
+    } else {
+      generatePlan.mutate(data);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="gap-2">
-          <Wand2 className="h-5 w-5" />
-          Generate AI Training Plan
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Generate Training Plan</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit((data) => generatePlan.mutate(data))}
-            className="space-y-4"
-          >
-            <FormField
-              control={form.control}
-              name="goal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Training Goal</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Complete first marathon" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="currentLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Level</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Beginner">Beginner</SelectItem>
-                      <SelectItem value="Intermediate">Intermediate</SelectItem>
-                      <SelectItem value="Advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="weeklyMileage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target Weekly Mileage</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="daysPerWeek"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Training Days per Week</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={7}
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="targetRace.distance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target Race Distance (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Marathon, 5K" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="targetRace.date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Target Race Date (Optional)</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={generatePlan.isPending}
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="lg" className="gap-2">
+            <Wand2 className="h-5 w-5" />
+            Create a New Training Plan
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Training Plan</DialogTitle>
+            {existingPlan && (
+              <DialogDescription>
+                You already have an active training plan. Creating a new plan will replace your current one.
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handlePlanGeneration)}
+              className="space-y-4"
             >
-              {generatePlan.isPending ? "Generating..." : "Generate Plan"}
-            </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Training Goal</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Complete first marathon" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currentLevel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Level</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your level" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Beginner">Beginner</SelectItem>
+                        <SelectItem value="Intermediate">Intermediate</SelectItem>
+                        <SelectItem value="Advanced">Advanced</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="weeklyMileage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Weekly Mileage</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="daysPerWeek"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Training Days per Week</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={7}
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="targetRace.distance"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Race Distance (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Marathon, 5K" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="targetRace.date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Target Race Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={generatePlan.isPending}
+              >
+                {generatePlan.isPending ? "Generating..." : "Generate Plan"}
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace Existing Plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace your current training plan. This action cannot be undone.
+              Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowConfirmDialog(false);
+                generatePlan.mutate(form.getValues());
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
