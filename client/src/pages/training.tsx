@@ -14,71 +14,47 @@ export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const queryClient = useQueryClient();
 
-  const { data: trainingPlan } = useQuery({
+  const { data: trainingPlan, isLoading } = useQuery({
     queryKey: ["/api/training-plans", 1], // Assuming user ID 1 for now
   });
 
-  // Mock data for demonstration
-  const mockWorkouts = [
-    {
-      distance: 5000,
-      actualPace: 5.5,
-      targetPace: 5.3,
-      perceivedEffort: 7,
-      notes: "Felt strong but pace was slightly slower than target",
-    },
-    {
-      distance: 8000,
-      actualPace: 5.2,
-      targetPace: 5.3,
-      perceivedEffort: 8,
-      notes: "Good session, maintained target pace throughout",
-    },
-  ];
+  // Find the current week's workouts based on selected date
+  const currentWeek = trainingPlan?.weeklyPlans?.find(week => {
+    const workoutDates = week.workouts.map(w => new Date(w.day));
+    const firstDay = workoutDates[0];
+    const lastDay = workoutDates[workoutDates.length - 1];
+    return selectedDate >= firstDay && selectedDate <= lastDay;
+  });
 
-  const mockWeek = {
-    phase: "Base Building",
-    workouts: [
-      {
-        day: "2024-01-08",
-        type: "Easy Run",
-        distance: 6,
-        description: "Easy run with 8x100m strides",
-      },
-      {
-        day: "2024-01-09",
-        type: "Workout",
-        distance: 10,
-        description: "6-8 miles tempo @ ~8:30-9:35/mile pace",
-      },
-      {
-        day: "2024-01-10",
-        type: "Recovery",
-        distance: 6,
-        description: "Easy run focused on recovery",
-      },
-    ],
-  };
+  // Find the selected day's workout
+  const selectedDayWorkout = currentWeek?.workouts.find(
+    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
+  );
 
-  const mockWorkout = {
-    type: "Tempo Run",
-    distance: 10,
-    description: "6-8 miles tempo with warm-up and cool-down",
+  // Generate workout options for the selected day
+  const workoutOptions = selectedDayWorkout ? {
+    type: selectedDayWorkout.type,
+    distance: selectedDayWorkout.distance,
+    description: selectedDayWorkout.description,
     options: [
       {
-        title: "Option 1",
-        description: "10 x 1k @ ~8:30 w/60s jog recovery",
+        title: "Original Plan",
+        description: selectedDayWorkout.description,
       },
       {
-        title: "Option 2",
-        description: "5 x 2k @ ~8:35 w/90s jog recovery",
+        title: "Alternative 1",
+        description: `Modified ${selectedDayWorkout.type.toLowerCase()} with different intensity: ${selectedDayWorkout.description.replace(/\d+/g, num => Math.round(Number(num) * 0.9))}`,
       },
       {
-        title: "Option 3",
-        description: "3 x 3k @ ~8:40 w/2m jog recovery",
+        title: "Alternative 2",
+        description: `Alternative ${selectedDayWorkout.type.toLowerCase()} workout: ${selectedDayWorkout.description.replace(/\d+/g, num => Math.round(Number(num) * 1.1))}`,
       },
     ],
-  };
+  } : null;
+
+  if (isLoading) {
+    return <div>Loading training plan...</div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -101,28 +77,33 @@ export default function Training() {
           <CalendarView
             selectedDate={selectedDate}
             onSelect={(date) => date && setSelectedDate(date)}
-            events={[]}
+            events={trainingPlan?.weeklyPlans?.flatMap(week => 
+              week.workouts.map(workout => ({
+                date: new Date(workout.day),
+                title: `${workout.type} - ${workout.distance} miles`,
+              }))
+            ) || []}
           />
           <div className="mt-8">
             <PlanRecommendations
-              planId={1} // Replace with actual plan ID
-              recentWorkouts={mockWorkouts}
+              planId={trainingPlan?.id || 1}
+              recentWorkouts={[]} // This would be populated with actual workout data
             />
           </div>
         </div>
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="font-medium mb-4">Adjust Training Plan</h3>
-            <div className="space-y-4">
-              <Input placeholder="Add notes or adjustments..." />
-              <Button className="w-full">Save Changes</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      <WeeklyOverview week={mockWeek} />
-      <DailyWorkout date={selectedDate} workout={mockWorkout} />
+        <div className="space-y-8">
+          {currentWeek && (
+            <WeeklyOverview week={currentWeek} />
+          )}
+          {workoutOptions && (
+            <DailyWorkout
+              date={selectedDate}
+              workout={workoutOptions}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
