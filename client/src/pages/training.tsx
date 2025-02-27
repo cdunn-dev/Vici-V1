@@ -45,27 +45,9 @@ export default function Training() {
     },
   });
 
-  // Find the current week's workouts based on today's date
-  const getCurrentWeek = () => {
-    if (!trainingPlan?.weeklyPlans) return null;
-    const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return (
-        (firstDay >= weekStart && firstDay <= weekEnd) ||
-        (lastDay >= weekStart && lastDay <= weekEnd)
-      );
-    });
-  };
-
   // Handle preview plan
   const handlePreviewPlan = (plan: any) => {
-    console.log("Preview plan called with:", plan); // Debug log
+    console.log("Preview plan called with:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
@@ -73,7 +55,7 @@ export default function Training() {
 
     setPreviewPlan(plan);
     setShowPreview(true);
-    setActiveTab("overall"); // Switch to Training Program tab
+    setActiveTab("overall");
   };
 
   // Handle plan adjustments
@@ -147,6 +129,89 @@ export default function Training() {
     }
   };
 
+  // Display loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Training</h1>
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Display empty state with plan generator
+  if (!trainingPlan && !showPreview) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Training</h1>
+          <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
+          <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
+        </div>
+      </div>
+    );
+  }
+
+  const currentWeek = getCurrentWeek();
+  const selectedWeek = getSelectedWeek();
+
+  // Find the selected day's workout
+  const selectedDayWorkout = selectedWeek?.workouts.find(
+    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
+  );
+
+  // Generate workout options
+  const workoutOptions = selectedDayWorkout ? {
+    type: selectedDayWorkout.type,
+    distance: selectedDayWorkout.distance,
+    description: selectedDayWorkout.description,
+    options: [
+      { title: "Recommended Workout", description: selectedDayWorkout.description },
+      ...(selectedDayWorkout.type.toLowerCase().includes('easy') ||
+        selectedDayWorkout.type.toLowerCase().includes('recovery') ? [] : [
+        {
+          title: "Alternative 1",
+          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
+            selectedDayWorkout.description
+              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
+              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
+          }`,
+        },
+        {
+          title: "Alternative 2",
+          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
+            selectedDayWorkout.type.includes('Interval') ?
+              selectedDayWorkout.description
+                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
+              selectedDayWorkout.description
+                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
+          }`,
+        },
+      ]),
+    ],
+  } : null;
+
+  const getCurrentWeek = () => {
+    if (!trainingPlan?.weeklyPlans) return null;
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+    return trainingPlan.weeklyPlans.find(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return (
+        (firstDay >= weekStart && firstDay <= weekEnd) ||
+        (lastDay >= weekStart && lastDay <= weekEnd)
+      );
+    });
+  };
 
   const getSelectedWeek = () => {
     if (!trainingPlan?.weeklyPlans) return null;
@@ -279,70 +344,6 @@ export default function Training() {
     }).length;
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Training</h1>
-          <div className="space-y-4">
-            <Skeleton className="h-[200px] w-full" />
-            <Skeleton className="h-[400px] w-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!trainingPlan) {
-    return (
-      <div className="space-y-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Training</h1>
-          <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
-          <PlanGenerator existingPlan={false} />
-        </div>
-      </div>
-    );
-  }
-
-  const currentWeek = getCurrentWeek();
-  const selectedWeek = getSelectedWeek();
-
-  // Find the selected day's workout
-  const selectedDayWorkout = selectedWeek?.workouts.find(
-    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
-  );
-
-  // Generate workout options
-  const workoutOptions = selectedDayWorkout ? {
-    type: selectedDayWorkout.type,
-    distance: selectedDayWorkout.distance,
-    description: selectedDayWorkout.description,
-    options: [
-      { title: "Recommended Workout", description: selectedDayWorkout.description },
-      ...(selectedDayWorkout.type.toLowerCase().includes('easy') ||
-        selectedDayWorkout.type.toLowerCase().includes('recovery') ? [] : [
-        {
-          title: "Alternative 1",
-          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
-            selectedDayWorkout.description
-              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
-              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
-          }`,
-        },
-        {
-          title: "Alternative 2",
-          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
-            selectedDayWorkout.type.includes('Interval') ?
-              selectedDayWorkout.description
-                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
-              selectedDayWorkout.description
-                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
-          }`,
-        },
-      ]),
-    ],
-  } : null;
 
   return (
     <div className="space-y-8">
@@ -413,54 +414,28 @@ export default function Training() {
             />
           ) : (
             <>
-              {trainingPlan && (
-                <ProgramProgressTracker
-                  completedWeeks={getCompletedWeeks()}
-                  totalWeeks={trainingPlan.weeklyPlans.length}
-                />
-              )}
               <div className="flex justify-end">
                 <PlanGenerator
                   existingPlan={!!trainingPlan}
                   onPreview={handlePreviewPlan}
                 />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                  <ProgramOverview
-                    weeklyPlans={trainingPlan.weeklyPlans}
-                    onSelectWeek={(weekNumber) => {
-                      const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                      if (week) {
-                        setSelectedDate(new Date(week.workouts[0].day));
-                      }
-                    }}
-                    onSelectDay={handleDateSelect}
-                    selectedDate={selectedDate}
-                    goal={trainingPlan.goal || "No goal set"}
-                    endDate={new Date(trainingPlan.endDate)}
-                    targetRace={trainingPlan.targetRace}
-                  />
-                </div>
-
-                <div className="space-y-4 lg:sticky lg:top-8">
-                  <h3 className="font-medium">Ask Your AI Coach</h3>
-                  <Textarea
-                    placeholder="Ask about adjusting your overall training plan, long-term goals, or training philosophy..."
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    className="min-h-[100px] resize-none"
-                  />
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => handleAIQuery(aiQuery, 'overall')}
-                    disabled={!aiQuery || isSubmittingQuery}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Get AI Coaching Advice
-                  </Button>
-                </div>
-              </div>
+              {trainingPlan && (
+                <ProgramOverview
+                  weeklyPlans={trainingPlan.weeklyPlans}
+                  onSelectWeek={(weekNumber) => {
+                    const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                    if (week) {
+                      setSelectedDate(new Date(week.workouts[0].day));
+                    }
+                  }}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
+                  goal={trainingPlan.goal || "No goal set"}
+                  endDate={new Date(trainingPlan.endDate)}
+                  targetRace={trainingPlan.targetRace}
+                />
+              )}
             </>
           )}
         </TabsContent>
