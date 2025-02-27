@@ -14,6 +14,7 @@ import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import HeatMapCalendar from "@/components/training/heat-map-calendar";
+import ProgressTracker from "@/components/training/progress-tracker";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -254,6 +255,13 @@ export default function Training() {
             <TabsTrigger value="overall" className="flex-1">Training Program</TabsTrigger>
           </TabsList>
         </div>
+
+        {currentWeek && (
+          <ProgressTracker
+            completedMiles={0}
+            totalMiles={currentWeek.totalMileage}
+          />
+        )}
 
         <TabsContent value="current" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
