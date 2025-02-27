@@ -7,12 +7,13 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanReview from "@/components/training/plan-review";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, format } from "date-fns";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -141,7 +142,7 @@ export default function Training() {
               console.error('Plan update error:', error);
               toast({
                 title: "Error",
-                description: error.message || "Failed to update training plan",
+                description: error instanceof Error ? error.message : "Failed to update training plan",
                 variant: "destructive",
               });
             }
@@ -154,7 +155,7 @@ export default function Training() {
       console.error('AI query error:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to get AI coach response",
+        description: error instanceof Error ? error.message : "Failed to get AI coach response",
         variant: "destructive",
       });
     } finally {
@@ -165,7 +166,17 @@ export default function Training() {
   };
 
   if (isLoading) {
-    return <div>Loading training plan...</div>;
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Training</h1>
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!trainingPlan) {
@@ -184,7 +195,7 @@ export default function Training() {
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Training</h1>
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 flex-wrap">
           <PlanGenerator existingPlan={true} />
           <PlanReview
             planId={trainingPlan.id}
@@ -202,7 +213,7 @@ export default function Training() {
 
         <TabsContent value="current" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-8">
               {workoutOptions && (
                 <DailyWorkout
                   date={selectedDate}
@@ -211,23 +222,21 @@ export default function Training() {
               )}
 
               {currentWeek && (
-                <div className="mt-8">
-                  <WeeklyOverview
-                    week={currentWeek}
-                    onSelectDay={handleDateSelect}
-                    selectedDate={selectedDate}
-                  />
-                </div>
+                <WeeklyOverview
+                  week={currentWeek}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
+                />
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-8">
               <h3 className="font-medium">Ask About Today's Training</h3>
               <Textarea
                 placeholder="Ask about today's workout, this week's focus, or request modifications..."
                 value={weeklyAiQuery}
                 onChange={(e) => setWeeklyAiQuery(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[100px] resize-none"
               />
               <Button 
                 className="w-full gap-2"
@@ -243,7 +252,7 @@ export default function Training() {
 
         <TabsContent value="overall" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-8">
               <CalendarView
                 selectedDate={selectedDate}
                 onSelect={handleDateSelect}
@@ -251,31 +260,30 @@ export default function Training() {
                   week.workouts.map(workout => ({
                     date: new Date(workout.day),
                     title: `${workout.type} - ${workout.distance} miles`,
+                    type: workout.type,
                   }))
                 )}
               />
-              <div className="mt-8">
-                <ProgramOverview
-                  weeklyPlans={trainingPlan.weeklyPlans}
-                  onSelectWeek={(weekNumber) => {
-                    const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                    if (week) {
-                      setSelectedDate(new Date(week.workouts[0].day));
-                    }
-                  }}
-                  onSelectDay={handleDateSelect}
-                  selectedDate={selectedDate}
-                />
-              </div>
+              <ProgramOverview
+                weeklyPlans={trainingPlan.weeklyPlans}
+                onSelectWeek={(weekNumber) => {
+                  const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                  if (week) {
+                    setSelectedDate(new Date(week.workouts[0].day));
+                  }
+                }}
+                onSelectDay={handleDateSelect}
+                selectedDate={selectedDate}
+              />
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-8">
               <h3 className="font-medium">Ask Your AI Coach</h3>
               <Textarea
                 placeholder="Ask about adjusting your overall training plan, long-term goals, or training philosophy..."
                 value={aiQuery}
                 onChange={(e) => setAiQuery(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[100px] resize-none"
               />
               <Button 
                 className="w-full gap-2"
