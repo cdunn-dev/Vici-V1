@@ -51,31 +51,32 @@ export default function WeeklyOverview({ week, onSelectDay, selectedDate }: Week
           return (
             <div
               key={index}
-              className={`flex justify-between items-start p-4 border rounded-lg transition-colors cursor-pointer
+              className={`flex flex-col p-4 border rounded-lg transition-colors cursor-pointer
                 ${isSameDay(currentDate, today) ? 'bg-accent/20' : 'hover:bg-accent/10'}
                 ${workout && onSelectDay ? 'cursor-pointer' : 'cursor-default opacity-50'}
                 ${selectedDate && isSameDay(currentDate, selectedDate) ? 'ring-2 ring-primary' : ''}
               `}
               onClick={() => workout && onSelectDay?.(currentDate)}
             >
-              <div className="flex-1">
-                <div className="font-medium text-sm">{format(currentDate, "EEEE")}</div>
-                <div className="text-xs text-muted-foreground">{format(currentDate, "MMM d")}</div>
-                {workout ? (
-                  <div className="mt-1">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium text-sm">{format(currentDate, "EEEE")}</div>
+                  <div className="text-xs text-muted-foreground">{format(currentDate, "MMM d")}</div>
+                </div>
+                {workout && (
+                  <div className="text-right">
                     <div className="text-sm font-medium text-primary">{workout.type}</div>
                     <div className="text-xs text-muted-foreground">{workout.distance} miles</div>
                   </div>
-                ) : (
-                  <div className="mt-1 text-sm text-muted-foreground">Rest Day</div>
                 )}
               </div>
               {workout && (
-                <div className="max-w-[60%] text-right">
-                  <div className="text-xs text-muted-foreground leading-relaxed">
-                    {workout.description}
-                  </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {workout.description}
                 </div>
+              )}
+              {!workout && (
+                <div className="mt-2 text-sm text-muted-foreground">Rest Day</div>
               )}
             </div>
           );
