@@ -207,7 +207,7 @@ export default function Training() {
     workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
   );
 
-  // Generate workout options remains the same...
+  // Generate workout options
   const workoutOptions = selectedDayWorkout ? {
     type: selectedDayWorkout.type,
     distance: selectedDayWorkout.distance,
@@ -297,20 +297,6 @@ export default function Training() {
         <TabsContent value="overall" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <HeatMapCalendar
-                selectedDate={selectedDate}
-                onSelect={handleDateSelect}
-                workouts={trainingPlan.weeklyPlans.flatMap(week =>
-                  week.workouts.map(workout => ({
-                    date: new Date(workout.day),
-                    intensity: calculateWorkoutIntensity(workout),
-                    type: workout.type,
-                    distance: workout.distance
-                  }))
-                )}
-                startDate={new Date(trainingPlan.startDate)}
-                endDate={new Date(trainingPlan.endDate)}
-              />
               <ProgramOverview
                 weeklyPlans={trainingPlan.weeklyPlans}
                 onSelectWeek={(weekNumber) => {
