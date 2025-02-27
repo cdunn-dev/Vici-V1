@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
-import PlanReview from "@/components/training/plan-review";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,11 @@ export default function Training() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Reset to current week when component mounts
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
+
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
     queryKey: ["/api/training-plans", { userId: 1 }],
     queryFn: async () => {
@@ -36,16 +40,37 @@ export default function Training() {
     },
   });
 
-  // Find the current week's workouts based on selected date
-  const currentWeek = trainingPlan?.weeklyPlans?.find(week => {
-    const workoutDates = week.workouts.map(w => new Date(w.day));
-    const firstDay = workoutDates[0];
-    const lastDay = workoutDates[workoutDates.length - 1];
-    return selectedDate >= firstDay && selectedDate <= lastDay;
-  });
+  // Find the current week's workouts based on today's date
+  const getCurrentWeek = () => {
+    if (!trainingPlan?.weeklyPlans) return null;
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+    return trainingPlan.weeklyPlans.find(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return (
+        (firstDay >= weekStart && firstDay <= weekEnd) ||
+        (lastDay >= weekStart && lastDay <= weekEnd)
+      );
+    });
+  };
+
+  // Find the selected week's workouts based on selected date
+  const getSelectedWeek = () => {
+    if (!trainingPlan?.weeklyPlans) return null;
+    return trainingPlan.weeklyPlans.find(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return selectedDate >= firstDay && selectedDate <= lastDay;
+    });
+  };
 
   // Handle date selection, ensuring it's within the plan's date range
-  const handleDateSelect = (date: Date | null) => {
+  const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
 
     const planStart = startOfDay(new Date(trainingPlan.startDate));
@@ -59,41 +84,23 @@ export default function Training() {
     setSelectedDate(date);
   };
 
-  // Find the selected day's workout
-  const selectedDayWorkout = currentWeek?.workouts.find(
-    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
-  );
+  const calculateWorkoutIntensity = (workout: {
+    type: string;
+    distance: number;
+    description: string;
+  }): number => {
+    // Base intensity on workout type and distance
+    const typeIntensity = workout.type.toLowerCase().includes('interval') ? 1 :
+                         workout.type.toLowerCase().includes('tempo') ? 0.8 :
+                         workout.type.toLowerCase().includes('long') ? 0.6 :
+                         workout.type.toLowerCase().includes('easy') ? 0.3 : 0;
 
-  // Generate workout options for the selected day
-  const workoutOptions = selectedDayWorkout ? {
-    type: selectedDayWorkout.type,
-    distance: selectedDayWorkout.distance,
-    description: selectedDayWorkout.description,
-    options: [
-      { title: "Recommended Workout", description: selectedDayWorkout.description },
-      ...(selectedDayWorkout.type.toLowerCase().includes("easy") ||
-        selectedDayWorkout.type.toLowerCase().includes("recovery") ? [] : [
-        {
-          title: "Alternative 1",
-          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
-            selectedDayWorkout.description
-              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
-              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
-          }`,
-        },
-        {
-          title: "Alternative 2",
-          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
-            selectedDayWorkout.type.includes("Interval") ?
-              selectedDayWorkout.description
-                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
-              selectedDayWorkout.description
-                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
-          }`,
-        },
-      ]),
-    ],
-  } : null;
+    // Combine with distance factor (normalized to max ~20 miles)
+    const distanceIntensity = Math.min(1, workout.distance / 20);
+
+    // Weight type more heavily than distance
+    return (typeIntensity * 0.7) + (distanceIntensity * 0.3);
+  };
 
   const handleAIQuery = async (query: string, type: 'overall' | 'weekly') => {
     try {
@@ -166,24 +173,6 @@ export default function Training() {
     }
   };
 
-  const calculateWorkoutIntensity = (workout: {
-    type: string;
-    distance: number;
-    description: string;
-  }): number => {
-    // Base intensity on workout type and distance
-    const typeIntensity = workout.type.toLowerCase().includes('interval') ? 1 :
-                         workout.type.toLowerCase().includes('tempo') ? 0.8 :
-                         workout.type.toLowerCase().includes('long') ? 0.6 :
-                         workout.type.toLowerCase().includes('easy') ? 0.3 : 0;
-
-    // Combine with distance factor (normalized to max ~20 miles)
-    const distanceIntensity = Math.min(1, workout.distance / 20);
-
-    // Weight type more heavily than distance
-    return (typeIntensity * 0.7) + (distanceIntensity * 0.3);
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -209,6 +198,45 @@ export default function Training() {
       </div>
     );
   }
+
+  const currentWeek = getCurrentWeek();
+  const selectedWeek = getSelectedWeek();
+
+  // Find the selected day's workout
+  const selectedDayWorkout = selectedWeek?.workouts.find(
+    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
+  );
+
+  // Generate workout options remains the same...
+  const workoutOptions = selectedDayWorkout ? {
+    type: selectedDayWorkout.type,
+    distance: selectedDayWorkout.distance,
+    description: selectedDayWorkout.description,
+    options: [
+      { title: "Recommended Workout", description: selectedDayWorkout.description },
+      ...(selectedDayWorkout.type.toLowerCase().includes('easy') ||
+        selectedDayWorkout.type.toLowerCase().includes('recovery') ? [] : [
+        {
+          title: "Alternative 1",
+          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
+            selectedDayWorkout.description
+              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
+              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
+          }`,
+        },
+        {
+          title: "Alternative 2",
+          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
+            selectedDayWorkout.type.includes('Interval') ?
+              selectedDayWorkout.description
+                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
+              selectedDayWorkout.description
+                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
+          }`,
+        },
+      ]),
+    ],
+  } : null;
 
   return (
     <div className="space-y-8">
