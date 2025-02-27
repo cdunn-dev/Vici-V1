@@ -243,9 +243,6 @@ export default function Training() {
     <div className="space-y-8">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-4">Training</h1>
-        <div className="flex justify-center gap-4 flex-wrap">
-          <PlanGenerator existingPlan={true} />
-        </div>
       </div>
 
       <Tabs defaultValue="current" className="space-y-8">
@@ -303,6 +300,9 @@ export default function Training() {
         </TabsContent>
 
         <TabsContent value="overall" className="space-y-8">
+          <div className="flex justify-end">
+            <PlanGenerator existingPlan={true} />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <ProgramOverview

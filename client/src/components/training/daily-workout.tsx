@@ -35,17 +35,9 @@ export default function DailyWorkout({ date, workout }: DailyWorkoutProps) {
       <CardHeader>
         <div className="flex justify-between items-center">
           <CardTitle>{format(date, "EEEE, MMMM d")}</CardTitle>
-          <div className="text-right">
-            <div className="font-semibold">{workout.type}</div>
-            <div className="text-sm text-muted-foreground">{workout.distance} miles</div>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">{workout.description}</p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {workoutOptions.map((option, index) => (
             <Card 
@@ -56,7 +48,13 @@ export default function DailyWorkout({ date, workout }: DailyWorkoutProps) {
               onClick={() => setSelectedOption(index)}
             >
               <CardHeader>
-                <CardTitle className="text-sm">{option.title}</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-sm">{option.title}</CardTitle>
+                  <div className="text-right">
+                    <div className="font-semibold">{workout.type}</div>
+                    <div className="text-sm text-muted-foreground">{workout.distance} miles</div>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm">{option.description}</p>
