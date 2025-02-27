@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import ProgramOverview from "./program-overview";
-import { ChevronLeft, CheckCircle2, MessageSquare } from "lucide-react";
+import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock } from "lucide-react";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -75,15 +75,15 @@ export default function PlanPreview({
           </Card>
 
           <div className="flex justify-between">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsAdjusting(false)}
               className="gap-2"
             >
               <ChevronLeft className="h-4 w-4" />
               Back
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 onAdjust(feedback);
                 setFeedback("");
@@ -108,52 +108,54 @@ export default function PlanPreview({
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setIsAdjusting(true)}
                 className="gap-2"
               >
                 <MessageSquare className="h-4 w-4" />
                 Request Adjustments
               </Button>
-              <Button onClick={onConfirm} className="gap-2">
+              <Button onClick={onConfirm} className="gap-2 bg-primary hover:bg-primary/90">
                 <CheckCircle2 className="h-4 w-4" />
                 Approve Plan
               </Button>
             </div>
           </div>
 
-          <Card className="shadow-sm border-primary/20">
-            <CardHeader>
-              <CardTitle className="text-lg">Training Plan Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium text-primary mb-2">Experience Level</h3>
-                  <p className="text-sm">Running Level: {planDetails.runningExperience.level}</p>
-                  <p className="text-sm">Fitness Level: {planDetails.runningExperience.fitnessLevel}</p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-primary mb-2">Training Preferences</h3>
-                  <p className="text-sm">{planDetails.trainingPreferences.weeklyRunningDays} days per week</p>
-                  <p className="text-sm">Up to {planDetails.trainingPreferences.maxWeeklyMileage} miles per week</p>
-                  <p className="text-sm">{planDetails.trainingPreferences.weeklyWorkouts} workouts per week</p>
+          <Card className="shadow-md border-primary/20 bg-primary/5">
+            <CardContent className="pt-6 pb-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Target className="h-5 w-5" />
+                  <div className="font-medium">
+                    Training Goal
+                    <div className="text-sm text-muted-foreground">
+                      {planDetails.goal}
+                    </div>
+                  </div>
                 </div>
 
                 {planDetails.targetRace && (
-                  <div>
-                    <h3 className="font-medium text-primary mb-2">Target Race</h3>
-                    <p className="text-sm">Distance: {planDetails.targetRace.customDistance || planDetails.targetRace.distance}</p>
-                    <p className="text-sm">Date: {format(new Date(planDetails.targetRace.date), "PPP")}</p>
+                  <div className="flex items-center gap-2 text-primary">
+                    <Medal className="h-5 w-5" />
+                    <div className="font-medium">
+                      Race Date
+                      <div className="text-sm text-muted-foreground">
+                        {planDetails.targetRace.distance} on {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div>
-                  <h3 className="font-medium text-primary mb-2">Program Timeline</h3>
-                  <p className="text-sm">Start: {format(new Date(planDetails.startDate), "PPP")}</p>
-                  <p className="text-sm">End: {format(planDetails.endDate, "PPP")}</p>
+                <div className="flex items-center gap-2 text-primary">
+                  <CalendarClock className="h-5 w-5" />
+                  <div className="font-medium">
+                    Program Timeline
+                    <div className="text-sm text-muted-foreground">
+                      {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(planDetails.endDate, "MMMM d, yyyy")}
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
