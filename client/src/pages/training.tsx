@@ -307,7 +307,7 @@ export default function Training() {
                 }}
                 onSelectDay={handleDateSelect}
                 selectedDate={selectedDate}
-                goal={trainingPlan.goal}
+                goal={trainingPlan.goal || "No goal set"}
                 endDate={new Date(trainingPlan.endDate)}
                 targetRace={trainingPlan.targetRace}
               />
