@@ -52,7 +52,7 @@ export default function CalendarView({
             modifiers={{
               training: (date) => isWithinTrainingPeriod(date),
               event: events.map(e => e.date),
-              race: (date) => isRaceDay(date)
+              race: isRaceDay
             }}
             modifiersStyles={{
               training: {
