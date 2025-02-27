@@ -23,15 +23,17 @@ export default function WeeklyOverview({ week, onSelectDay, selectedDate }: Week
   const today = new Date();
   const firstWorkoutDate = new Date(week.workouts[0].day);
   const weekStart = startOfWeek(firstWorkoutDate, { weekStartsOn: 1 });
+  const lastWorkoutDate = new Date(week.workouts[week.workouts.length - 1].day);
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-1">
           <CardTitle>Week {week.week} - {week.phase}</CardTitle>
-          <div className="text-sm text-muted-foreground">
-            Total: {week.totalMileage} miles
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {format(firstWorkoutDate, "MMM d")} - {format(lastWorkoutDate, "MMM d, yyyy")}
+          </p>
+          <p className="text-sm font-medium">Total: {week.totalMileage} miles</p>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
