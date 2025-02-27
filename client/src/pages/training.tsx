@@ -346,99 +346,101 @@ export default function Training() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Training</h1>
+        <h1 className="text-2xl font-bold mb-2">Training</h1>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-center">
-          <TabsList className="w-full max-w-[280px]">
+          <TabsList className="w-full max-w-[240px] h-9">
             <TabsTrigger value="current">This Week</TabsTrigger>
             <TabsTrigger value="overall">Training Program</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="current" className="space-y-8">
-          {currentWeek && (
-            <ProgressTracker
-              completedMiles={calculateCompletedMiles()}
-              totalMiles={currentWeek.totalMileage}
-            />
-          )}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              {workoutOptions && (
-                <DailyWorkout
-                  date={selectedDate}
-                  workout={workoutOptions}
-                />
-              )}
-
-              {currentWeek && (
-                <WeeklyOverview
-                  week={currentWeek}
-                  onSelectDay={handleDateSelect}
-                  selectedDate={selectedDate}
-                />
-              )}
-            </div>
-
-            <div className="space-y-4 lg:sticky lg:top-8">
-              <h3 className="font-medium">Ask About Today's Training</h3>
-              <Textarea
-                placeholder="Ask about today's workout, this week's focus, or request modifications..."
-                value={weeklyAiQuery}
-                onChange={(e) => setWeeklyAiQuery(e.target.value)}
-                className="min-h-[100px] resize-none"
+        <div className="mt-6">
+          <TabsContent value="current" className="space-y-6">
+            {currentWeek && (
+              <ProgressTracker
+                completedMiles={calculateCompletedMiles()}
+                totalMiles={currentWeek.totalMileage}
               />
-              <Button
-                className="w-full gap-2"
-                onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
-                disabled={!weeklyAiQuery || isSubmittingQuery}
-              >
-                <MessageCircle className="h-4 w-4" />
-                Get Workout Advice
-              </Button>
-            </div>
-          </div>
-        </TabsContent>
+            )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                {workoutOptions && (
+                  <DailyWorkout
+                    date={selectedDate}
+                    workout={workoutOptions}
+                  />
+                )}
 
-        <TabsContent value="overall" className="space-y-8">
-          {showPreview ? (
-            <PlanPreview
-              planDetails={previewPlan}
-              onConfirm={handleConfirmPlan}
-              onAdjust={handleAdjustPlan}
-              onBack={() => setShowPreview(false)}
-            />
-          ) : (
-            <>
-              <div className="flex justify-end">
-                <PlanGenerator
-                  existingPlan={!!trainingPlan}
-                  onPreview={handlePreviewPlan}
-                />
+                {currentWeek && (
+                  <WeeklyOverview
+                    week={currentWeek}
+                    onSelectDay={handleDateSelect}
+                    selectedDate={selectedDate}
+                  />
+                )}
               </div>
-              {trainingPlan && (
-                <ProgramOverview
-                  weeklyPlans={trainingPlan.weeklyPlans}
-                  onSelectWeek={(weekNumber) => {
-                    const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                    if (week) {
-                      setSelectedDate(new Date(week.workouts[0].day));
-                    }
-                  }}
-                  onSelectDay={handleDateSelect}
-                  selectedDate={selectedDate}
-                  goal={trainingPlan.goal || "No goal set"}
-                  endDate={new Date(trainingPlan.endDate)}
-                  targetRace={trainingPlan.targetRace}
+
+              <div className="space-y-4">
+                <h3 className="font-medium">Ask About Today's Training</h3>
+                <Textarea
+                  placeholder="Ask about today's workout, this week's focus, or request modifications..."
+                  value={weeklyAiQuery}
+                  onChange={(e) => setWeeklyAiQuery(e.target.value)}
+                  className="min-h-[100px] resize-none"
                 />
-              )}
-            </>
-          )}
-        </TabsContent>
+                <Button
+                  className="w-full gap-2"
+                  onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
+                  disabled={!weeklyAiQuery || isSubmittingQuery}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Get Workout Advice
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="overall" className="space-y-6">
+            {showPreview ? (
+              <PlanPreview
+                planDetails={previewPlan}
+                onConfirm={handleConfirmPlan}
+                onAdjust={handleAdjustPlan}
+                onBack={() => setShowPreview(false)}
+              />
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <PlanGenerator
+                    existingPlan={!!trainingPlan}
+                    onPreview={handlePreviewPlan}
+                  />
+                </div>
+                {trainingPlan && (
+                  <ProgramOverview
+                    weeklyPlans={trainingPlan.weeklyPlans}
+                    onSelectWeek={(weekNumber) => {
+                      const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                      if (week) {
+                        setSelectedDate(new Date(week.workouts[0].day));
+                      }
+                    }}
+                    onSelectDay={handleDateSelect}
+                    selectedDate={selectedDate}
+                    goal={trainingPlan.goal || "No goal set"}
+                    endDate={new Date(trainingPlan.endDate)}
+                    targetRace={trainingPlan.targetRace}
+                  />
+                )}
+              </>
+            )}
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
