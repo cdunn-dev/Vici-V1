@@ -174,6 +174,13 @@ export default function Training() {
     }
   };
 
+  // Calculate completed miles for current week
+  const calculateCompletedMiles = () => {
+    if (!currentWeek) return 0;
+    // TODO: In the future, this will come from completed workouts
+    return 0; // For now, returning 0 as we haven't implemented workout completion
+  };
+
   // Calculate completed weeks
   const getCompletedWeeks = () => {
     if (!trainingPlan?.weeklyPlans) return 0;
@@ -264,6 +271,12 @@ export default function Training() {
         </div>
 
         <TabsContent value="current" className="space-y-8">
+          {currentWeek && (
+            <ProgressTracker
+              completedMiles={calculateCompletedMiles()}
+              totalMiles={currentWeek.totalMileage}
+            />
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               {workoutOptions && (
@@ -290,7 +303,7 @@ export default function Training() {
                 onChange={(e) => setWeeklyAiQuery(e.target.value)}
                 className="min-h-[100px] resize-none"
               />
-              <Button 
+              <Button
                 className="w-full gap-2"
                 onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
                 disabled={!weeklyAiQuery || isSubmittingQuery}
@@ -303,6 +316,12 @@ export default function Training() {
         </TabsContent>
 
         <TabsContent value="overall" className="space-y-8">
+          {trainingPlan && (
+            <ProgramProgressTracker
+              completedWeeks={getCompletedWeeks()}
+              totalWeeks={trainingPlan.weeklyPlans.length}
+            />
+          )}
           <div className="flex justify-end">
             <PlanGenerator existingPlan={true} />
           </div>
@@ -332,7 +351,7 @@ export default function Training() {
                 onChange={(e) => setAiQuery(e.target.value)}
                 className="min-h-[100px] resize-none"
               />
-              <Button 
+              <Button
                 className="w-full gap-2"
                 onClick={() => handleAIQuery(aiQuery, 'overall')}
                 disabled={!aiQuery || isSubmittingQuery}
@@ -342,12 +361,6 @@ export default function Training() {
               </Button>
             </div>
           </div>
-          {trainingPlan && (
-            <ProgramProgressTracker
-              completedWeeks={getCompletedWeeks()}
-              totalWeeks={trainingPlan.weeklyPlans.length}
-            />
-          )}
         </TabsContent>
       </Tabs>
     </div>
