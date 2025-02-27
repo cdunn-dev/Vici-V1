@@ -6,14 +6,14 @@ import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import HeatMapCalendar from "@/components/training/heat-map-calendar";
+import ProgramProgressTracker from "@/components/training/program-progress-tracker";
 import ProgressTracker from "@/components/training/progress-tracker";
 
 export default function Training() {
@@ -174,6 +174,16 @@ export default function Training() {
     }
   };
 
+  // Calculate completed weeks
+  const getCompletedWeeks = () => {
+    if (!trainingPlan?.weeklyPlans) return 0;
+    const today = new Date();
+    return trainingPlan.weeklyPlans.filter(week => {
+      const lastDay = new Date(week.workouts[week.workouts.length - 1].day);
+      return lastDay < today;
+    }).length;
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -252,13 +262,6 @@ export default function Training() {
             <TabsTrigger value="overall" className="flex-1">Training Program</TabsTrigger>
           </TabsList>
         </div>
-
-        {currentWeek && (
-          <ProgressTracker
-            completedMiles={0}
-            totalMiles={currentWeek.totalMileage}
-          />
-        )}
 
         <TabsContent value="current" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -339,6 +342,12 @@ export default function Training() {
               </Button>
             </div>
           </div>
+          {trainingPlan && (
+            <ProgramProgressTracker
+              completedWeeks={getCompletedWeeks()}
+              totalWeeks={trainingPlan.weeklyPlans.length}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
