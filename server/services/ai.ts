@@ -96,6 +96,36 @@ function generateBasicTrainingPlan(preferences: TrainingPreferences) {
   return { weeklyPlans };
 }
 
+// Helper function to generate more natural prompt text
+function generatePromptFromPreferences(preferences: TrainingPreferences): string {
+  return `As an expert running coach, create a training plan for the following runner:
+
+Goal: ${preferences.goal}
+Current Level: ${preferences.currentLevel}
+Weekly Mileage: ${preferences.weeklyMileage} miles
+Training Days Per Week: ${preferences.daysPerWeek}
+${preferences.targetRace ? `Target Race: ${preferences.targetRace.distance} on ${preferences.targetRace.date}` : 'No specific target race'}
+
+Create a plan using this exact JSON format:
+{
+  "weeklyPlans": [
+    {
+      "week": number,
+      "phase": "Base Building|Peak Training|Taper",
+      "totalMileage": number,
+      "workouts": [
+        {
+          "day": "YYYY-MM-DD",
+          "type": "Easy Run|Long Run|Tempo Run|Interval Training|Rest Day",
+          "distance": number,
+          "description": "string"
+        }
+      ]
+    }
+  ]
+}`;
+}
+
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
   try {
     console.log("Generating training plan with preferences:", preferences);
@@ -105,55 +135,22 @@ export async function generateTrainingPlan(preferences: TrainingPreferences) {
       return generateBasicTrainingPlan(preferences);
     }
 
-    const prompt = `Generate a detailed running training plan with the following requirements:
-- Goal: ${preferences.goal}
-- Current Level: ${preferences.currentLevel}
-- Weekly Mileage: ${preferences.weeklyMileage} miles
-- Training Days: ${preferences.daysPerWeek} days per week
-${preferences.targetRace ? `- Target Race: ${preferences.targetRace.distance} on ${preferences.targetRace.date}` : ''}
-
-Generate a structured training plan that includes:
-1. Weekly mileage targets that gradually increase
-2. Daily workouts incorporating:
-   - Easy runs for recovery
-   - Speed work (intervals, tempo runs)
-   - Long runs for endurance
-   - Rest/cross-training days
-3. Training phases (base building, peak training, taper)
-4. Progression that follows the 10% rule for weekly mileage increases
-5. Recovery weeks every 3-4 weeks
-6. Detailed workout descriptions with pacing guidance
-
-The response must be a valid JSON object with this exact structure:
-{
-  "weeklyPlans": [
-    {
-      "week": 1,
-      "phase": "Base Building",
-      "totalMileage": 25,
-      "workouts": [
-        {
-          "day": "2024-03-01",
-          "type": "Easy Run",
-          "distance": 5,
-          "description": "Easy-paced run to build aerobic base. Keep heart rate in Zone 2."
-        }
-      ]
-    }
-  ]
-}
-
-Return only the JSON object, no additional text.`;
+    const prompt = generatePromptFromPreferences(preferences);
+    console.log("Sending prompt to Gemini API");
 
     const result = await model.generateContent(prompt);
+    console.log("Received response from Gemini API");
     const response = await result.response;
     const text = response.text();
+    console.log("Raw Gemini response:", text);
 
     try {
-      return JSON.parse(text);
+      const parsedResponse = JSON.parse(text);
+      console.log("Successfully parsed JSON response");
+      return parsedResponse;
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
-      console.log("Raw response:", text);
+      console.log("Raw response that failed to parse:", text);
       return generateBasicTrainingPlan(preferences);
     }
   } catch (error) {
@@ -161,6 +158,7 @@ Return only the JSON object, no additional text.`;
     return generateBasicTrainingPlan(preferences);
   }
 }
+
 
 export async function analyzeWorkoutAndSuggestAdjustments(
   recentWorkouts: WorkoutAnalysis[],
@@ -246,45 +244,58 @@ export async function generateTrainingPlanAdjustments(
       throw new Error("Gemini API key not configured");
     }
 
-    const prompt = `Review this training plan feedback and suggest appropriate adjustments:
+    console.log("Generating training plan adjustments with feedback:", feedback);
 
-Feedback: "${feedback}"
+    const cleanedPlan = JSON.stringify(currentPlan, null, 2)
+      .replace(/\\n/g, ' ')
+      .replace(/\\"/g, '"');
 
-Current Training Plan:
-${JSON.stringify(currentPlan, null, 2)}
+    const prompt = `You are an expert running coach. Review this training plan feedback and suggest adjustments.
 
-Analyze the feedback and provide adjustments in this JSON format:
+Feedback from runner: "${feedback}"
+
+Current Training Plan: ${cleanedPlan}
+
+Provide your response in this exact JSON format:
 {
-  "reasoning": "Detailed explanation of why these changes are recommended",
+  "reasoning": "Brief explanation of recommended changes",
   "suggestedPlan": {
     "weeklyPlans": [
-      // Modified weekly plans following the same structure as the current plan
+      {
+        "week": number,
+        "phase": "string",
+        "totalMileage": number,
+        "workouts": [
+          {
+            "day": "YYYY-MM-DD",
+            "type": "string",
+            "distance": number,
+            "description": "string"
+          }
+        ]
+      }
     ]
   }
-}
+}`;
 
-Consider these factors when suggesting adjustments:
-1. Maintain overall training progression
-2. Address the specific concerns in the feedback
-3. Keep the adjustments realistic and achievable
-4. Preserve the basic structure while modifying specific aspects
-5. Include clear explanations for recommended changes
-
-Return only the JSON object, no additional text.`;
-
+    console.log("Sending prompt to Gemini API");
     const result = await model.generateContent(prompt);
+    console.log("Received response from Gemini API");
     const response = await result.response;
     const text = response.text();
+    console.log("Raw Gemini response:", text);
 
     try {
-      return JSON.parse(text);
+      const parsedResponse = JSON.parse(text);
+      console.log("Successfully parsed JSON response");
+      return parsedResponse;
     } catch (parseError) {
       console.error("Error parsing Gemini response:", parseError);
-      console.log("Raw response:", text);
-      throw new Error("Failed to parse AI response");
+      console.log("Raw response that failed to parse:", text);
+      throw new Error("Failed to parse AI response - invalid JSON format");
     }
   } catch (error) {
-    console.error("Error generating plan adjustments:", error);
+    console.error("Error in generateTrainingPlanAdjustments:", error);
     throw error;
   }
 }
