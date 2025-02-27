@@ -34,7 +34,6 @@ import { format, addWeeks, nextMonday } from "date-fns";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { apiRequest } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const planGeneratorSchema = z.object({
@@ -71,29 +70,6 @@ interface PlanGeneratorProps {
   existingPlan?: boolean;
   onPreview?: (plan: any) => void;
 }
-
-const experienceLevelDescriptions = {
-  Beginner: "New to running or just starting structured training",
-  Intermediate: "Regular runner with some race experience",
-  Advanced: "Experienced runner with multiple races completed",
-};
-
-const fitnessLevelDescriptions = {
-  "Very fit": "Currently training regularly and feeling strong",
-  "Solid base": "Maintaining regular activity but room for improvement",
-  "Out of shape": "Getting back into fitness after a break",
-  "Never run before": "Starting from scratch with running",
-};
-
-const coachingStyleDescriptions = {
-  Authoritative: "Clear, structured guidance with detailed explanations",
-  Directive: "Direct instructions focusing on what needs to be done",
-  Motivational: "Encouraging approach emphasizing positive reinforcement",
-  Collaborative: "Interactive style working together to achieve goals",
-  Hybrid: "Flexible combination of different coaching approaches",
-};
-
-const TOTAL_SCREENS = 12;
 
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
@@ -146,7 +122,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const onSubmit = (data: PlanGeneratorFormData) => {
+    console.log("Form submitted with data:", data); // Debug log
+
     if (onPreview) {
       const endDate = data.targetRace?.date
         ? new Date(data.targetRace.date)
@@ -158,10 +136,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         endDate,
       };
 
+      console.log("Calling onPreview with planData:", planData); // Debug log
       onPreview(planData);
       setOpen(false);
     }
-  });
+  };
 
   return (
     <>
@@ -185,7 +164,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             </DialogHeader>
 
             <Form {...form}>
-              <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                 <div className="flex-1 p-6">
                   <div className="max-w-2xl mx-auto space-y-8">
                     <div className="space-y-2">
@@ -618,7 +597,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         <ChevronRight className="h-4 w-4 ml-2" />
                       </Button>
                     ) : (
-                      <Button type="submit">
+                      <Button type="submit" onClick={() => console.log("Submit button clicked")}>
                         Preview Plan
                       </Button>
                     )}
@@ -632,3 +611,26 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     </>
   );
 }
+
+const experienceLevelDescriptions = {
+  Beginner: "New to running or just starting structured training",
+  Intermediate: "Regular runner with some race experience",
+  Advanced: "Experienced runner with multiple races completed",
+};
+
+const fitnessLevelDescriptions = {
+  "Very fit": "Currently training regularly and feeling strong",
+  "Solid base": "Maintaining regular activity but room for improvement",
+  "Out of shape": "Getting back into fitness after a break",
+  "Never run before": "Starting from scratch with running",
+};
+
+const coachingStyleDescriptions = {
+  Authoritative: "Clear, structured guidance with detailed explanations",
+  Directive: "Direct instructions focusing on what needs to be done",
+  Motivational: "Encouraging approach emphasizing positive reinforcement",
+  Collaborative: "Interactive style working together to achieve goals",
+  Hybrid: "Flexible combination of different coaching approaches",
+};
+
+const TOTAL_SCREENS = 12;
