@@ -17,6 +17,34 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProgramProgressTracker from "@/components/training/program-progress-tracker";
 import ProgressTracker from "@/components/training/progress-tracker";
 
+// Define helper functions first
+const getCurrentWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
+    if (!trainingPlan?.weeklyPlans) return null;
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+    return trainingPlan.weeklyPlans.find(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return (
+        (firstDay >= weekStart && firstDay <= weekEnd) ||
+        (lastDay >= weekStart && lastDay <= weekEnd)
+      );
+    });
+  };
+
+  const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
+    if (!trainingPlan?.weeklyPlans) return null;
+    return trainingPlan.weeklyPlans.find(week => {
+      const workoutDates = week.workouts.map(w => new Date(w.day));
+      const firstDay = workoutDates[0];
+      const lastDay = workoutDates[workoutDates.length - 1];
+      return selectedDate >= firstDay && selectedDate <= lastDay;
+    });
+  };
+
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [aiQuery, setAiQuery] = useState("");
@@ -157,8 +185,8 @@ export default function Training() {
     );
   }
 
-  const currentWeek = getCurrentWeek();
-  const selectedWeek = getSelectedWeek();
+  const currentWeek = getCurrentWeek(trainingPlan);
+  const selectedWeek = getSelectedWeek(trainingPlan);
 
   // Find the selected day's workout
   const selectedDayWorkout = selectedWeek?.workouts.find(
@@ -196,34 +224,6 @@ export default function Training() {
     ],
   } : null;
 
-  const getCurrentWeek = () => {
-    if (!trainingPlan?.weeklyPlans) return null;
-    const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return (
-        (firstDay >= weekStart && firstDay <= weekEnd) ||
-        (lastDay >= weekStart && lastDay <= weekEnd)
-      );
-    });
-  };
-
-  const getSelectedWeek = () => {
-    if (!trainingPlan?.weeklyPlans) return null;
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return selectedDate >= firstDay && selectedDate <= lastDay;
-    });
-  };
-
-  // Handle date selection, ensuring it's within the plan's date range
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
 
