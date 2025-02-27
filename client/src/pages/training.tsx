@@ -7,7 +7,7 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export default function Training() {
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewPlan, setPreviewPlan] = useState(null);
+  const [activeTab, setActiveTab] = useState("current");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -66,6 +67,7 @@ export default function Training() {
   const handlePreviewPlan = (plan) => {
     setPreviewPlan(plan);
     setShowPreview(true);
+    setActiveTab("overall"); // Switch to Training Program tab
   };
 
   // Handle plan adjustments
@@ -106,7 +108,6 @@ export default function Training() {
     }
   };
 
-
   const handleConfirmPlan = async () => {
     try {
       const response = await fetch(`/api/training-plans/${trainingPlan?.id}`, {
@@ -123,6 +124,7 @@ export default function Training() {
       toast({
         title: "Success",
         description: "Training plan updated successfully",
+        duration: 3000,
       });
       setShowPreview(false);
 
@@ -339,7 +341,7 @@ export default function Training() {
         <h1 className="text-2xl font-bold mb-4">Training</h1>
       </div>
 
-      <Tabs defaultValue="current" className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <div className="flex justify-center">
           <TabsList className="w-full max-w-[280px]">
             <TabsTrigger value="current" className="flex-1">This Week</TabsTrigger>
