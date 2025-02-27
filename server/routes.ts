@@ -133,26 +133,43 @@ export async function registerRoutes(app: Express) {
       return res.status(400).json({ error: "User ID is required" });
     }
 
-    const authUrl = getStravaAuthUrl(userId);
-    res.json({ url: authUrl });
+    try {
+      const authUrl = getStravaAuthUrl(userId);
+      console.log("Generated Strava auth URL:", authUrl);
+      res.json({ url: authUrl });
+    } catch (error) {
+      console.error("Error generating Strava auth URL:", error);
+      res.status(500).json({ error: "Failed to generate auth URL" });
+    }
   });
 
   app.get("/api/strava/callback", async (req, res) => {
+    console.log("Strava callback received:", {
+      code: req.query.code ? "present" : "missing",
+      state: req.query.state,
+      error: req.query.error,
+    });
+
     const { code, state: userId, error } = req.query;
 
     if (error) {
+      console.error("Strava auth error:", error);
       return res.redirect(`/profile?error=${error}`);
     }
 
     if (!code || !userId) {
+      console.error("Missing params in callback:", { code, userId });
       return res.redirect("/profile?error=missing_params");
     }
 
     try {
+      console.log("Exchanging code for tokens...");
       const tokens = await exchangeStravaCode(code as string);
-      const user = await storage.getUser(parseInt(userId as string));
+      console.log("Successfully obtained Strava tokens");
 
+      const user = await storage.getUser(parseInt(userId as string));
       if (!user) {
+        console.error("User not found:", userId);
         return res.redirect("/profile?error=user_not_found");
       }
 
@@ -166,6 +183,7 @@ export async function registerRoutes(app: Express) {
         connectedApps: [...(user.connectedApps || []), "strava"],
       });
 
+      console.log("Successfully connected Strava for user:", user.id);
       res.redirect("/profile?success=strava_connected");
     } catch (error) {
       console.error("Error connecting Strava:", error);

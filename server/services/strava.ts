@@ -27,18 +27,23 @@ export function getStravaAuthUrl(state: string): string {
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
-  const response = await axios.post(STRAVA_TOKEN_URL, {
-    client_id: STRAVA_CLIENT_ID,
-    client_secret: STRAVA_CLIENT_SECRET,
-    code,
-    grant_type: "authorization_code",
-  });
+  try {
+    const response = await axios.post(STRAVA_TOKEN_URL, {
+      client_id: STRAVA_CLIENT_ID,
+      client_secret: STRAVA_CLIENT_SECRET,
+      code,
+      grant_type: "authorization_code",
+    });
 
-  return {
-    access_token: response.data.access_token,
-    refresh_token: response.data.refresh_token,
-    expires_at: response.data.expires_at,
-  };
+    return {
+      access_token: response.data.access_token,
+      refresh_token: response.data.refresh_token,
+      expires_at: response.data.expires_at,
+    };
+  } catch (error) {
+    console.error("Error exchanging Strava code:", error.response?.data || error.message);
+    throw error;
+  }
 }
 
 export async function refreshStravaToken(refreshToken: string): Promise<StravaTokens> {
