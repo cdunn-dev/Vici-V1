@@ -98,29 +98,19 @@ export default function PlanPreview({
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center pb-4 border-b">
-            <div>
-              <h2 className="text-2xl font-bold">{planDetails.goal}</h2>
-              <p className="text-muted-foreground">{planDetails.goalDescription}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={onBack} className="gap-2">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAdjusting(true)}
-                className="gap-2"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Request Adjustments
-              </Button>
-              <Button onClick={onConfirm} className="gap-2 bg-primary hover:bg-primary/90">
-                <CheckCircle2 className="h-4 w-4" />
-                Approve Plan
-              </Button>
-            </div>
+          <div className="flex justify-between items-center">
+            <Button variant="outline" onClick={onBack} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsAdjusting(true)}
+              className="gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Request Adjustments
+            </Button>
           </div>
 
           <Card className="shadow-md border-primary/20 bg-primary/5">
@@ -229,6 +219,17 @@ export default function PlanPreview({
               targetRace={planDetails.targetRace}
             />
           )}
+
+          <div className="flex justify-center mt-8">
+            <Button 
+              onClick={onConfirm} 
+              size="lg"
+              className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
+            >
+              <CheckCircle2 className="h-5 w-5" />
+              Approve Training Plan
+            </Button>
+          </div>
         </>
       )}
     </div>
