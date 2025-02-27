@@ -85,10 +85,12 @@ export async function registerRoutes(app: Express) {
       const trainingPlan = {
         userId: parseInt(req.body.userId),
         name: `AI Generated Plan - ${preferences.goal}`,
+        goal: preferences.goal, // Add this line to include the goal
         startDate: new Date(),
         endDate: preferences.targetRace ? new Date(preferences.targetRace.date) : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.weeklyMileage,
         weeklyPlans: generatedPlan.weeklyPlans,
+        targetRace: preferences.targetRace || null // Ensure targetRace is properly set
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
