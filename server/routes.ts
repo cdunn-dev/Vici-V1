@@ -2,8 +2,9 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
+import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
+import { generateTrainingPlan } from "./services/training-plan-generator";
 
 export async function registerRoutes(app: Express) {
   // User routes
@@ -83,7 +84,7 @@ export async function registerRoutes(app: Express) {
 
       const generatedPlan = await generateTrainingPlan(preferences);
 
-      // Convert the AI response into a training plan
+      // Convert the generated plan into a training plan
       const trainingPlan = {
         userId: parseInt(req.body.userId),
         name: `AI Generated Plan - ${preferences.goal}`,
