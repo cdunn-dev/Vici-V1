@@ -17,8 +17,6 @@ import HeatMapCalendar from "@/components/training/heat-map-calendar";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [currentTab, setCurrentTab] = useState<"current" | "overall">("current");
-  const [expandedWeekNumber, setExpandedWeekNumber] = useState<number | null>(null);
   const [aiQuery, setAiQuery] = useState("");
   const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
   const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
@@ -83,21 +81,7 @@ export default function Training() {
       return;
     }
 
-    // Switch to Training Program tab and expand the selected week
-    setCurrentTab("overall");
     setSelectedDate(date);
-
-    // Find and expand the corresponding week
-    const selectedWeek = trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return selectedDay >= firstDay && selectedDay <= lastDay;
-    });
-
-    if (selectedWeek) {
-      setExpandedWeekNumber(selectedWeek.week);
-    }
   };
 
   const calculateWorkoutIntensity = (workout: {
@@ -223,7 +207,7 @@ export default function Training() {
     workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
   );
 
-  // Generate workout options
+  // Generate workout options remains the same...
   const workoutOptions = selectedDayWorkout ? {
     type: selectedDayWorkout.type,
     distance: selectedDayWorkout.distance,
@@ -263,7 +247,7 @@ export default function Training() {
         </div>
       </div>
 
-      <Tabs defaultValue="current" value={currentTab} onValueChange={(val) => setCurrentTab(val as "current" | "overall")} className="space-y-8">
+      <Tabs defaultValue="current" className="space-y-8">
         <div className="flex justify-center">
           <TabsList className="w-full max-w-[280px]">
             <TabsTrigger value="current" className="flex-1">This Week</TabsTrigger>
@@ -274,10 +258,18 @@ export default function Training() {
         <TabsContent value="current" className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              {getCurrentWeek() && (
+              {workoutOptions && (
+                <DailyWorkout
+                  date={selectedDate}
+                  workout={workoutOptions}
+                />
+              )}
+
+              {currentWeek && (
                 <WeeklyOverview
-                  week={getCurrentWeek()!}
-                  selectedDate={new Date()} // Always show today for This Week tab
+                  week={currentWeek}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
                 />
               )}
             </div>
@@ -322,7 +314,6 @@ export default function Training() {
               <ProgramOverview
                 weeklyPlans={trainingPlan.weeklyPlans}
                 onSelectWeek={(weekNumber) => {
-                  setExpandedWeekNumber(weekNumber);
                   const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
                   if (week) {
                     setSelectedDate(new Date(week.workouts[0].day));
@@ -330,7 +321,6 @@ export default function Training() {
                 }}
                 onSelectDay={handleDateSelect}
                 selectedDate={selectedDate}
-                expandedWeekNumber={expandedWeekNumber}
                 targetRace={trainingPlan.targetRace}
               />
             </div>

@@ -64,7 +64,6 @@ export default function HeatMapCalendar({
             workout: (date) => intensityMap.has(format(date, 'yyyy-MM-dd')),
           }}
           modifiersClassNames={{
-            training: "bg-primary/10 hover:bg-primary/20",
             selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground text-white",
           }}
           styles={{
