@@ -13,6 +13,9 @@ console.log("\nStrava Configuration:");
 console.log("====================");
 console.log("Callback URL to use in Strava API settings:");
 console.log(REDIRECT_URI);
+console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
+console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
+console.log("Running on Replit:", process.env.REPLIT_URL ? "Yes" : "No");
 console.log("====================\n");
 
 export interface StravaTokens {
@@ -55,6 +58,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       client_secret: STRAVA_CLIENT_SECRET,
       code,
       grant_type: "authorization_code",
+      redirect_uri: REDIRECT_URI, // Added this to ensure it matches
     });
 
     console.log("Successfully exchanged code for tokens");
@@ -65,10 +69,16 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
+    console.error("Full error response:", JSON.stringify(error.response?.data, null, 2));
 
-    // Check for rate limiting errors
+    // Check for specific error types
     if (error.response?.status === 429) {
       throw new Error("Too many requests. Please wait a moment and try again.");
+    }
+
+    // If there's a specific OAuth error, format it nicely
+    if (error.response?.data?.errors) {
+      throw new Error(`Strava Auth Error: ${error.response.data.errors[0]?.field}: ${error.response.data.errors[0]?.code}`);
     }
 
     throw error;
