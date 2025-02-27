@@ -7,9 +7,8 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanRecommendations from "@/components/training/plan-recommendations";
 import PlanReview from "@/components/training/plan-review";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import ProgramOverview from "@/components/training/program-overview";
+import { isAfter, isBefore, startOfDay } from "date-fns";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -40,6 +39,21 @@ export default function Training() {
   const selectedDayWorkout = currentWeek?.workouts.find(
     workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
   );
+
+  // Handle date selection, ensuring it's within the plan's date range
+  const handleDateSelect = (date: Date | null) => {
+    if (!date || !trainingPlan) return;
+
+    const planStart = startOfDay(new Date(trainingPlan.startDate));
+    const planEnd = startOfDay(new Date(trainingPlan.endDate));
+    const selectedDay = startOfDay(date);
+
+    if (isBefore(selectedDay, planStart) || isAfter(selectedDay, planEnd)) {
+      return;
+    }
+
+    setSelectedDate(date);
+  };
 
   // Generate workout options for the selected day
   const workoutOptions = selectedDayWorkout ? {
@@ -86,7 +100,7 @@ export default function Training() {
         <div className="lg:col-span-2">
           <CalendarView
             selectedDate={selectedDate}
-            onSelect={(date) => date && setSelectedDate(date)}
+            onSelect={handleDateSelect}
             events={trainingPlan?.weeklyPlans?.flatMap(week => 
               week.workouts.map(workout => ({
                 date: new Date(workout.day),
@@ -94,6 +108,19 @@ export default function Training() {
               }))
             ) || []}
           />
+          <div className="mt-8">
+            <ProgramOverview
+              weeklyPlans={trainingPlan?.weeklyPlans || []}
+              onSelectWeek={(weekNumber) => {
+                const week = trainingPlan?.weeklyPlans.find(w => w.week === weekNumber);
+                if (week) {
+                  setSelectedDate(new Date(week.workouts[0].day));
+                }
+              }}
+              onSelectDay={handleDateSelect}
+              selectedDate={selectedDate}
+            />
+          </div>
           <div className="mt-8">
             <PlanRecommendations
               planId={trainingPlan?.id || 1}
@@ -104,7 +131,11 @@ export default function Training() {
 
         <div className="space-y-8">
           {currentWeek && (
-            <WeeklyOverview week={currentWeek} />
+            <WeeklyOverview
+              week={currentWeek}
+              onSelectDay={handleDateSelect}
+              selectedDate={selectedDate}
+            />
           )}
           {workoutOptions && (
             <DailyWorkout
