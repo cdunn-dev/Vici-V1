@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
@@ -8,9 +8,11 @@ import PlanRecommendations from "@/components/training/plan-recommendations";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import PlanReview from "@/components/training/plan-review";
 
 export default function Training() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const queryClient = useQueryClient();
 
   const { data: trainingPlan } = useQuery({
     queryKey: ["/api/training-plans", 1], // Assuming user ID 1 for now
@@ -84,6 +86,13 @@ export default function Training() {
         <h1 className="text-2xl font-bold">Training</h1>
         <div className="flex gap-4">
           <PlanGenerator />
+          {trainingPlan && (
+            <PlanReview
+              planId={trainingPlan.id}
+              currentPlan={trainingPlan}
+              onPlanUpdate={() => queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] })}
+            />
+          )}
         </div>
       </div>
 

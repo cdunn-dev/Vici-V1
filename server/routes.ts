@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan, analyzeWorkoutAndSuggestAdjustments } from "./services/ai";
+import { generateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 
 export async function registerRoutes(app: Express) {
@@ -125,6 +125,35 @@ export async function registerRoutes(app: Express) {
       res.status(500).json({ error: "Failed to analyze workouts" });
     }
   });
+
+  // Add this new route after the existing training plan routes
+  app.post("/api/training-plans/:id/adjust", async (req, res) => {
+    try {
+      const { feedback, currentPlan } = req.body;
+      const planId = parseInt(req.params.id);
+
+      if (!feedback || !currentPlan) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const plan = await storage.getTrainingPlan(planId);
+      if (!plan) {
+        return res.status(404).json({ error: "Training plan not found" });
+      }
+
+      // Get AI suggestions for plan adjustments
+      const adjustments = await generateTrainingPlanAdjustments(
+        feedback,
+        currentPlan
+      );
+
+      res.json(adjustments);
+    } catch (error) {
+      console.error("Error adjusting training plan:", error);
+      res.status(500).json({ error: "Failed to adjust training plan" });
+    }
+  });
+
 
   // Strava OAuth Routes
   app.get("/api/strava/auth", (req, res) => {
