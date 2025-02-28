@@ -1,6 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage"; // Added import for storage
+
+async function ensureDefaultUser() {
+  try {
+    const user = await storage.getUser(1);
+    if (!user) {
+      console.log("Creating default user...");
+      await storage.createUser({
+        username: "default",
+        name: "Default User",
+        dateOfBirth: new Date("1990-01-01"),
+        gender: "Other",
+        personalBests: {},
+        connectedApps: [],
+        stravaTokens: null
+      });
+      console.log("Default user created successfully");
+    }
+  } catch (error) {
+    console.error("Error ensuring default user:", error);
+  }
+}
 
 const app = express();
 app.use(express.json());
@@ -47,6 +69,9 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Ensure we have a default user
+  await ensureDefaultUser();
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -56,8 +81,6 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
   const port = 5000;
   server.listen({
     port,

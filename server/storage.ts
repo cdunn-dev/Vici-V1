@@ -25,17 +25,81 @@ export interface IStorage {
   updateTrainingPlan(id: number, plan: Partial<InsertTrainingPlan>): Promise<TrainingPlan>;
 }
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private workouts: Map<number, Workout>;
   private trainingPlans: Map<number, TrainingPlan>;
   private currentIds: { [key: string]: number };
+  private dbFilePath: string;
 
   constructor() {
+    this.dbFilePath = path.join(process.cwd(), 'db.json');
+    
+    // Initialize with default values
     this.users = new Map();
     this.workouts = new Map();
     this.trainingPlans = new Map();
     this.currentIds = { users: 1, workouts: 1, trainingPlans: 1 };
+    
+    // Load data from file if it exists
+    this.loadFromFile();
+  }
+
+  private loadFromFile() {
+    try {
+      if (fs.existsSync(this.dbFilePath)) {
+        const data = JSON.parse(fs.readFileSync(this.dbFilePath, 'utf8'));
+        
+        // Restore users
+        if (data.users) {
+          this.users = new Map(Object.entries(data.users).map(([id, user]) => [Number(id), user as User]));
+        }
+        
+        // Restore workouts
+        if (data.workouts) {
+          this.workouts = new Map(Object.entries(data.workouts).map(([id, workout]) => [Number(id), workout as Workout]));
+        }
+        
+        // Restore training plans
+        if (data.trainingPlans) {
+          this.trainingPlans = new Map(Object.entries(data.trainingPlans).map(([id, plan]) => {
+            // Convert date strings back to Date objects
+            const planObj = plan as TrainingPlan;
+            planObj.startDate = new Date(planObj.startDate);
+            planObj.endDate = new Date(planObj.endDate);
+            return [Number(id), planObj];
+          }));
+        }
+        
+        // Restore current IDs
+        if (data.currentIds) {
+          this.currentIds = data.currentIds;
+        }
+        
+        console.log('Loaded data from persistent storage');
+      }
+    } catch (error) {
+      console.error('Error loading data from file:', error);
+    }
+  }
+
+  private saveToFile() {
+    try {
+      // Convert Maps to objects for JSON serialization
+      const data = {
+        users: Object.fromEntries(this.users),
+        workouts: Object.fromEntries(this.workouts),
+        trainingPlans: Object.fromEntries(this.trainingPlans),
+        currentIds: this.currentIds
+      };
+      
+      fs.writeFileSync(this.dbFilePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Error saving data to file:', error);
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -46,6 +110,7 @@ export class MemStorage implements IStorage {
     const id = this.currentIds.users++;
     const user = { ...insertUser, id };
     this.users.set(id, user);
+    this.saveToFile();
     return user;
   }
 
@@ -54,6 +119,7 @@ export class MemStorage implements IStorage {
     if (!user) throw new Error("User not found");
     const updatedUser = { ...user, ...userData };
     this.users.set(id, updatedUser);
+    this.saveToFile();
     return updatedUser;
   }
 
@@ -69,6 +135,7 @@ export class MemStorage implements IStorage {
     const id = this.currentIds.workouts++;
     const workout = { ...insertWorkout, id };
     this.workouts.set(id, workout);
+    this.saveToFile();
     return workout;
   }
 
@@ -84,6 +151,7 @@ export class MemStorage implements IStorage {
     const id = this.currentIds.trainingPlans++;
     const plan = { ...insertPlan, id };
     this.trainingPlans.set(id, plan);
+    this.saveToFile();
     return plan;
   }
 
@@ -92,6 +160,7 @@ export class MemStorage implements IStorage {
     if (!plan) throw new Error("Training plan not found");
     const updatedPlan = { ...plan, ...planData };
     this.trainingPlans.set(id, updatedPlan);
+    this.saveToFile();
     return updatedPlan;
   }
 }

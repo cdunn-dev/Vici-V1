@@ -15,6 +15,7 @@ import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
+import { StoredPlans } from "@/components/training/stored-plans"; // Import added here
 
 // Define helper functions first
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
@@ -367,6 +368,7 @@ export default function Training() {
           <TabsList className="w-full max-w-[240px] h-9 p-1">
             <TabsTrigger value="current" className="px-3 py-1.5">This Week</TabsTrigger>
             <TabsTrigger value="overall" className="px-3 py-1.5">Training Program</TabsTrigger>
+            <TabsTrigger value="stored" className="px-3 py-1.5">Stored Plans</TabsTrigger> {/* Added Stored Plans tab */}
           </TabsList>
         </div>
 
@@ -451,6 +453,9 @@ export default function Training() {
               />
             </div>
           </TabsContent>
+          <TabsContent value="stored">
+            <StoredPlans />
+          </TabsContent> {/* Added Stored Plans content */}
         </div>
       </Tabs>
     </div>
