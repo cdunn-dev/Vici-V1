@@ -1,9 +1,8 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, Clock, MapPin, User } from "lucide-react";
+import { CalendarDays, Clock, MapPin, User, Trophy, History } from "lucide-react";
 import { formatDistance } from "@/lib/utils";
 
 interface StoredPlansProps {
@@ -32,22 +31,29 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
 
   if (!trainingPlans || trainingPlans.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No saved training plans found.</p>
-        <p className="text-sm mt-2">Create a new plan to get started!</p>
+      <div className="text-center py-12 bg-muted/30 rounded-xl border border-dashed border-muted-foreground/30">
+        <History className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+        <p className="text-muted-foreground text-lg">No past training plans found.</p>
+        <p className="text-sm mt-2 mb-4">Create a new plan to get started!</p>
+        <Button variant="outline" onClick={() => window.location.href = "#"}>
+          Create New Plan
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Your Saved Training Plans</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="space-y-8">
+      <h2 className="text-2xl font-bold text-center mb-6">Your Past Training Plans</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {trainingPlans.map((plan) => (
-          <Card key={plan.id} className="overflow-hidden">
-            <CardHeader className="bg-primary/5">
-              <CardTitle>{plan.name}</CardTitle>
-              <CardDescription>{plan.goalDescription}</CardDescription>
+          <Card key={plan.id} className="overflow-hidden hover:shadow-lg transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Trophy className="h-5 w-5 text-primary" />
+                {plan.name}
+              </CardTitle>
+              <CardDescription className="text-sm line-clamp-2">{plan.goalDescription}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-center gap-2">
@@ -57,7 +63,7 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
                   {new Date(plan.endDate).toLocaleDateString()}
                 </span>
               </div>
-              
+
               {plan.targetRace && (
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -67,14 +73,13 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
                   </span>
                 </div>
               )}
-              
+
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  {plan.runningExperience.level} runner, {plan.runningExperience.fitnessLevel}
-                </span>
-              </div>
-              
+                    Experience Level: {plan.runningExperience?.level || "Not specified"}
+                  </span>
+                </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
@@ -82,10 +87,12 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
                 </span>
               </div>
             </CardContent>
-            <CardFooter className="bg-muted/50 flex justify-end">
+            <CardFooter className="bg-muted/20 pt-4 pb-4 flex justify-end">
               <Button 
-                variant="secondary" 
+                variant="default" 
+                size="sm" 
                 onClick={() => onLoadPlan(plan.id)}
+                className="transition-all hover:translate-y-[-2px]"
               >
                 Load Plan
               </Button>

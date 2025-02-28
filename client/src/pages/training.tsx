@@ -15,29 +15,27 @@ import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
-import { StoredPlans } from "@/components/training/stored-plans"; // Import added here
+import { StoredPlans } from "@/components/training/stored-plans";
+import { Calendar, BarChart, History } from 'lucide-react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { XCircle, CheckCircle2 } from "lucide-react";
 
-// Define helper functions first
+
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
   const today = new Date();
   let completedWeeks = 0;
-
-  // Sort weekly plans by week number to ensure chronological order
   const sortedPlans = [...trainingPlan.weeklyPlans].sort((a, b) => a.week - b.week);
-
   for (const plan of sortedPlans) {
-    // Take the last day of the week to check if the week is completed
     const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) => 
       new Date(b.day).getTime() - new Date(a.day).getTime()
     )[0];
-
     if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < today) {
       completedWeeks++;
     } else {
-      break; // Stop counting once we reach a week that's not completed
+      break;
     }
   }
-
   return completedWeeks;
 }
 
@@ -46,7 +44,6 @@ function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | null) {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
     return trainingPlan.weeklyPlans.find(week => {
       const workoutDates = week.workouts.map(w => new Date(w.day));
       const firstDay = workoutDates[0];
@@ -76,10 +73,11 @@ export default function Training() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewPlan, setPreviewPlan] = useState(null);
   const [activeTab, setActiveTab] = useState("current");
+  const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
+  const [workoutDetail, setWorkoutDetail] = useState(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Reset to current week when component mounts
   useEffect(() => {
     setSelectedDate(new Date());
   }, []);
@@ -96,19 +94,16 @@ export default function Training() {
     },
   });
 
-  // Handle preview plan
   const handlePreviewPlan = (plan: any) => {
     console.log("Preview plan called with:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
     }
-
     setPreviewPlan(plan);
     setShowPreview(true);
   };
 
-  // Handle plan confirmation
   const handleConfirmPlan = async () => {
     try {
       const response = await fetch(`/api/training-plans/generate`, {
@@ -133,7 +128,7 @@ export default function Training() {
         duration: 3000,
       });
       setShowPreview(false);
-      setActiveTab("current"); // Switch to This Week view after approval
+      setActiveTab("current");
     } catch (error) {
       toast({
         title: "Error",
@@ -143,7 +138,6 @@ export default function Training() {
     }
   };
 
-  // Handle plan adjustments
   const handleAdjustPlan = async (feedback: string) => {
     try {
       setIsSubmittingQuery(true);
@@ -181,7 +175,6 @@ export default function Training() {
     }
   };
 
-  // Display loading state
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -198,13 +191,10 @@ export default function Training() {
 
   const currentWeek = getCurrentWeek(trainingPlan);
   const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
-
-  // Find the selected day's workout
   const selectedDayWorkout = selectedWeek?.workouts.find(
     workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
   );
 
-  // Generate workout options
   const workoutOptions = selectedDayWorkout ? {
     type: selectedDayWorkout.type,
     distance: selectedDayWorkout.distance,
@@ -237,15 +227,12 @@ export default function Training() {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
-
     const planStart = startOfDay(new Date(trainingPlan.startDate));
     const planEnd = startOfDay(new Date(trainingPlan.endDate));
     const selectedDay = startOfDay(date);
-
     if (isBefore(selectedDay, planStart) || isAfter(selectedDay, planEnd)) {
       return;
     }
-
     setSelectedDate(date);
   };
 
@@ -319,11 +306,9 @@ export default function Training() {
     }
   };
 
-  // Add this function before the return statement
   const calculateCompletedMiles = () => {
     if (!currentWeek) return 0;
-    // TODO: In the future, this will come from completed workouts
-    return 0; // For now, returning 0 as we haven't implemented workout completion
+    return 0;
   };
 
   const getCompletedWeeks = () => {
@@ -331,7 +316,6 @@ export default function Training() {
     return calculateCompletedWeeks(trainingPlan);
   };
 
-  // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -356,7 +340,6 @@ export default function Training() {
     );
   }
 
-  // Show the main training interface with tabs
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -364,13 +347,26 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex justify-center">
-          <TabsList className="w-full max-w-[240px] h-9 p-1">
-            <TabsTrigger value="current" className="px-3 py-1.5">This Week</TabsTrigger>
-            <TabsTrigger value="overall" className="px-3 py-1.5">Training Program</TabsTrigger>
-            <TabsTrigger value="stored" className="px-3 py-1.5">Stored Plans</TabsTrigger> {/* Added Stored Plans tab */}
-          </TabsList>
-        </div>
+        <TabsList className="grid w-full grid-cols-3 mb-6 shadow-md rounded-lg bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-2 items-center">
+          <TabsTrigger value="current" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+            <span className="flex items-center justify-center gap-2">
+              <Calendar className="h-4 w-4" />
+              This Week
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="overall" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+            <span className="flex items-center justify-center gap-2">
+              <BarChart className="h-4 w-4" />
+              Training Plan
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="stored" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+            <span className="flex items-center justify-center gap-2">
+              <History className="h-4 w-4" />
+              Past Plans
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
         <div className="mt-6">
           <TabsContent value="current" className="space-y-6">
@@ -381,18 +377,17 @@ export default function Training() {
               />
             )}
             {selectedDayWorkout && (
-              <DailyWorkout
-                date={selectedDate}
-                workout={{
-                  type: selectedDayWorkout.type,
-                  distance: selectedDayWorkout.distance,
-                  description: selectedDayWorkout.description,
-                  options: [
-                    { title: "Recommended Workout", description: selectedDayWorkout.description },
-                    { title: "Alternative Option", description: "An easier version of today's workout." }
-                  ]
-                }}
-              />
+              <Card onClick={() => {
+                setWorkoutDetail({date: selectedDate, workout: workoutOptions});
+                setShowWorkoutDetail(true);
+              }}>
+                <CardContent>
+                  <DailyWorkout
+                    date={selectedDate}
+                    workout={workoutOptions}
+                  />
+                </CardContent>
+              </Card>
             )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
@@ -455,9 +450,93 @@ export default function Training() {
           </TabsContent>
           <TabsContent value="stored">
             <StoredPlans />
-          </TabsContent> {/* Added Stored Plans content */}
+          </TabsContent>
         </div>
       </Tabs>
+      {/* Workout Detail Dialog */}
+      {workoutDetail && (
+        <Dialog open={showWorkoutDetail} onOpenChange={setShowWorkoutDetail}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">
+                {workoutDetail.workout.type} - {new Date(workoutDetail.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </DialogTitle>
+              <DialogDescription>
+                {(workoutDetail.workout.distance / 1000).toFixed(1)} km
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              <div className="rounded-lg bg-muted p-4">
+                <h3 className="font-medium mb-2">Workout Goal</h3>
+                <p className="text-sm text-muted-foreground">
+                  {workoutDetail.workout.type.toLowerCase().includes('easy') 
+                    ? "Build aerobic base and recover between harder sessions."
+                    : workoutDetail.workout.type.toLowerCase().includes('interval') 
+                    ? "Improve VO2 max and running economy with high-intensity efforts."
+                    : workoutDetail.workout.type.toLowerCase().includes('tempo') 
+                    ? "Improve lactate threshold and maintain pace for longer periods."
+                    : workoutDetail.workout.type.toLowerCase().includes('long') 
+                    ? "Build endurance and train your body to use fat as fuel efficiently."
+                    : "Complete the workout as prescribed to build fitness and progress in your training plan."}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium">Workout Options</h3>
+                <Tabs defaultValue="option-0" className="w-full">
+                  <TabsList className="grid grid-cols-3">
+                    {workoutDetail.workout.options.map((_, index) => (
+                      <TabsTrigger key={`option-${index}`} value={`option-${index}`}>
+                        Option {index + 1}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {workoutDetail.workout.options.map((option, index) => (
+                    <TabsContent key={`option-${index}`} value={`option-${index}`} className="space-y-4 pt-4">
+                      <h4 className="font-medium">{option.title}</h4>
+                      <p className="text-sm text-muted-foreground">{option.description}</p>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">About {workoutDetail.workout.type.split(' ')[0]} Workouts</h4>
+                <p className="text-sm text-muted-foreground">
+                  {workoutDetail.workout.type.toLowerCase().includes('easy') 
+                    ? "Easy runs build your aerobic base and allow your body to recover. They should feel comfortable, and you should be able to hold a conversation."
+                    : workoutDetail.workout.type.toLowerCase().includes('interval') 
+                    ? "Interval workouts include short bursts of high-intensity effort followed by recovery periods. They improve speed, power, and running economy."
+                    : workoutDetail.workout.type.toLowerCase().includes('tempo') 
+                    ? "Tempo runs are sustained efforts at a challenging but controlled pace. They improve your lactate threshold and teach your body to clear lactic acid efficiently."
+                    : workoutDetail.workout.type.toLowerCase().includes('long') 
+                    ? "Long runs build endurance and train your body to use fat as fuel. They prepare you mentally and physically for longer race distances."
+                    : "This workout is designed to improve specific aspects of your running fitness as part of your overall training plan."}
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6">
+              <div className="flex justify-between w-full">
+                <Button variant="outline" className="gap-2">
+                  <XCircle className="h-4 w-4" />
+                  Skip Workout
+                </Button>
+                <Button className="gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Complete Workout
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
