@@ -103,7 +103,7 @@ export default function Training() {
 
       if (todayWorkout) {
         handleDateSelect(today);
-      } else {
+      } else if (currentWeek.workouts && currentWeek.workouts.length > 0) {
         // If no workout for today, select the first workout of the week
         handleDateSelect(new Date(currentWeek.workouts[0].day));
       }
@@ -404,13 +404,15 @@ export default function Training() {
                 totalMiles={currentWeek.totalMileage}
               />
             )}
-            {currentWeek && ( // Added condition to render DailyWorkout only if currentWeek exists
+            {currentWeek && selectedDate && ( // Added conditions to render DailyWorkout only if currentWeek and selectedDate exist
               <Card onClick={() => {
-                const today = new Date();
-                const todayWorkout = currentWeek.workouts.find(w => isSameDay(new Date(w.day), today));
-                const selectedWorkout = todayWorkout || currentWeek.workouts[0]; // Default to first workout if today's workout is missing.
-                setWorkoutDetail({date: new Date(selectedWorkout.day), workout: workoutOptions}); // Fixed the date issue
-                setShowWorkoutDetail(true);
+                if (currentWeek && currentWeek.workouts && currentWeek.workouts.length > 0) {
+                  const today = new Date();
+                  const todayWorkout = currentWeek.workouts.find(w => isSameDay(new Date(w.day), today));
+                  const selectedWorkout = todayWorkout || currentWeek.workouts[0]; // Default to first workout if today's workout is missing.
+                  setWorkoutDetail({date: new Date(selectedWorkout.day), workout: workoutOptions}); // Fixed the date issue
+                  setShowWorkoutDetail(true);
+                }
               }}>
                 <CardContent>
                   <DailyWorkout
