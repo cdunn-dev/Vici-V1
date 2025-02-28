@@ -83,15 +83,15 @@ export default function HeatMapCalendar({
         />
         <div className="flex justify-center mt-4 gap-2 text-sm">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(0.2) }} />
+            <div className="w-3 h-3 rounded-sm bg-primary opacity-30" />
             <span>Light</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(0.5) }} />
+            <div className="w-3 h-3 rounded-sm bg-primary opacity-60" />
             <span>Medium</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: getIntensityColor(0.8) }} />
+            <div className="w-3 h-3 rounded-sm bg-primary opacity-90" />
             <span>High</span>
           </div>
         </div>

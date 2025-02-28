@@ -11,6 +11,13 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
+        white: "#FFFFFF",
+        primary_purple: "#5224EF",
+        deep_purple: "#2F1589",
+        light_gray: "#D9D9D9",
+        dark_gray: "#1E1E1E",
+        success_green: "#34C759",
+        danger_red: "#FF3B30",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -24,6 +31,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          dark: "#2F1589",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -41,15 +49,19 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         chart: {
-          "1": "hsl(var(--chart-1))",
-          "2": "hsl(var(--chart-2))",
-          "3": "hsl(var(--chart-3))",
-          "4": "hsl(var(--chart-4))",
-          "5": "hsl(var(--chart-5))",
+          "1": "#5224EF",
+          "2": "#2F1589",
+          "3": "#34C759",
+          "4": "#FF3B30",
+          "5": "#D9D9D9",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
