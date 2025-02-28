@@ -377,16 +377,16 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 lg:max-w-[400px] h-10 bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-2">
-          <TabsTrigger value="current" className="flex items-center gap-2 px-2 py-2">
+        <TabsList className="grid w-full grid-cols-3 lg:max-w-[400px] h-10 bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-0.5">
+          <TabsTrigger value="current" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             This Week
           </TabsTrigger>
-          <TabsTrigger value="overall" className="flex items-center gap-2 px-2 py-2">
+          <TabsTrigger value="overall" className="flex items-center gap-2">
             <BarChart2 className="h-4 w-4" />
             Training Plan
           </TabsTrigger>
-          <TabsTrigger value="stored" className="flex items-center gap-2 px-2 py-2">
+          <TabsTrigger value="stored" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Saved Plans
           </TabsTrigger>
