@@ -17,7 +17,30 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
 
 // Define helper functions first
-const getCurrentWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null) => {
+function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
+  const today = new Date();
+  let completedWeeks = 0;
+
+  // Sort weekly plans by week number to ensure chronological order
+  const sortedPlans = [...trainingPlan.weeklyPlans].sort((a, b) => a.week - b.week);
+
+  for (const plan of sortedPlans) {
+    // Take the last day of the week to check if the week is completed
+    const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) => 
+      new Date(b.day).getTime() - new Date(a.day).getTime()
+    )[0];
+
+    if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < today) {
+      completedWeeks++;
+    } else {
+      break; // Stop counting once we reach a week that's not completed
+    }
+  }
+
+  return completedWeeks;
+}
+
+function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | null) {
     if (!trainingPlan?.weeklyPlans) return null;
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -302,6 +325,11 @@ export default function Training() {
     return 0; // For now, returning 0 as we haven't implemented workout completion
   };
 
+  const getCompletedWeeks = () => {
+    if (!trainingPlan) return 0;
+    return calculateCompletedWeeks(trainingPlan);
+  };
+
   // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
@@ -389,12 +417,12 @@ export default function Training() {
           </TabsContent>
 
           <TabsContent value="overall" className="space-y-6">
-            <div className="flex justify-end">
-              <PlanGenerator
-                existingPlan={!!trainingPlan}
-                onPreview={handlePreviewPlan}
+            {trainingPlan && (
+              <ProgressTracker
+                completedWeeks={getCompletedWeeks()}
+                totalWeeks={trainingPlan.weeklyPlans.length}
               />
-            </div>
+            )}
             <ProgramOverview
               weeklyPlans={trainingPlan.weeklyPlans}
               onSelectWeek={(weekNumber) => {
@@ -409,6 +437,12 @@ export default function Training() {
               endDate={new Date(trainingPlan.endDate)}
               targetRace={trainingPlan.targetRace}
             />
+            <div className="flex justify-center mt-8">
+              <PlanGenerator
+                existingPlan={!!trainingPlan}
+                onPreview={handlePreviewPlan}
+              />
+            </div>
           </TabsContent>
         </div>
       </Tabs>

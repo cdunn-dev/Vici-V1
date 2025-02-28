@@ -98,7 +98,7 @@ export default function PlanPreview({
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-center mt-8 space-x-4">
             <Button variant="outline" onClick={onBack} className="gap-2">
               <ChevronLeft className="h-4 w-4" />
               Back
