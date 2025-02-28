@@ -13,7 +13,7 @@ export default {
       colors: {
         white: "#FFFFFF",
         primary_purple: "#5224EF",
-        deep_purple: "#2F1589",
+        deep_purple: "#5224EF",
         light_gray: "#D9D9D9",
         dark_gray: "#1E1E1E",
         success_green: "#34C759",

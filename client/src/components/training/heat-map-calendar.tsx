@@ -83,15 +83,15 @@ export default function HeatMapCalendar({
         />
         <div className="flex justify-center mt-4 gap-2 text-sm">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-primary opacity-30" />
+            <div className="w-3 h-3 rounded-sm bg-[#5224EF] opacity-30" />
             <span>Light</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-primary opacity-60" />
+            <div className="w-3 h-3 rounded-sm bg-[#5224EF] opacity-60" />
             <span>Medium</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-sm bg-primary opacity-90" />
+            <div className="w-3 h-3 rounded-sm bg-[#5224EF] opacity-90" />
             <span>High</span>
           </div>
         </div>

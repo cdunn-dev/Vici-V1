@@ -21,6 +21,9 @@
   
   --primary: 255 87% 54%;
   --primary-foreground: 0 0% 100%;
+  /* Ensure consistent purple color */
+  --purple: #5224EF;
+  --purple-transparent: rgba(82, 36, 239, 0.3);
   
   --secondary: 258 70% 36%;
   --secondary-foreground: 0 0% 100%;
