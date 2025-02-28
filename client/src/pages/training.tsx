@@ -7,7 +7,7 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isSameDay } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -79,36 +79,8 @@ export default function Training() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace("#", "");
-      if (hash === "plan" || hash === "past") {
-        setActiveTab(hash);
-      } else {
-        setActiveTab("current");
-      }
-    };
-
-    handleHashChange();
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
+    setSelectedDate(new Date());
   }, []);
-
-  // Set default selected day to today when viewing the current week tab
-  useEffect(() => {
-    if (activeTab === "current" && currentWeek && !selectedDate) {
-      const today = new Date();
-      const todayWorkout = currentWeek.workouts.find(w => 
-        isSameDay(new Date(w.day), today)
-      );
-
-      if (todayWorkout) {
-        handleDateSelect(today);
-      } else if (currentWeek.workouts && currentWeek.workouts.length > 0) {
-        // If no workout for today, select the first workout of the week
-        handleDateSelect(new Date(currentWeek.workouts[0].day));
-      }
-    }
-  }, [activeTab, currentWeek]);
 
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
     queryKey: ["/api/training-plans", { userId: 1 }],
@@ -404,15 +376,10 @@ export default function Training() {
                 totalMiles={currentWeek.totalMileage}
               />
             )}
-            {currentWeek && selectedDate && ( // Added conditions to render DailyWorkout only if currentWeek and selectedDate exist
+            {selectedDayWorkout && (
               <Card onClick={() => {
-                if (currentWeek && currentWeek.workouts && currentWeek.workouts.length > 0) {
-                  const today = new Date();
-                  const todayWorkout = currentWeek.workouts.find(w => isSameDay(new Date(w.day), today));
-                  const selectedWorkout = todayWorkout || currentWeek.workouts[0]; // Default to first workout if today's workout is missing.
-                  setWorkoutDetail({date: new Date(selectedWorkout.day), workout: workoutOptions}); // Fixed the date issue
-                  setShowWorkoutDetail(true);
-                }
+                setWorkoutDetail({date: selectedDate, workout: workoutOptions});
+                setShowWorkoutDetail(true);
               }}>
                 <CardContent>
                   <DailyWorkout
