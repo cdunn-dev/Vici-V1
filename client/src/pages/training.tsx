@@ -7,27 +7,37 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isSameDay, format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, CalendarDays, BarChart2, History, XCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
 import { StoredPlans } from "@/components/training/stored-plans";
-import { Calendar, BarChart, History } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { XCircle, CheckCircle2 } from "lucide-react";
 
+interface WorkoutDetailType {
+  date: Date;
+  workout: {
+    type: string;
+    distance: number;
+    description: string;
+    options: Array<{
+      title: string;
+      description: string;
+    }>;
+  };
+}
 
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
   const today = new Date();
   let completedWeeks = 0;
   const sortedPlans = [...trainingPlan.weeklyPlans].sort((a, b) => a.week - b.week);
   for (const plan of sortedPlans) {
-    const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) => 
+    const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) =>
       new Date(b.day).getTime() - new Date(a.day).getTime()
     )[0];
     if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < today) {
@@ -39,50 +49,38 @@ function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): num
   return completedWeeks;
 }
 
-function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | null) {
-    if (!trainingPlan?.weeklyPlans) return null;
-    const today = new Date();
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return (
-        (firstDay >= weekStart && firstDay <= weekEnd) ||
-        (lastDay >= weekStart && lastDay <= weekEnd)
-      );
-    });
-};
+function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | undefined | null): typeof trainingPlan extends null | undefined ? null : (typeof trainingPlan.weeklyPlans)[number] | null {
+  if (!trainingPlan?.weeklyPlans) return null;
+  const today = new Date();
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+  return trainingPlan.weeklyPlans.find(week => {
+    const workoutDates = week.workouts.map(w => new Date(w.day));
+    const firstDay = workoutDates[0];
+    const lastDay = workoutDates[workoutDates.length - 1];
+    return (
+      (firstDay >= weekStart && firstDay <= weekEnd) ||
+      (lastDay >= weekStart && lastDay <= weekEnd)
+    );
+  }) || null;
+}
 
-const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | null, selectedDate: Date) => {
-    if (!trainingPlan?.weeklyPlans) return null;
-    return trainingPlan.weeklyPlans.find(week => {
-      const workoutDates = week.workouts.map(w => new Date(w.day));
-      const firstDay = workoutDates[0];
-      const lastDay = workoutDates[workoutDates.length - 1];
-      return selectedDate >= firstDay && selectedDate <= lastDay;
-    });
+const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | undefined | null, selectedDate: Date) => {
+  if (!trainingPlan?.weeklyPlans) return null;
+  return trainingPlan.weeklyPlans.find(week => {
+    const workoutDates = week.workouts.map(w => new Date(w.day));
+    const firstDay = workoutDates[0];
+    const lastDay = workoutDates[workoutDates.length - 1];
+    return selectedDate >= firstDay && selectedDate <= lastDay;
+  }) || null;
 };
 
 export default function Training() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [aiQuery, setAiQuery] = useState("");
-  const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
-  const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewPlan, setPreviewPlan] = useState(null);
-  const [activeTab, setActiveTab] = useState("current");
-  const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
-  const [workoutDetail, setWorkoutDetail] = useState(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  useEffect(() => {
-    setSelectedDate(new Date());
-  }, []);
-
-  const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans>({
+  // Query for training plan
+  const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
     queryKey: ["/api/training-plans", { userId: 1 }],
     queryFn: async () => {
       const response = await fetch(`/api/training-plans?userId=1`);
@@ -94,8 +92,45 @@ export default function Training() {
     },
   });
 
+  // State management
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [aiQuery, setAiQuery] = useState("");
+  const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
+  const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("current");
+  const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
+  const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
+
+  // Derived state
+  const currentWeek = getCurrentWeek(trainingPlan);
+  const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
+  const selectedDayWorkout = selectedWeek?.workouts.find(
+    workout => isSameDay(new Date(workout.day), selectedDate)
+  );
+
+  // Effects
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
+
+  useEffect(() => {
+    if (!currentWeek) return;
+
+    const today = new Date();
+    const todayWorkout = currentWeek.workouts.find(w =>
+      isSameDay(new Date(w.day), today)
+    );
+
+    if (todayWorkout) {
+      setSelectedDate(new Date(todayWorkout.day));
+    } else {
+      setSelectedDate(new Date(currentWeek.workouts[0].day));
+    }
+  }, [currentWeek]);
+
   const handlePreviewPlan = (plan: any) => {
-    console.log("Preview plan called with:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
@@ -128,7 +163,7 @@ export default function Training() {
         duration: 3000,
       });
       setShowPreview(false);
-      setActiveTab("current");
+      setActiveTab("current"); // Switch to This Week view after approval
     } catch (error) {
       toast({
         title: "Error",
@@ -152,13 +187,12 @@ export default function Training() {
         }),
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error("Failed to adjust plan");
+        throw new Error(data.details || data.error || 'Failed to adjust plan');
       }
 
-      const adjustedPlan = await response.json();
-      setPreviewPlan(adjustedPlan);
-
+      setPreviewPlan(data);
       toast({
         title: "Plan Adjusted",
         description: "Your training plan has been updated based on your feedback.",
@@ -177,9 +211,9 @@ export default function Training() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Training</h1>
+          <h1 className="text-2xl font-bold mb-2">Training</h1>
           <div className="space-y-4">
             <Skeleton className="h-[200px] w-full" />
             <Skeleton className="h-[400px] w-full" />
@@ -189,41 +223,11 @@ export default function Training() {
     );
   }
 
-  const currentWeek = getCurrentWeek(trainingPlan);
-  const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
-  const selectedDayWorkout = selectedWeek?.workouts.find(
-    workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
-  );
-
-  const workoutOptions = selectedDayWorkout ? {
-    type: selectedDayWorkout.type,
-    distance: selectedDayWorkout.distance,
-    description: selectedDayWorkout.description,
-    options: [
-      { title: "Recommended Workout", description: selectedDayWorkout.description },
-      ...(selectedDayWorkout.type.toLowerCase().includes('easy') ||
-        selectedDayWorkout.type.toLowerCase().includes('recovery') ? [] : [
-        {
-          title: "Alternative 1",
-          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
-            selectedDayWorkout.description
-              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
-              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
-          }`,
-        },
-        {
-          title: "Alternative 2",
-          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
-            selectedDayWorkout.type.includes('Interval') ?
-              selectedDayWorkout.description
-                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
-              selectedDayWorkout.description
-                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
-          }`,
-        },
-      ]),
-    ],
-  } : null;
+  const calculateCompletedMiles = () => {
+    if (!currentWeek) return 0;
+    // TODO: In the future, this will come from completed workouts
+    return 0;
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
@@ -237,9 +241,10 @@ export default function Training() {
   };
 
   const handleAIQuery = async (query: string, type: 'overall' | 'weekly') => {
+    if (!trainingPlan) return;
     try {
       setIsSubmittingQuery(true);
-      const response = await fetch(`/api/training-plans/${trainingPlan?.id}/adjust`, {
+      const response = await fetch(`/api/training-plans/${trainingPlan.id}/adjust`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +266,7 @@ export default function Training() {
         action: data.suggestedPlan ? (
           <Button onClick={async () => {
             try {
-              const updateResponse = await fetch(`/api/training-plans/${trainingPlan?.id}`, {
+              const updateResponse = await fetch(`/api/training-plans/${trainingPlan.id}`, {
                 method: 'PATCH',
                 headers: {
                   'Content-Type': 'application/json',
@@ -306,16 +311,40 @@ export default function Training() {
     }
   };
 
-  const calculateCompletedMiles = () => {
-    if (!currentWeek) return 0;
-    return 0;
-  };
+  const workoutOptions = selectedDayWorkout ? {
+    type: selectedDayWorkout.type,
+    distance: selectedDayWorkout.distance,
+    description: selectedDayWorkout.description,
+    options: [
+      {
+        title: "Recommended Workout",
+        description: selectedDayWorkout.description
+      },
+      ...(selectedDayWorkout.type.toLowerCase().includes('easy') ||
+        selectedDayWorkout.type.toLowerCase().includes('recovery') ? [] : [
+        {
+          title: "Alternative 1",
+          description: `Modified ${selectedDayWorkout.type.toLowerCase()} with lower intensity: ${
+            selectedDayWorkout.description
+              .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 0.9)}-${Math.round(Number(max) * 0.9)}`)
+              .replace(/(\d+)(?=\s*(?:miles|km|meters))/g, num => Math.round(Number(num) * 0.9).toString())
+          }`,
+        },
+        {
+          title: "Alternative 2",
+          description: `Alternative ${selectedDayWorkout.type.toLowerCase()} with different structure: ${
+            selectedDayWorkout.type.includes('Interval') ?
+              selectedDayWorkout.description
+                .replace(/(\d+)\s*x\s*(\d+)m/g, (_, sets, dist) => `${Math.round(Number(sets) * 1.5)}x${Math.round(Number(dist) * 0.67)}m`) :
+              selectedDayWorkout.description
+                .replace(/(\d+)-(\d+)/g, (_, min, max) => `${Math.round(Number(min) * 1.1)}-${Math.round(Number(max) * 1.1)}`)
+          }`,
+        },
+      ]),
+    ],
+  } : null;
 
-  const getCompletedWeeks = () => {
-    if (!trainingPlan) return 0;
-    return calculateCompletedWeeks(trainingPlan);
-  };
-
+  // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -340,6 +369,7 @@ export default function Training() {
     );
   }
 
+  // Show the main training interface with tabs
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -347,24 +377,18 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 mb-6 shadow-md rounded-lg bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-2.5 h-16 items-center">
-          <TabsTrigger value="current" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
-            <span className="flex items-center justify-center gap-2">
-              <Calendar className="h-4 w-4" />
-              This Week
-            </span>
+        <TabsList className="grid w-full grid-cols-3 lg:max-w-[400px] h-10">
+          <TabsTrigger value="current" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            This Week
           </TabsTrigger>
-          <TabsTrigger value="overall" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
-            <span className="flex items-center justify-center gap-2">
-              <BarChart className="h-4 w-4" />
-              Training Plan
-            </span>
+          <TabsTrigger value="overall" className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4" />
+            Training Plan
           </TabsTrigger>
-          <TabsTrigger value="stored" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
-            <span className="flex items-center justify-center gap-2">
-              <History className="h-4 w-4" />
-              Past Plans
-            </span>
+          <TabsTrigger value="stored" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Saved Plans
           </TabsTrigger>
         </TabsList>
 
@@ -372,16 +396,23 @@ export default function Training() {
           <TabsContent value="current" className="space-y-6">
             {currentWeek && (
               <ProgressTracker
-                completedMiles={calculateCompletedMiles()}
-                totalMiles={currentWeek.totalMileage}
+                completed={calculateCompletedMiles()}
+                total={currentWeek.totalMileage}
+                label="miles"
               />
             )}
-            {selectedDayWorkout && (
-              <Card onClick={() => {
-                setWorkoutDetail({date: selectedDate, workout: workoutOptions});
-                setShowWorkoutDetail(true);
-              }}>
-                <CardContent>
+            {workoutOptions && (
+              <Card
+                onClick={() => {
+                  setWorkoutDetail({
+                    date: selectedDate,
+                    workout: workoutOptions
+                  });
+                  setShowWorkoutDetail(true);
+                }}
+                className="hover:bg-accent/5 cursor-pointer transition-colors"
+              >
+                <CardContent className="pt-6">
                   <DailyWorkout
                     date={selectedDate}
                     workout={workoutOptions}
@@ -390,7 +421,7 @@ export default function Training() {
               </Card>
             )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+              <div className="lg:col-span-2">
                 {currentWeek && (
                   <WeeklyOverview
                     week={currentWeek}
@@ -421,52 +452,48 @@ export default function Training() {
           </TabsContent>
 
           <TabsContent value="overall" className="space-y-6">
-            {trainingPlan && (
-              <ProgressTracker
-                completedWeeks={getCompletedWeeks()}
-                totalWeeks={trainingPlan.weeklyPlans.length}
-              />
-            )}
-            <ProgramOverview
-              weeklyPlans={trainingPlan.weeklyPlans}
-              onSelectWeek={(weekNumber) => {
-                const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                if (week) {
-                  setSelectedDate(new Date(week.workouts[0].day));
-                }
-              }}
-              onSelectDay={handleDateSelect}
-              selectedDate={selectedDate}
-              goal={trainingPlan.goal || "No goal set"}
-              endDate={new Date(trainingPlan.endDate)}
-              targetRace={trainingPlan.targetRace}
-            />
-            <div className="flex justify-center mt-8">
+            <div className="flex justify-end">
               <PlanGenerator
                 existingPlan={!!trainingPlan}
                 onPreview={handlePreviewPlan}
               />
             </div>
+            {trainingPlan && (
+              <ProgramOverview
+                weeklyPlans={trainingPlan.weeklyPlans}
+                onSelectWeek={(weekNumber) => {
+                  const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                  if (week) {
+                    setSelectedDate(new Date(week.workouts[0].day));
+                  }
+                }}
+                onSelectDay={handleDateSelect}
+                selectedDate={selectedDate}
+                goal={trainingPlan.goal || "No goal set"}
+                endDate={new Date(trainingPlan.endDate)}
+                targetRace={trainingPlan.targetRace ? {
+                  distance: trainingPlan.targetRace.distance,
+                  date: trainingPlan.targetRace.date
+                } : undefined}
+              />
+            )}
           </TabsContent>
+
           <TabsContent value="stored">
-            <StoredPlans />
+            <StoredPlans onLoadPlan={() => {}} />
           </TabsContent>
         </div>
       </Tabs>
-      {/* Workout Detail Dialog */}
+
       {workoutDetail && (
         <Dialog open={showWorkoutDetail} onOpenChange={setShowWorkoutDetail}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl">
-                {workoutDetail.workout.type} - {new Date(workoutDetail.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric'
-                })}
+                {workoutDetail.workout.type} - {format(workoutDetail.date, 'EEEE, MMMM d')}
               </DialogTitle>
               <DialogDescription>
-                {(workoutDetail.workout.distance / 1000).toFixed(1)} km
+                {workoutDetail.workout.distance} miles
               </DialogDescription>
             </DialogHeader>
 
@@ -474,13 +501,13 @@ export default function Training() {
               <div className="rounded-lg bg-muted p-4">
                 <h3 className="font-medium mb-2">Workout Goal</h3>
                 <p className="text-sm text-muted-foreground">
-                  {workoutDetail.workout.type.toLowerCase().includes('easy') 
+                  {workoutDetail.workout.type.toLowerCase().includes('easy')
                     ? "Build aerobic base and recover between harder sessions."
-                    : workoutDetail.workout.type.toLowerCase().includes('interval') 
+                    : workoutDetail.workout.type.toLowerCase().includes('interval')
                     ? "Improve VO2 max and running economy with high-intensity efforts."
-                    : workoutDetail.workout.type.toLowerCase().includes('tempo') 
+                    : workoutDetail.workout.type.toLowerCase().includes('tempo')
                     ? "Improve lactate threshold and maintain pace for longer periods."
-                    : workoutDetail.workout.type.toLowerCase().includes('long') 
+                    : workoutDetail.workout.type.toLowerCase().includes('long')
                     ? "Build endurance and train your body to use fat as fuel efficiently."
                     : "Complete the workout as prescribed to build fitness and progress in your training plan."}
                 </p>
@@ -509,13 +536,13 @@ export default function Training() {
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold">About {workoutDetail.workout.type.split(' ')[0]} Workouts</h4>
                 <p className="text-sm text-muted-foreground">
-                  {workoutDetail.workout.type.toLowerCase().includes('easy') 
+                  {workoutDetail.workout.type.toLowerCase().includes('easy')
                     ? "Easy runs build your aerobic base and allow your body to recover. They should feel comfortable, and you should be able to hold a conversation."
-                    : workoutDetail.workout.type.toLowerCase().includes('interval') 
+                    : workoutDetail.workout.type.toLowerCase().includes('interval')
                     ? "Interval workouts include short bursts of high-intensity effort followed by recovery periods. They improve speed, power, and running economy."
-                    : workoutDetail.workout.type.toLowerCase().includes('tempo') 
+                    : workoutDetail.workout.type.toLowerCase().includes('tempo')
                     ? "Tempo runs are sustained efforts at a challenging but controlled pace. They improve your lactate threshold and teach your body to clear lactic acid efficiently."
-                    : workoutDetail.workout.type.toLowerCase().includes('long') 
+                    : workoutDetail.workout.type.toLowerCase().includes('long')
                     ? "Long runs build endurance and train your body to use fat as fuel. They prepare you mentally and physically for longer race distances."
                     : "This workout is designed to improve specific aspects of your running fitness as part of your overall training plan."}
                 </p>
@@ -524,9 +551,9 @@ export default function Training() {
 
             <DialogFooter className="mt-6">
               <div className="flex justify-between w-full">
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => setShowWorkoutDetail(false)}>
                   <XCircle className="h-4 w-4" />
-                  Skip Workout
+                  Close
                 </Button>
                 <Button className="gap-2">
                   <CheckCircle2 className="h-4 w-4" />
