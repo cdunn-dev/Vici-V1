@@ -55,6 +55,23 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  app.get("/api/training-plans/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid plan ID" });
+      }
+      const plan = await storage.getTrainingPlan(id);
+      if (!plan) {
+        return res.status(404).json({ error: "Training plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error("Error fetching training plan:", error);
+      res.status(500).json({ error: "Failed to fetch training plan" });
+    }
+  });
+
   app.post("/api/training-plans", async (req, res) => {
     const result = insertTrainingPlanSchema.safeParse(req.body);
     if (!result.success) {

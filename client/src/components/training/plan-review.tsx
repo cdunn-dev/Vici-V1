@@ -168,7 +168,7 @@ export default function PlanReview({ planId, currentPlan, onPlanUpdate }: PlanRe
                 <div className="flex gap-2">
                   <Button
                     onClick={handleApplyAdjustment}
-                    className="gap-2"
+                    className="gap-2 bg-success hover:bg-success/90"
                   >
                     <Check className="h-4 w-4" />
                     Apply Changes
@@ -176,7 +176,7 @@ export default function PlanReview({ planId, currentPlan, onPlanUpdate }: PlanRe
                   <Button
                     variant="outline"
                     onClick={() => setAdjustments(null)}
-                    className="gap-2"
+                    className="gap-2 border-destructive text-destructive hover:bg-destructive/10"
                   >
                     <X className="h-4 w-4" />
                     Dismiss

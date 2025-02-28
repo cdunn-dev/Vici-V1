@@ -15,6 +15,7 @@ import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
+import { StoredPlans } from "@/components/training/stored-plans"; // Import added here
 
 // Define helper functions first
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
@@ -364,9 +365,10 @@ export default function Training() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-center">
-          <TabsList className="w-full max-w-[240px] h-9">
-            <TabsTrigger value="current">This Week</TabsTrigger>
-            <TabsTrigger value="overall">Training Program</TabsTrigger>
+          <TabsList className="w-full max-w-[240px] h-9 p-1">
+            <TabsTrigger value="current" className="px-3 py-1.5">This Week</TabsTrigger>
+            <TabsTrigger value="overall" className="px-3 py-1.5">Training Program</TabsTrigger>
+            <TabsTrigger value="stored" className="px-3 py-1.5">Stored Plans</TabsTrigger> {/* Added Stored Plans tab */}
           </TabsList>
         </div>
 
@@ -378,15 +380,22 @@ export default function Training() {
                 totalMiles={currentWeek.totalMileage}
               />
             )}
+            {selectedDayWorkout && (
+              <DailyWorkout
+                date={selectedDate}
+                workout={{
+                  type: selectedDayWorkout.type,
+                  distance: selectedDayWorkout.distance,
+                  description: selectedDayWorkout.description,
+                  options: [
+                    { title: "Recommended Workout", description: selectedDayWorkout.description },
+                    { title: "Alternative Option", description: "An easier version of today's workout." }
+                  ]
+                }}
+              />
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                {workoutOptions && (
-                  <DailyWorkout
-                    date={selectedDate}
-                    workout={workoutOptions}
-                  />
-                )}
-
                 {currentWeek && (
                   <WeeklyOverview
                     week={currentWeek}
@@ -444,6 +453,9 @@ export default function Training() {
               />
             </div>
           </TabsContent>
+          <TabsContent value="stored">
+            <StoredPlans />
+          </TabsContent> {/* Added Stored Plans content */}
         </div>
       </Tabs>
     </div>
