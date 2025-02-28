@@ -347,20 +347,20 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 mb-6 shadow-md rounded-lg bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-2 items-center">
-          <TabsTrigger value="current" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+        <TabsList className="grid w-full grid-cols-3 mb-6 shadow-md rounded-lg bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-2.5 h-16 items-center">
+          <TabsTrigger value="current" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
             <span className="flex items-center justify-center gap-2">
               <Calendar className="h-4 w-4" />
               This Week
             </span>
           </TabsTrigger>
-          <TabsTrigger value="overall" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+          <TabsTrigger value="overall" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
             <span className="flex items-center justify-center gap-2">
               <BarChart className="h-4 w-4" />
               Training Plan
             </span>
           </TabsTrigger>
-          <TabsTrigger value="stored" className="py-0 px-3 font-medium rounded-md flex items-center justify-center h-9">
+          <TabsTrigger value="stored" className="px-3 font-medium rounded-md h-11 flex items-center justify-center">
             <span className="flex items-center justify-center gap-2">
               <History className="h-4 w-4" />
               Past Plans
