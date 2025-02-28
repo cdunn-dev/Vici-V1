@@ -19,7 +19,7 @@ export default function ProgressTracker({ completedMiles, totalMiles }: Progress
             {/* Background circle */}
             <svg className="w-full h-full -rotate-90">
               <circle
-                className="text-muted-foreground/20"
+                className="text-[#5224EF]/20"
                 strokeWidth="8"
                 stroke="currentColor"
                 fill="transparent"
@@ -29,7 +29,7 @@ export default function ProgressTracker({ completedMiles, totalMiles }: Progress
               />
               {/* Progress circle */}
               <circle
-                className="text-primary"
+                className="text-[#5224EF]"
                 strokeWidth="8"
                 strokeLinecap="round"
                 stroke="currentColor"

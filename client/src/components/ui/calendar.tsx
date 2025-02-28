@@ -42,12 +42,12 @@ function Calendar({
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground text-white",
-        day_today: "bg-accent text-accent-foreground",
+        day_today: "bg-[#5224EF]/30 text-white font-medium",
         day_outside:
           "day-outside text-muted-foreground opacity-50",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "aria-selected:bg-[#5224EF]/30 aria-selected:text-white",
         day_hidden: "invisible",
         ...classNames,
       }}
