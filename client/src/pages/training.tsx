@@ -364,9 +364,9 @@ export default function Training() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex justify-center">
-          <TabsList className="w-full max-w-[240px] h-9">
-            <TabsTrigger value="current">This Week</TabsTrigger>
-            <TabsTrigger value="overall">Training Program</TabsTrigger>
+          <TabsList className="w-full max-w-[240px] h-9 p-1">
+            <TabsTrigger value="current" className="px-3 py-1.5">This Week</TabsTrigger>
+            <TabsTrigger value="overall" className="px-3 py-1.5">Training Program</TabsTrigger>
           </TabsList>
         </div>
 
