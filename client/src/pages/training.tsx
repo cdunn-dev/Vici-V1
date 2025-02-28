@@ -385,6 +385,10 @@ export default function Training() {
                   type: selectedDayWorkout.type,
                   distance: selectedDayWorkout.distance,
                   description: selectedDayWorkout.description,
+                  options: [
+                    { title: "Recommended Workout", description: selectedDayWorkout.description },
+                    { title: "Alternative Option", description: "An easier version of today's workout." }
+                  ]
                 }}
               />
             )}
