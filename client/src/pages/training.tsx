@@ -423,12 +423,6 @@ export default function Training() {
                 totalWeeks={trainingPlan.weeklyPlans.length}
               />
             )}
-            <div className="flex justify-end">
-              <PlanGenerator
-                existingPlan={!!trainingPlan}
-                onPreview={handlePreviewPlan}
-              />
-            </div>
             <ProgramOverview
               weeklyPlans={trainingPlan.weeklyPlans}
               onSelectWeek={(weekNumber) => {
@@ -443,6 +437,12 @@ export default function Training() {
               endDate={new Date(trainingPlan.endDate)}
               targetRace={trainingPlan.targetRace}
             />
+            <div className="flex justify-center mt-8">
+              <PlanGenerator
+                existingPlan={!!trainingPlan}
+                onPreview={handlePreviewPlan}
+              />
+            </div>
           </TabsContent>
         </div>
       </Tabs>
