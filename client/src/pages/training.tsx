@@ -16,30 +16,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
 import { StoredPlans } from "@/components/training/stored-plans";
-import { Calendar, BarChart, History } from 'lucide-react'; // Added icon imports
+import { Calendar, BarChart, History } from 'lucide-react';
 
 
-// Define helper functions first
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
   const today = new Date();
   let completedWeeks = 0;
-
-  // Sort weekly plans by week number to ensure chronological order
   const sortedPlans = [...trainingPlan.weeklyPlans].sort((a, b) => a.week - b.week);
-
   for (const plan of sortedPlans) {
-    // Take the last day of the week to check if the week is completed
     const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) => 
       new Date(b.day).getTime() - new Date(a.day).getTime()
     )[0];
-
     if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < today) {
       completedWeeks++;
     } else {
-      break; // Stop counting once we reach a week that's not completed
+      break;
     }
   }
-
   return completedWeeks;
 }
 
@@ -48,7 +41,6 @@ function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | null) {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-
     return trainingPlan.weeklyPlans.find(week => {
       const workoutDates = week.workouts.map(w => new Date(w.day));
       const firstDay = workoutDates[0];
@@ -81,7 +73,6 @@ export default function Training() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Reset to current week when component mounts
   useEffect(() => {
     setSelectedDate(new Date());
   }, []);
@@ -98,19 +89,16 @@ export default function Training() {
     },
   });
 
-  // Handle preview plan
   const handlePreviewPlan = (plan: any) => {
     console.log("Preview plan called with:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
     }
-
     setPreviewPlan(plan);
     setShowPreview(true);
   };
 
-  // Handle plan confirmation
   const handleConfirmPlan = async () => {
     try {
       const response = await fetch(`/api/training-plans/generate`, {
@@ -135,7 +123,7 @@ export default function Training() {
         duration: 3000,
       });
       setShowPreview(false);
-      setActiveTab("current"); // Switch to This Week view after approval
+      setActiveTab("current");
     } catch (error) {
       toast({
         title: "Error",
@@ -145,7 +133,6 @@ export default function Training() {
     }
   };
 
-  // Handle plan adjustments
   const handleAdjustPlan = async (feedback: string) => {
     try {
       setIsSubmittingQuery(true);
@@ -183,7 +170,6 @@ export default function Training() {
     }
   };
 
-  // Display loading state
   if (isLoading) {
     return (
       <div className="space-y-8">
@@ -200,13 +186,10 @@ export default function Training() {
 
   const currentWeek = getCurrentWeek(trainingPlan);
   const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
-
-  // Find the selected day's workout
   const selectedDayWorkout = selectedWeek?.workouts.find(
     workout => new Date(workout.day).toDateString() === selectedDate.toDateString()
   );
 
-  // Generate workout options
   const workoutOptions = selectedDayWorkout ? {
     type: selectedDayWorkout.type,
     distance: selectedDayWorkout.distance,
@@ -239,15 +222,12 @@ export default function Training() {
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
-
     const planStart = startOfDay(new Date(trainingPlan.startDate));
     const planEnd = startOfDay(new Date(trainingPlan.endDate));
     const selectedDay = startOfDay(date);
-
     if (isBefore(selectedDay, planStart) || isAfter(selectedDay, planEnd)) {
       return;
     }
-
     setSelectedDate(date);
   };
 
@@ -321,11 +301,9 @@ export default function Training() {
     }
   };
 
-  // Add this function before the return statement
   const calculateCompletedMiles = () => {
     if (!currentWeek) return 0;
-    // TODO: In the future, this will come from completed workouts
-    return 0; // For now, returning 0 as we haven't implemented workout completion
+    return 0;
   };
 
   const getCompletedWeeks = () => {
@@ -333,7 +311,6 @@ export default function Training() {
     return calculateCompletedWeeks(trainingPlan);
   };
 
-  // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -358,7 +335,6 @@ export default function Training() {
     );
   }
 
-  // Show the main training interface with tabs
   return (
     <div className="space-y-6">
       <div className="text-center">

@@ -96,7 +96,15 @@ export default function WorkoutDetail({ date, workout, expandable = true }: Work
                 "Recovery and aerobic development - keep the effort comfortable and controlled." :
                 "Key workout designed to boost your running performance and economy."}
             </p>
-          </div>
+            {expandable && (
+              <Button variant="outline" size="sm" className="w-full mt-2" onClick={(e) => {
+                e.stopPropagation();
+                setIsOpen(true);
+              }}>
+                View Workout Details
+              </Button>
+            )}
+          </div>v>
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" className="gap-1">
