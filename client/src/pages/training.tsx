@@ -325,7 +325,7 @@ export default function Training() {
     return 0; // For now, returning 0 as we haven't implemented workout completion
   };
 
-  const calculateCompletedWeeks = () => {
+  const getCompletedWeeks = () => {
     if (!trainingPlan) return 0;
     return calculateCompletedWeeks(trainingPlan);
   };
@@ -419,7 +419,7 @@ export default function Training() {
           <TabsContent value="overall" className="space-y-6">
             {trainingPlan && (
               <ProgressTracker
-                completedWeeks={calculateCompletedWeeks()}
+                completedWeeks={getCompletedWeeks()}
                 totalWeeks={trainingPlan.weeklyPlans.length}
               />
             )}
