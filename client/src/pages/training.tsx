@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
 import { StoredPlans } from "@/components/training/stored-plans";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 interface WorkoutDetailType {
   date: Date;
@@ -377,7 +377,7 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 lg:max-w-[400px] h-10">
+        <TabsList className="grid w-full grid-cols-3 lg:max-w-[400px] h-10 bg-gradient-to-r from-indigo-400/60 via-purple-400/60 to-pink-400/60 p-0.5">
           <TabsTrigger value="current" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             This Week
@@ -417,6 +417,24 @@ export default function Training() {
                     date={selectedDate}
                     workout={workoutOptions}
                   />
+                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                    <h3 className="font-medium mb-2">Workout Details</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {workoutOptions.type.toLowerCase().includes('easy')
+                        ? "Build aerobic base and recover between harder sessions."
+                        : workoutOptions.type.toLowerCase().includes('interval')
+                        ? "Improve VO2 max and running economy with high-intensity efforts."
+                        : workoutOptions.type.toLowerCase().includes('tempo')
+                        ? "Improve lactate threshold and maintain pace for longer periods."
+                        : workoutOptions.type.toLowerCase().includes('long')
+                        ? "Build endurance and train your body to use fat as fuel efficiently."
+                        : "Complete the workout as prescribed to build fitness and progress in your training plan."}
+                    </p>
+                    <div className="text-sm">
+                      <strong>Instructions:</strong>
+                      <p className="text-muted-foreground mt-1">{workoutOptions.description}</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
