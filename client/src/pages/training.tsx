@@ -15,7 +15,9 @@ import { MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
-import { StoredPlans } from "@/components/training/stored-plans"; // Import added here
+import { StoredPlans } from "@/components/training/stored-plans";
+import { Calendar, BarChart, History } from 'lucide-react'; // Added icon imports
+
 
 // Define helper functions first
 function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
@@ -364,13 +366,26 @@ export default function Training() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex justify-center">
-          <TabsList className="w-full max-w-[240px] h-9 p-1">
-            <TabsTrigger value="current" className="px-3 py-1.5">This Week</TabsTrigger>
-            <TabsTrigger value="overall" className="px-3 py-1.5">Training Program</TabsTrigger>
-            <TabsTrigger value="stored" className="px-3 py-1.5">Stored Plans</TabsTrigger> {/* Added Stored Plans tab */}
-          </TabsList>
-        </div>
+        <TabsList className="grid w-full grid-cols-3 mb-6 shadow-md rounded-lg">
+          <TabsTrigger value="current" className="py-3 font-medium">
+            <span className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              This Week
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="overall" className="py-3 font-medium">
+            <span className="flex items-center gap-2">
+              <BarChart className="h-4 w-4" />
+              Training Plan
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="stored" className="py-3 font-medium">
+            <span className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Past Plans
+            </span>
+          </TabsTrigger>
+        </TabsList>
 
         <div className="mt-6">
           <TabsContent value="current" className="space-y-6">
@@ -455,7 +470,7 @@ export default function Training() {
           </TabsContent>
           <TabsContent value="stored">
             <StoredPlans />
-          </TabsContent> {/* Added Stored Plans content */}
+          </TabsContent>
         </div>
       </Tabs>
     </div>
