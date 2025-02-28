@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express) {
       const preferences = req.body;
       console.log("Generating training plan with preferences:", preferences);
 
-      const generatedPlan = await generateTrainingPlan(preferences);
+      const { weeklyPlans, suggestions } = await generateTrainingPlan(preferences);
 
       // Convert the generated plan into a training plan
       const trainingPlan = {
@@ -108,18 +108,23 @@ export async function registerRoutes(app: Express) {
         goal: preferences.goal,
         goalDescription: preferences.goalDescription,
         startDate: new Date(preferences.startDate),
-        endDate: preferences.targetRace?.date 
+        endDate: preferences.targetRace?.date
           ? new Date(preferences.targetRace.date)
           : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
-        weeklyPlans: generatedPlan.weeklyPlans,
+        weeklyPlans,
         targetRace: preferences.targetRace || null,
         runningExperience: preferences.runningExperience,
         trainingPreferences: preferences.trainingPreferences,
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
-      res.json(plan);
+
+      // Include suggestions in the response if they exist
+      res.json({
+        ...plan,
+        suggestions
+      });
     } catch (error) {
       console.error("Error generating training plan:", error);
       res.status(500).json({ error: "Failed to generate training plan" });
@@ -186,16 +191,16 @@ export async function registerRoutes(app: Express) {
         res.json(adjustments);
       } catch (aiError) {
         console.error("AI service error:", aiError);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to generate AI adjustments",
-          details: aiError.message 
+          details: aiError.message
         });
       }
     } catch (error) {
       console.error("Error adjusting training plan:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to adjust training plan",
-        details: error.message 
+        details: error.message
       });
     }
   });

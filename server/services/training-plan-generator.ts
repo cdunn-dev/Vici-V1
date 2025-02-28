@@ -30,20 +30,41 @@ export function generateTrainingPlan(preferences: {
     distance: string;
     date: string;
   };
-}): { weeklyPlans: WeeklyPlan[] } {
+}): { weeklyPlans: WeeklyPlan[]; suggestions?: { mileage?: string; workouts?: string } } {
   const startDate = new Date(preferences.startDate);
   const endDate = preferences.endDate;
-  
+
   // Calculate total weeks
   const weeks = eachWeekOfInterval({
     start: startDate,
     end: endDate
   });
 
+  // Beginner-specific adjustments and suggestions
+  let suggestions;
+  if (preferences.runningExperience.level === "Beginner") {
+    const suggestedMileage = Math.min(20, preferences.trainingPreferences.maxWeeklyMileage);
+    const suggestedWorkouts = Math.min(1, preferences.trainingPreferences.weeklyWorkouts);
+
+    suggestions = {
+      mileage: preferences.trainingPreferences.maxWeeklyMileage > 20 
+        ? "For beginners, we recommend starting with no more than 20 miles per week to build safely."
+        : undefined,
+      workouts: preferences.trainingPreferences.weeklyWorkouts > 1
+        ? "As a beginner, we suggest starting with just one quality workout per week to avoid injury risk."
+        : undefined
+    };
+
+    // Override user preferences if they exceed recommended limits
+    preferences.trainingPreferences.maxWeeklyMileage = Math.min(20, preferences.trainingPreferences.maxWeeklyMileage);
+    preferences.trainingPreferences.weeklyWorkouts = Math.min(1, preferences.trainingPreferences.weeklyWorkouts);
+    preferences.trainingPreferences.weeklyRunningDays = Math.min(4, preferences.trainingPreferences.weeklyRunningDays);
+  }
+
   // Calculate starting mileage based on experience
   let startingMileage = preferences.trainingPreferences.maxWeeklyMileage * 0.6;
   if (preferences.runningExperience.level === "Beginner") {
-    startingMileage = Math.min(15, preferences.trainingPreferences.maxWeeklyMileage * 0.4);
+    startingMileage = Math.min(10, preferences.trainingPreferences.maxWeeklyMileage * 0.4);
   } else if (preferences.runningExperience.level === "Intermediate") {
     startingMileage = preferences.trainingPreferences.maxWeeklyMileage * 0.5;
   }
@@ -58,10 +79,11 @@ export function generateTrainingPlan(preferences: {
 
     let weeklyMileage = startingMileage;
     if (weekNumber <= buildupPhase) {
-      // Build up phase
+      // Build up phase - more gradual for beginners
+      const buildupRate = preferences.runningExperience.level === "Beginner" ? 0.05 : 0.1;
       weeklyMileage = startingMileage + (
         (preferences.trainingPreferences.maxWeeklyMileage - startingMileage) * 
-        (weekNumber / buildupPhase)
+        (weekNumber / buildupPhase) * buildupRate * 10
       );
     } else if (weekNumber > (totalWeeks - taperPhase)) {
       // Taper phase
@@ -79,36 +101,54 @@ export function generateTrainingPlan(preferences: {
     const workouts: WorkoutDay[] = [];
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const preferredLongRunIndex = daysOfWeek.indexOf(preferences.trainingPreferences.preferredLongRunDay);
-    
+
+    // For beginners, ensure rest days between runs
+    const availableRunDays = preferences.runningExperience.level === "Beginner"
+      ? [0, 2, 4, 6].slice(0, preferences.trainingPreferences.weeklyRunningDays)
+      : Array.from({ length: preferences.trainingPreferences.weeklyRunningDays }, (_, i) => i);
+
     // Distribute workouts across the week
-    for (let i = 0; i < preferences.trainingPreferences.weeklyRunningDays; i++) {
-      const dayIndex = (preferredLongRunIndex + i) % 7;
+    availableRunDays.forEach((dayOffset) => {
+      const dayIndex = (preferredLongRunIndex + dayOffset) % 7;
       const date = addWeeks(weekStart, 0);
       date.setDate(date.getDate() + dayIndex);
 
       let workoutType = "Easy Run";
       let distance = Math.round(weeklyMileage / preferences.trainingPreferences.weeklyRunningDays);
-      let description = "Easy-paced run to build endurance";
+      let description = preferences.runningExperience.level === "Beginner"
+        ? "Easy-paced run at a conversational pace. You should be able to speak in complete sentences."
+        : "Easy-paced run to build endurance";
 
       // Long run on preferred day
       if (dayIndex === preferredLongRunIndex) {
         workoutType = "Long Run";
-        distance = Math.round(weeklyMileage * 0.3); // 30% of weekly mileage
-        description = "Long run at an easy, conversational pace";
+        // Beginners have shorter long runs
+        const longRunPercent = preferences.runningExperience.level === "Beginner" ? 0.25 : 0.3;
+        distance = Math.round(weeklyMileage * longRunPercent);
+        description = preferences.runningExperience.level === "Beginner"
+          ? "Longest run of the week. Keep the pace very easy and focus on time on feet rather than speed."
+          : "Long run at an easy, conversational pace";
       } 
-      // Add quality workouts if requested
+      // Add quality workouts if requested and not for recovery
       else if (preferences.trainingPreferences.weeklyWorkouts > 0 && 
-               i < preferences.trainingPreferences.weeklyWorkouts &&
-               dayIndex !== (preferredLongRunIndex + 1) % 7) { // Avoid day after long run
-        
-        if (preferences.targetRace?.distance.includes("5k") || preferences.targetRace?.distance.includes("10k")) {
-          workoutType = "Speed Work";
-          description = "Interval training: 8-12 x 400m repeats with 200m recovery jogs";
-        } else {
+               dayOffset !== 1 && // Not the day after long run
+               workouts.length < preferences.trainingPreferences.weeklyWorkouts) {
+
+        // Beginner-friendly workout descriptions
+        if (preferences.runningExperience.level === "Beginner") {
           workoutType = "Tempo Run";
-          description = "20-30 minutes at half marathon pace";
+          description = "10-15 minutes at a 'comfortably hard' pace, with easy running before and after";
+          distance = Math.round(weeklyMileage * 0.15);
+        } else {
+          if (preferences.targetRace?.distance.includes("5k") || preferences.targetRace?.distance.includes("10k")) {
+            workoutType = "Speed Work";
+            description = "Interval training: 8-12 x 400m repeats with 200m recovery jogs";
+          } else {
+            workoutType = "Tempo Run";
+            description = "20-30 minutes at half marathon pace";
+          }
+          distance = Math.round(weeklyMileage * 0.15);
         }
-        distance = Math.round(weeklyMileage * 0.15); // 15% of weekly mileage
       }
 
       workouts.push({
@@ -117,7 +157,7 @@ export function generateTrainingPlan(preferences: {
         distance,
         description,
       });
-    }
+    });
 
     return {
       week: weekNumber,
@@ -126,5 +166,5 @@ export function generateTrainingPlan(preferences: {
     };
   });
 
-  return { weeklyPlans };
+  return { weeklyPlans, suggestions };
 }
