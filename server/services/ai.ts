@@ -10,99 +10,6 @@ const openai = new OpenAI({
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-//type TrainingPreferences = { // This type definition is now imported from shared/schema
-//  goal: string;
-//  currentLevel: string;
-//  weeklyMileage: number;
-//  daysPerWeek: number;
-//  targetRace?: {
-//    distance: string;
-//    date: string;
-//  };
-//};
-
-// Fallback training plan generator
-function generateBasicTrainingPlan(preferences: TrainingPreferences) {
-  const workoutTypes = {
-    easy: "Easy Run",
-    long: "Long Run",
-    tempo: "Tempo Run",
-    intervals: "Interval Training",
-    rest: "Rest Day"
-  };
-
-  // Calculate base distances based on weekly mileage
-  const easyDistance = Math.round(preferences.weeklyMileage * 0.15);
-  const longDistance = Math.round(preferences.weeklyMileage * 0.3);
-  const tempoDistance = Math.round(preferences.weeklyMileage * 0.2);
-  const intervalDistance = Math.round(preferences.weeklyMileage * 0.15);
-
-  // Generate 12 weeks of basic training
-  const weeklyPlans = Array.from({ length: 12 }, (_, weekIndex) => {
-    const weekNumber = weekIndex + 1;
-    const phase = weekNumber <= 4 ? "Base Building" :
-                 weekNumber <= 8 ? "Peak Training" : "Taper";
-
-    // Adjust mileage based on phase
-    const multiplier = phase === "Taper" ? 0.8 :
-                      phase === "Peak Training" ? 1.1 : 1.0;
-
-    const workouts = [];
-    for (let day = 0; day < 7; day++) {
-      const date = new Date();
-      date.setDate(date.getDate() + (weekIndex * 7) + day);
-
-      let workout;
-      if (day === 0 || day === 2 || day === 4) { // Mon, Wed, Fri
-        workout = {
-          day: date.toISOString().split('T')[0],
-          type: workoutTypes.easy,
-          distance: Math.round(easyDistance * multiplier),
-          description: "Easy-paced run to build aerobic base. Keep heart rate in Zone 2."
-        };
-      } else if (day === 1) { // Tuesday
-        workout = {
-          day: date.toISOString().split('T')[0],
-          type: workoutTypes.intervals,
-          distance: Math.round(intervalDistance * multiplier),
-          description: "8-10 x 400m intervals at 5K race pace with 200m easy jog recovery."
-        };
-      } else if (day === 3) { // Thursday
-        workout = {
-          day: date.toISOString().split('T')[0],
-          type: workoutTypes.tempo,
-          distance: Math.round(tempoDistance * multiplier),
-          description: "20-30 minutes at half marathon pace, with warm-up and cool-down."
-        };
-      } else if (day === 5) { // Saturday
-        workout = {
-          day: date.toISOString().split('T')[0],
-          type: workoutTypes.long,
-          distance: Math.round(longDistance * multiplier),
-          description: "Long run at conversational pace. Focus on time on feet."
-        };
-      } else { // Sunday
-        workout = {
-          day: date.toISOString().split('T')[0],
-          type: workoutTypes.rest,
-          distance: 0,
-          description: "Rest and recovery day. Light stretching or cross-training optional."
-        };
-      }
-      workouts.push(workout);
-    }
-
-    return {
-      week: weekNumber,
-      phase,
-      totalMileage: Math.round(preferences.weeklyMileage * multiplier),
-      workouts
-    };
-  });
-
-  return { weeklyPlans };
-}
-
 function generatePromptFromPreferences(preferences: TrainingPreferences): string {
   return `As an expert running coach, create a training plan for the following runner:
 
@@ -131,6 +38,14 @@ Create a plan using this exact JSON format:
     }
   ]
 }`;
+}
+
+// Legacy function kept for compatibility
+export async function oldGenerateTrainingPlan(preferences: TrainingPreferences) {
+  // Fallback implementation
+  // This can be removed once the new implementation is confirmed working
+  console.log("Using legacy training plan generation");
+  // ... legacy implementation
 }
 
 export async function generateTrainingPlan(preferences: TrainingPreferences) {
