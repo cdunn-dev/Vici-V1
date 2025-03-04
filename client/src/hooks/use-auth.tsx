@@ -70,19 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      const result = registerUserSchema.safeParse({
-        email: data.email,
-        password: data.password,
-        confirmPassword: data.confirmPassword
-      });
-
+      // Validate using the schema first
+      const result = registerUserSchema.safeParse(data);
       if (!result.success) {
         throw new Error(result.error.format()._errors.join(", "));
       }
 
+      // Send registration request
       const res = await apiRequest("POST", "/api/register", {
         email: data.email,
-        password: data.password
+        password: data.password,
+        confirmPassword: data.confirmPassword // Include confirmPassword
       });
 
       if (!res.ok) {

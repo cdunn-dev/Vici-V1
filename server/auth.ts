@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { registerUserSchema } from "@shared/schema";
+import { registerUserSchema, insertUserSchema } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
@@ -68,23 +68,26 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      const result = registerUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: result.error.format() });
+      // First validate with register schema (includes password confirmation)
+      const registerResult = registerUserSchema.safeParse(req.body);
+      if (!registerResult.success) {
+        return res.status(400).json({ error: registerResult.error.format() });
       }
 
-      const existingUser = await storage.getUserByEmail(result.data.email);
+      const existingUser = await storage.getUserByEmail(registerResult.data.email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      const hashedPassword = await hashPassword(result.data.password);
-      const user = await storage.createUser({
-        email: result.data.email,
-        password: hashedPassword,
+      // Now create user with insert schema (excludes confirmation)
+      const insertData = {
+        email: registerResult.data.email,
+        password: await hashPassword(registerResult.data.password),
         connectedApps: [],
         stravaTokens: null
-      });
+      };
+
+      const user = await storage.createUser(insertData);
 
       req.login(user, (err) => {
         if (err) {
