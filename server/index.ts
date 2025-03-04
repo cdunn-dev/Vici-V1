@@ -1,11 +1,28 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { storage } from "./storage"; // Added import for storage
+import { storage } from "./storage";
+import * as dotenv from 'dotenv';
+import { migrateData } from './migrate-data';
+import { db } from './db';
+import { validateEnv, env } from './config/env';
+import { logger } from './utils/logger';
+import { verifyMigrations } from './db/migrate';
+import { errorHandler } from './middleware/errorHandler';
+
+// Load and validate environment variables
+dotenv.config();
+
+// Display application banner
+logger.info('==========================================================');
+logger.info('  Training App Server');
+logger.info(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info('==========================================================');
 
 async function ensureDefaultUser() {
   try {
-    const user = await storage.getUser(1);
+    const user = await storage.getUser(1); // Uses the existing file-based storage as fallback
     if (!user) {
       console.log("Creating default user...");
       await storage.createUser({
@@ -27,6 +44,7 @@ async function ensureDefaultUser() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -80,6 +98,44 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Add global error handler
+  app.use(errorHandler);
+
+  // Initialize the application
+  async function initializeApplication() {
+    // Validate environment variables
+    if (!validateEnv()) {
+      logger.error('Environment validation failed. Exiting application.');
+      process.exit(1);
+    }
+
+    // Initialize database if configured
+    let dbInitialized = false;
+    if (env.DATABASE_URL) {
+      try {
+        // Verify database migrations
+        dbInitialized = await verifyMigrations(env.DATABASE_URL);
+        
+        // Run data migration if needed
+        if (dbInitialized && env.MIGRATE_DATA) {
+          logger.info('Running data migration from file to database...');
+          await migrateData();
+          logger.info('Data migration completed successfully');
+        }
+      } catch (error) {
+        logger.error('Database initialization failed:', error);
+        logger.warn('Application will use file-based storage');
+      }
+    } else {
+      logger.warn('No DATABASE_URL provided. Using file-based storage.');
+    }
+
+    return dbInitialized;
+  }
+
+  await initializeApplication();
+
 
   const port = 5000;
   server.listen({
