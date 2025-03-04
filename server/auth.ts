@@ -30,7 +30,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
@@ -46,17 +46,20 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByEmail(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false, { message: "Invalid email or password" });
+    new LocalStrategy(
+      { usernameField: 'email' },
+      async (email, password, done) => {
+        try {
+          const user = await storage.getUserByEmail(email);
+          if (!user || !(await comparePasswords(password, user.password))) {
+            return done(null, false, { message: "Invalid email or password" });
+          }
+          return done(null, user);
+        } catch (error) {
+          return done(error);
         }
-        return done(null, user);
-      } catch (error) {
-        return done(error);
       }
-    }),
+    )
   );
 
   passport.serializeUser((user, done) => done(null, user.id));
