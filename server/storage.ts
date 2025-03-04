@@ -45,6 +45,8 @@ export class MemStorage implements IStorage {
     const user: User = { 
       id,
       ...insertUser,
+      emailVerified: true,
+      verificationToken: null,
       connectedApps: [],
       stravaTokens: null
     };
