@@ -7,11 +7,15 @@ import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from 
 import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import { generateTrainingPlan } from "./services/training-plan-generator";
+import express from "express";
+import healthApi from "./routes/health"; // Added health check route import
+import { logger } from "./utils/logger"; // Added logger import
+
 
 export async function registerRoutes(app: Express) {
   // Auth routes
   app.use("/api/auth", authRoutes);
-  
+
   // User routes
   app.post("/api/users", async (req, res) => {
     const result = insertUserSchema.safeParse(req.body);
@@ -27,7 +31,7 @@ export async function registerRoutes(app: Express) {
     if (req.user?.id !== parseInt(req.params.id)) {
       return res.status(403).json({ error: "Unauthorized access" });
     }
-    
+
     const user = await storage.getUser(parseInt(req.params.id));
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
@@ -37,12 +41,12 @@ export async function registerRoutes(app: Express) {
   app.get("/api/workouts", authenticate, async (req: AuthRequest, res) => {
     const userId = parseInt(req.query.userId as string);
     if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
-    
+
     // Users can only access their own workouts
     if (req.user?.id !== userId) {
       return res.status(403).json({ error: "Unauthorized access" });
     }
-    
+
     const workouts = await storage.getWorkouts(userId);
     res.json(workouts);
   });
@@ -67,12 +71,12 @@ export async function registerRoutes(app: Express) {
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       // Users can only access their own training plans
       if (req.user?.id !== userId) {
         return res.status(403).json({ error: "Unauthorized access" });
       }
-      
+
       const plans = await storage.getTrainingPlans(userId);
       res.json(plans);
     } catch (error) {
@@ -333,6 +337,12 @@ export async function registerRoutes(app: Express) {
       res.status(500).json({ error: "Failed to sync activities" });
     }
   });
+
+  app.use('/api', healthApi); // Added health check route registration
+
+  // Log registered routes
+  logger.info('API routes registered successfully');
+
 
   return createServer(app);
 }

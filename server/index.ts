@@ -4,12 +4,21 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import * as dotenv from 'dotenv';
-import { migrateData } from './migrate-data'; // Added import for migration function
-import { db } from './db'; // Added import for database client
+import { migrateData } from './migrate-data';
+import { db } from './db';
+import { validateEnv, env } from './config/env';
+import { logger } from './utils/logger';
+import { verifyMigrations } from './db/migrate';
+import { errorHandler } from './middleware/errorHandler';
 
-
-// Load environment variables
+// Load and validate environment variables
 dotenv.config();
+
+// Display application banner
+logger.info('==========================================================');
+logger.info('  Training App Server');
+logger.info(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info('==========================================================');
 
 async function ensureDefaultUser() {
   try {
@@ -90,38 +99,42 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // Initialize the database before starting the server
-  async function initializeDatabase() {
-    try {
-      if (process.env.DATABASE_URL && db) {
-        try {
-          // Check if the database is initialized by trying to perform a simple query
-          await db.select().from(db.schema.users).limit(1);
-          console.log('Database connected successfully');
+  // Add global error handler
+  app.use(errorHandler);
 
-          // Only run migration if MIGRATE_DATA environment variable is set
-          if (process.env.MIGRATE_DATA === 'true') {
-            console.log('Running data migration...');
-            await migrateData();
-          }
-          return true;
-        } catch (error) {
-          console.error('Error connecting to database:', error);
-          console.log('Application will use file-based storage');
-          return false;
-        }
-      } else {
-        console.log('No DATABASE_URL provided or database client not initialized. Using file-based storage.');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error in database initialization:', error);
-      console.log('Application will use file-based storage');
-      return false;
+  // Initialize the application
+  async function initializeApplication() {
+    // Validate environment variables
+    if (!validateEnv()) {
+      logger.error('Environment validation failed. Exiting application.');
+      process.exit(1);
     }
+
+    // Initialize database if configured
+    let dbInitialized = false;
+    if (env.DATABASE_URL) {
+      try {
+        // Verify database migrations
+        dbInitialized = await verifyMigrations(env.DATABASE_URL);
+        
+        // Run data migration if needed
+        if (dbInitialized && env.MIGRATE_DATA) {
+          logger.info('Running data migration from file to database...');
+          await migrateData();
+          logger.info('Data migration completed successfully');
+        }
+      } catch (error) {
+        logger.error('Database initialization failed:', error);
+        logger.warn('Application will use file-based storage');
+      }
+    } else {
+      logger.warn('No DATABASE_URL provided. Using file-based storage.');
+    }
+
+    return dbInitialized;
   }
 
-  await initializeDatabase();
+  await initializeApplication();
 
 
   const port = 5000;
