@@ -87,10 +87,10 @@ export function setupAuth(app: Express) {
 
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
-        ...result.data, // Use the validated and transformed data
+        email: result.data.email,
         password: hashedPassword,
-        personalBests: {},
         connectedApps: [],
+        stravaTokens: null
       });
 
       // Log the user in after registration
