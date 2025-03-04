@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2 } from "lucide-react";
+import { Wand2, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -32,6 +32,17 @@ import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks, nextMonday } from "date-fns";
+import {
+  TrainingGoals,
+  RaceDistances,
+  ExperienceLevels,
+  ExperienceLevelDescriptions,
+  FitnessLevels,
+  FitnessLevelDescriptions,
+  DaysOfWeek,
+  CoachingStyles,
+  CoachingStyleDescriptions,
+} from "./plan-generator-constants";
 
 interface PlanGeneratorProps {
   existingPlan?: boolean;
@@ -40,6 +51,7 @@ interface PlanGeneratorProps {
 
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<PlanGeneratorFormData>({
@@ -47,33 +59,46 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     defaultValues: {
       startDate: new Date().toISOString(),
       runningExperience: {
-        level: "Beginner",
-        fitnessLevel: "Solid base",
+        level: ExperienceLevels.BEGINNER,
+        fitnessLevel: FitnessLevels.SOLID_BASE,
       },
       trainingPreferences: {
         weeklyRunningDays: 4,
         maxWeeklyMileage: 20,
         weeklyWorkouts: 1,
-        preferredLongRunDay: "Saturday",
-        coachingStyle: "Collaborative",
+        preferredLongRunDay: DaysOfWeek.SATURDAY,
+        coachingStyle: CoachingStyles.COLLABORATIVE,
       },
     },
   });
 
-  const onSubmit = (data: PlanGeneratorFormData) => {
-    console.log("Form submitted with data:", data);
-    if (onPreview) {
-      const endDate = data.targetRace?.date
-        ? new Date(data.targetRace.date)
-        : addWeeks(new Date(data.startDate), 12);
+  const onSubmit = async (data: PlanGeneratorFormData) => {
+    try {
+      setIsSubmitting(true);
+      console.log("Form submitted with data:", data);
 
-      const planData = {
-        ...data,
-        endDate,
-      };
+      if (onPreview) {
+        const endDate = data.targetRace?.date
+          ? new Date(data.targetRace.date)
+          : addWeeks(new Date(data.startDate), 12);
 
-      onPreview(planData);
-      setOpen(false);
+        const planData = {
+          ...data,
+          endDate,
+        };
+
+        onPreview(planData);
+        setOpen(false);
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to submit form. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -111,12 +136,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="First Race">Complete My First Race</SelectItem>
-                      <SelectItem value="Personal Best">Set a Personal Best</SelectItem>
-                      <SelectItem value="Run Fast">Run Fast</SelectItem>
-                      <SelectItem value="Run Far">Run Far</SelectItem>
-                      <SelectItem value="Get Fit">Get Fit</SelectItem>
-                      <SelectItem value="Be Healthy">Be Healthy</SelectItem>
+                      {Object.entries(TrainingGoals).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -136,6 +160,140 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="runningExperience.level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Running Experience Level</FormLabel>
+                  <FormDescription>
+                    {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                  </FormDescription>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(ExperienceLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="runningExperience.fitnessLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Fitness Level</FormLabel>
+                  <FormDescription>
+                    {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                  </FormDescription>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your fitness level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(FitnessLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyRunningDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weekly Running Days</FormLabel>
+                  <FormDescription>How many days per week would you like to run?</FormDescription>
+                  <FormControl>
+                    <Slider
+                      min={1}
+                      max={7}
+                      step={1}
+                      value={[field.value]}
+                      onValueChange={(vals) => field.onChange(vals[0])}
+                    />
+                  </FormControl>
+                  <div className="text-sm text-muted-foreground text-center">
+                    {field.value} days per week
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.maxWeeklyMileage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Weekly Mileage</FormLabel>
+                  <FormDescription>
+                    What's the highest weekly mileage you'd like to reach during training?
+                  </FormDescription>
+                  <FormControl>
+                    <Slider
+                      min={5}
+                      max={150}
+                      step={5}
+                      value={[field.value]}
+                      onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
+                    />
+                  </FormControl>
+                  <div className="text-sm text-muted-foreground text-center">
+                    {field.value} miles per week
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.coachingStyle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Desired Coaching Style</FormLabel>
+                  <FormDescription>
+                    {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                  </FormDescription>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select coaching style" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(CoachingStyles).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -175,7 +333,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               )}
             />
 
-            <Button type="submit" className="w-full">Preview Plan</Button>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating Plan...
+                </>
+              ) : (
+                "Preview Plan"
+              )}
+            </Button>
           </form>
         </Form>
       </DialogContent>
