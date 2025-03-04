@@ -78,7 +78,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
       code,
-      grant_type: "authorization_code",
+      grant_type: "authorization_code"
     });
 
     console.log("Successfully obtained Strava tokens");
