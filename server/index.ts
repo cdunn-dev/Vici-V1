@@ -2,11 +2,18 @@ import express, { type Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { storage } from "./storage"; // Added import for storage
+import { storage } from "./storage";
+import * as dotenv from 'dotenv';
+import { migrateData } from './migrate-data'; // Added import for migration function
+import { db } from './db'; // Added import for database client
+
+
+// Load environment variables
+dotenv.config();
 
 async function ensureDefaultUser() {
   try {
-    const user = await storage.getUser(1);
+    const user = await storage.getUser(1); // Uses the existing file-based storage as fallback
     if (!user) {
       console.log("Creating default user...");
       await storage.createUser({
@@ -82,6 +89,29 @@ app.use((req, res, next) => {
   } else {
     serveStatic(app);
   }
+
+  // Initialize the database before starting the server
+  async function initializeDatabase() {
+    try {
+      if (process.env.DATABASE_URL) {
+        // Check if the database is initialized by trying to perform a simple query
+        await db.select().from(db.schema.users).limit(1);
+        console.log('Database connected successfully');
+
+        // Only run migration if MIGRATE_DATA environment variable is set
+        if (process.env.MIGRATE_DATA === 'true') {
+          console.log('Running data migration...');
+          await migrateData();
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      console.log('Application will use file-based storage');
+    }
+  }
+
+  await initializeDatabase();
+
 
   const port = 5000;
   server.listen({

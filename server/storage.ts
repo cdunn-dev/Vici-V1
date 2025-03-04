@@ -1,3 +1,4 @@
+
 import {
   type User,
   type InsertUser,
@@ -28,6 +29,7 @@ export interface IStorage {
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { DbStorage } from './storage/db-storage';
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
@@ -111,7 +113,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.username === username);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser & { password?: string }): Promise<User> {
     const id = this.currentIds.users++;
     const user = { ...insertUser, id };
     this.users.set(id, user);
@@ -119,7 +121,7 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
+  async updateUser(id: number, userData: Partial<InsertUser> & { password?: string }): Promise<User> {
     const user = await this.getUser(id);
     if (!user) throw new Error("User not found");
     const updatedUser = { ...user, ...userData };
@@ -170,4 +172,21 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Try to use the database storage, but fall back to memory storage if DATABASE_URL is not set
+let storage: IStorage;
+
+try {
+  if (process.env.DATABASE_URL) {
+    console.log('Using database storage');
+    storage = new DbStorage();
+  } else {
+    console.log('DATABASE_URL not set, using memory storage');
+    storage = new MemStorage();
+  }
+} catch (error) {
+  console.error('Error initializing database storage:', error);
+  console.log('Falling back to memory storage');
+  storage = new MemStorage();
+}
+
+export { storage };
