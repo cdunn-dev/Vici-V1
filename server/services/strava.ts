@@ -52,8 +52,9 @@ export function getStravaAuthUrl(userId: string): string {
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "activity:read_all",
+    scope: "read,activity:read_all,profile:read_all",
     state: userId, // Using userId as state for verification
+    approval_prompt: "auto"
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
@@ -61,7 +62,7 @@ export function getStravaAuthUrl(userId: string): string {
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     state: userId,
-    scope: "activity:read_all"
+    scope: "read,activity:read_all,profile:read_all"
   });
   return authUrl;
 }
@@ -78,7 +79,6 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       client_secret: STRAVA_CLIENT_SECRET,
       code,
       grant_type: "authorization_code",
-      redirect_uri: REDIRECT_URI, // Added this to ensure it matches
     });
 
     console.log("Successfully obtained Strava tokens");
