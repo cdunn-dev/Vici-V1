@@ -1,6 +1,6 @@
-
 import { z } from 'zod';
 import * as dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -9,15 +9,15 @@ dotenv.config();
 const envSchema = z.object({
   // Database (optional but validated if present)
   DATABASE_URL: z.string().optional(),
-  
+
   // Authentication (required)
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters long"),
-  
+
   // Optional environment variables
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
   MIGRATE_DATA: z.enum(['true', 'false']).optional(),
-  
+
   // Strava integration (optional)
   STRAVA_CLIENT_ID: z.string().optional(),
   STRAVA_CLIENT_SECRET: z.string().optional(),
@@ -26,26 +26,29 @@ const envSchema = z.object({
 // Parse and validate environment variables
 export const validateEnv = () => {
   try {
+    logger.info('Validating environment variables...');
+
     const env = envSchema.safeParse(process.env);
-    
+
     if (!env.success) {
-      console.error('❌ Invalid environment variables:');
+      logger.error('❌ Invalid environment variables:');
       for (const error of env.error.errors) {
-        console.error(`- ${error.path}: ${error.message}`);
+        logger.error(`- ${error.path.join('.')}: ${error.message}`);
       }
       return false;
     }
-    
+
     // Additional validation logic
+    logger.info('✅ Environment validation successful');
     if (process.env.DATABASE_URL) {
-      console.log('✅ Database URL provided');
+      logger.info('✅ Database URL provided');
     } else {
-      console.warn('⚠️ DATABASE_URL not set - will use file-based storage');
+      logger.warn('⚠️ DATABASE_URL not set - will use file-based storage');
     }
-    
+
     return true;
   } catch (error) {
-    console.error('❌ Error validating environment variables:', error);
+    logger.error('❌ Error validating environment variables:', error);
     return false;
   }
 };
