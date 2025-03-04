@@ -5,17 +5,18 @@ import { storage } from "./storage";
 import { authenticate, AuthRequest } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
-import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import { generateTrainingPlan } from "./services/training-plan-generator";
+import { analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
+import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import express from "express";
 import healthApi from "./routes/health";
 import { logger } from "./utils/logger";
 
 export async function registerRoutes(app: Express) {
+  // Create HTTP server instance
   const server = createServer(app);
 
-  // Initialize WebSocket server on a distinct path
+  // Initialize WebSocket server
   const wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', (ws) => {
@@ -34,8 +35,9 @@ export async function registerRoutes(app: Express) {
     });
   });
 
-  // Auth routes
+  // Register routes
   app.use("/api/auth", authRoutes);
+  app.use('/api', healthApi);
 
   // User routes
   app.post("/api/users", async (req, res) => {
@@ -48,7 +50,6 @@ export async function registerRoutes(app: Express) {
   });
 
   app.get("/api/users/:id", authenticate, async (req: AuthRequest, res) => {
-    // Users can only access their own data
     if (req.user?.id !== parseInt(req.params.id)) {
       return res.status(403).json({ error: "Unauthorized access" });
     }
@@ -359,10 +360,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.use('/api', healthApi); // Added health check route registration
-
-  // Log registered routes
-  logger.info('API routes registered successfully');
-
+  logger.info('API routes and WebSocket server registered successfully');
   return server;
 }

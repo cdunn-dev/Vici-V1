@@ -24,6 +24,7 @@ logger.info('==========================================================');
 
 // Initialize the application
 async function initializeApplication() {
+  const startTime = Date.now();
   logger.info('Starting application initialization...');
 
   // Validate environment variables
@@ -43,24 +44,7 @@ async function initializeApplication() {
 
   // Request logging middleware
   app.use((req, res, next) => {
-    const start = Date.now();
-    const path = req.path;
-
-    // Capture JSON responses for logging
-    const originalJson = res.json;
-    res.json = function(body) {
-      const duration = Date.now() - start;
-      if (path.startsWith("/api")) {
-        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-        if (body) {
-          const bodyStr = JSON.stringify(body);
-          logLine += ` :: ${bodyStr.length > 50 ? bodyStr.substring(0, 47) + '...' : bodyStr}`;
-        }
-        logger.info(logLine);
-      }
-      return originalJson.call(this, body);
-    };
-
+    logger.info(`${req.method} ${req.path}`);
     next();
   });
 
@@ -107,11 +91,10 @@ async function initializeApplication() {
     logger.info('Setting up Vite development server...');
     await setupVite(app, server);
     logger.info('Vite setup completed');
-  } else {
-    logger.info('Production mode detected, skipping static file serving');
   }
 
-  logger.info('Application initialization completed successfully');
+  const initDuration = Date.now() - startTime;
+  logger.info(`Application initialization completed in ${initDuration}ms`);
   return { app, server };
 }
 
@@ -121,36 +104,24 @@ async function initializeApplication() {
     logger.info('Starting application...');
     const { server } = await initializeApplication();
 
-    // Try primary port first, fallback to dynamic port assignment
-    const attemptListen = (preferredPort = env.PORT) => {
-      const port = preferredPort || 0; // Port 0 means random available port
-      logger.info(`Attempting to start server on port ${port === 0 ? 'any available' : port}...`);
-      
-      const serverInstance = server.listen({
-        port,
-        host: "0.0.0.0"
-      }, () => {
-        const actualPort = serverInstance.address().port;
-        logger.info(`Server successfully listening on port ${actualPort}`);
-        // Store the actual port for other services to reference
-        process.env.ACTIVE_PORT = String(actualPort);
-      });
-      
-      serverInstance.on('error', (error) => {
-        if (error.code === 'EADDRINUSE' && preferredPort !== 0) {
-          logger.warn(`Port ${preferredPort} is in use, trying alternative port...`);
-          // Close the current instance and try again with port 0 (random assignment)
-          serverInstance.close(() => attemptListen(0));
-        } else {
-          logger.error('Server failed to start:', error);
-          process.exit(1);
-        }
-      });
-      
-      return serverInstance;
-    };
-    
-    attemptListen();
+    const port = process.env.PORT || 5000;
+    logger.info(`Attempting to bind server to port ${port}...`);
+
+    const startBindTime = Date.now();
+
+    server.listen({
+      port,
+      host: "0.0.0.0"
+    }, () => {
+      const bindDuration = Date.now() - startBindTime;
+      logger.info(`Server successfully bound to port ${port} in ${bindDuration}ms`);
+    });
+
+    server.on('error', (error) => {
+      logger.error('Server failed to start:', error);
+      process.exit(1);
+    });
+
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     if (error instanceof Error) {

@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { logger } from '../utils/logger';
 import { getDatabaseVersion } from '../db/migrate';
@@ -10,14 +9,13 @@ const router = express.Router();
 router.get('/health', async (req, res) => {
   try {
     const startTime = Date.now();
-    
+
     // Check database connection if configured
     let dbStatus = 'not_configured';
     let dbVersion = 'n/a';
-    
+
     if (db) {
       try {
-        // Simple query to check DB connection
         await db.select().from(db.schema.users).limit(1);
         dbStatus = 'connected';
         dbVersion = await getDatabaseVersion();
@@ -26,10 +24,7 @@ router.get('/health', async (req, res) => {
         logger.error('Database health check failed', error);
       }
     }
-    
-    // Calculate response time
-    const responseTime = Date.now() - startTime;
-    
+
     // System info
     const systemInfo = {
       uptime: process.uptime(),
@@ -39,7 +34,7 @@ router.get('/health', async (req, res) => {
       },
       cpu: os.cpus().length,
     };
-    
+
     res.status(200).json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -50,7 +45,7 @@ router.get('/health', async (req, res) => {
         version: dbVersion,
       },
       system: systemInfo,
-      responseTime: `${responseTime}ms`,
+      responseTime: `${Date.now() - startTime}ms`,
     });
   } catch (error) {
     logger.error('Health check failed', error);
