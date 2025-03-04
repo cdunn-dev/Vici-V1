@@ -9,6 +9,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
+  server: {
+    hmr: {
+      // Ensure HMR works correctly in Replit environment
+      clientPort: 443, // Use HTTPS port for WebSocket
+      port: 5173,
+      host: '0.0.0.0',
+    },
+    watch: {
+      usePolling: true, // More reliable file watching in Replit
+      interval: 1000,
+    },
+    host: '0.0.0.0',
+    strictPort: false, // Allow fallback to another port if needed
+  },
   plugins: [
     react(),
     runtimeErrorOverlay(),

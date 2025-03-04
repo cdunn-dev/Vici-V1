@@ -11,11 +11,20 @@ build = ["npm", "run", "build"]
 run = ["sh", "-c", "npm run start"]
 
 [[ports]]
-localPort = 5000
+localPort = 3000
 externalPort = 80
 
+[[ports]]
+localPort = 5000
+
+[[ports]]
+localPort = 5173
+
+[[ports]]
+localPort = 8080
+
 [workflows]
-runButton = "Project"
+runButton = "Start application"
 
 [[workflows.workflow]]
 name = "Project"
