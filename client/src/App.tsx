@@ -10,8 +10,8 @@ import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
 
-// Protected route component
-const ProtectedRoute = ({ component: Component, ...rest }: { component: React.ComponentType<any>, path?: string }) => {
+// AuthRequired component
+const AuthRequired = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -31,8 +31,9 @@ const ProtectedRoute = ({ component: Component, ...rest }: { component: React.Co
     return null;
   }
 
-  return <Component {...rest} />;
+  return children;
 };
+
 
 function Router() {
   const { isAuthenticated } = useAuth();
@@ -46,13 +47,19 @@ function Router() {
           </Route>
           <Route path="/auth" component={Auth} />
           <Route path="/training">
-            <ProtectedRoute component={Training} />
+            <AuthRequired>
+              <Training />
+            </AuthRequired>
           </Route>
           <Route path="/profile">
-            <ProtectedRoute component={Profile} />
+            <AuthRequired>
+              <Profile />
+            </AuthRequired>
           </Route>
           <Route path="/log">
-            <ProtectedRoute component={Log} />
+            <AuthRequired>
+              <Log />
+            </AuthRequired>
           </Route>
           <Route component={NotFound} />
         </Switch>

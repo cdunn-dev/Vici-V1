@@ -13,6 +13,9 @@ const envSchema = z.object({
   // Authentication (required)
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters long"),
 
+  // OpenAI API Key (required)
+  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+
   // Optional environment variables
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(5000),
@@ -57,6 +60,7 @@ export const validateEnv = () => {
 export const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET!,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000'),
   MIGRATE_DATA: process.env.MIGRATE_DATA === 'true',
