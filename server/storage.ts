@@ -6,17 +6,12 @@ import {
   type TrainingPlan,
   type InsertTrainingPlan,
 } from "@shared/schema";
-import * as fs from 'fs';
-import * as path from 'path';
-import { DbStorage } from './storage/db-storage';
-import { logger } from './utils/logger';
 
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser & { password?: string }): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser> & { password?: string }): Promise<User>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
 
   // Workout operations
   getWorkouts(userId: number): Promise<Workout[]>;
@@ -30,6 +25,9 @@ export interface IStorage {
   updateTrainingPlan(id: number, plan: Partial<InsertTrainingPlan>): Promise<TrainingPlan>;
 }
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private workouts: Map<number, Workout>;
@@ -39,10 +37,14 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.dbFilePath = path.join(process.cwd(), 'db.json');
+    
+    // Initialize with default values
     this.users = new Map();
     this.workouts = new Map();
     this.trainingPlans = new Map();
     this.currentIds = { users: 1, workouts: 1, trainingPlans: 1 };
+    
+    // Load data from file if it exists
     this.loadFromFile();
   }
 
@@ -50,77 +52,69 @@ export class MemStorage implements IStorage {
     try {
       if (fs.existsSync(this.dbFilePath)) {
         const data = JSON.parse(fs.readFileSync(this.dbFilePath, 'utf8'));
-
+        
+        // Restore users
         if (data.users) {
           this.users = new Map(Object.entries(data.users).map(([id, user]) => [Number(id), user as User]));
         }
-
+        
+        // Restore workouts
         if (data.workouts) {
           this.workouts = new Map(Object.entries(data.workouts).map(([id, workout]) => [Number(id), workout as Workout]));
         }
-
+        
+        // Restore training plans
         if (data.trainingPlans) {
           this.trainingPlans = new Map(Object.entries(data.trainingPlans).map(([id, plan]) => {
+            // Convert date strings back to Date objects
             const planObj = plan as TrainingPlan;
             planObj.startDate = new Date(planObj.startDate);
             planObj.endDate = new Date(planObj.endDate);
-            if (planObj.targetRace?.date) {
-              planObj.targetRace.date = new Date(planObj.targetRace.date);
-            }
             return [Number(id), planObj];
           }));
         }
-
+        
+        // Restore current IDs
         if (data.currentIds) {
           this.currentIds = data.currentIds;
         }
-
-        logger.info('Loaded data from persistent storage');
+        
+        console.log('Loaded data from persistent storage');
       }
     } catch (error) {
-      logger.error('Error loading data from file:', error);
+      console.error('Error loading data from file:', error);
     }
   }
 
   private saveToFile() {
     try {
+      // Convert Maps to objects for JSON serialization
       const data = {
         users: Object.fromEntries(this.users),
         workouts: Object.fromEntries(this.workouts),
         trainingPlans: Object.fromEntries(this.trainingPlans),
         currentIds: this.currentIds
       };
+      
       fs.writeFileSync(this.dbFilePath, JSON.stringify(data, null, 2));
     } catch (error) {
-      logger.error('Error saving data to file:', error);
+      console.error('Error saving data to file:', error);
     }
   }
 
-  // Implement interface methods
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
-  }
-
-  async createUser(insertUser: InsertUser & { password?: string | null }): Promise<User> {
+  async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentIds.users++;
-    const user: User = {
-      id,
-      ...insertUser,
-      password: insertUser.password || null,
-      personalBests: insertUser.personalBests || null,
-      connectedApps: insertUser.connectedApps || null,
-      stravaTokens: insertUser.stravaTokens || null
-    };
+    const user = { ...insertUser, id };
     this.users.set(id, user);
     this.saveToFile();
     return user;
   }
 
-  async updateUser(id: number, userData: Partial<InsertUser> & { password?: string | null }): Promise<User> {
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
     const user = await this.getUser(id);
     if (!user) throw new Error("User not found");
     const updatedUser = { ...user, ...userData };
@@ -139,12 +133,7 @@ export class MemStorage implements IStorage {
 
   async createWorkout(insertWorkout: InsertWorkout): Promise<Workout> {
     const id = this.currentIds.workouts++;
-    const workout: Workout = {
-      id,
-      ...insertWorkout,
-      perceivedEffort: insertWorkout.perceivedEffort || null,
-      notes: insertWorkout.notes || null
-    };
+    const workout = { ...insertWorkout, id };
     this.workouts.set(id, workout);
     this.saveToFile();
     return workout;
@@ -160,14 +149,7 @@ export class MemStorage implements IStorage {
 
   async createTrainingPlan(insertPlan: InsertTrainingPlan): Promise<TrainingPlan> {
     const id = this.currentIds.trainingPlans++;
-    const plan: TrainingPlan = {
-      id,
-      ...insertPlan,
-      weeklyPlans: insertPlan.weeklyPlans || [],
-      targetRace: insertPlan.targetRace || null,
-      runningExperience: insertPlan.runningExperience || null,
-      trainingPreferences: insertPlan.trainingPreferences || null
-    };
+    const plan = { ...insertPlan, id };
     this.trainingPlans.set(id, plan);
     this.saveToFile();
     return plan;
@@ -183,28 +165,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Initialize storage with proper error handling
-let storage: IStorage;
-
-async function initializeStorage(): Promise<IStorage> {
-  try {
-    if (process.env.DATABASE_URL) {
-      logger.info('Attempting to connect to database...');
-      const db = await DbStorage.connect(process.env.DATABASE_URL);
-      logger.info('Successfully connected to database');
-      return new DbStorage(db);
-    } else {
-      logger.info('DATABASE_URL not set, using memory storage');
-      return new MemStorage();
-    }
-  } catch (error) {
-    logger.error('Error initializing database storage:', error);
-    logger.warn('Falling back to memory storage');
-    return new MemStorage();
-  }
-}
-
-// Initialize storage asynchronously
-storage = await initializeStorage();
-
-export { storage };
+export const storage = new MemStorage();

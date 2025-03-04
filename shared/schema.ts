@@ -50,7 +50,6 @@ export const insertTrainingPlanSchema = createInsertSchema(trainingPlans).omit({
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  password: text("password"),  // Added password field
   name: text("name").notNull(),
   dateOfBirth: timestamp("date_of_birth").notNull(),
   gender: text("gender").notNull(),

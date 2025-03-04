@@ -1,44 +1,12 @@
 import type { Express } from "express";
 import { createServer } from "http";
-import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import express from "express";
-import healthApi from "./routes/health";
-import { logger } from "./utils/logger";
-import authRoutes from "./routes/auth";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan } from "./services/training-plan-generator";
-import { analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
+import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
-
+import { generateTrainingPlan } from "./services/training-plan-generator";
 
 export async function registerRoutes(app: Express) {
-  // Create HTTP server instance
-  const server = createServer(app);
-
-  // Initialize WebSocket server
-  const wss = new WebSocketServer({ server, path: '/ws' });
-
-  wss.on('connection', (ws) => {
-    logger.info('New WebSocket connection established');
-
-    ws.on('message', (message) => {
-      logger.info('Received WebSocket message:', message.toString());
-    });
-
-    ws.on('close', () => {
-      logger.info('WebSocket connection closed');
-    });
-
-    ws.on('error', (error) => {
-      logger.error('WebSocket error:', error);
-    });
-  });
-
-  // Register routes
-  app.use("/api/auth", authRoutes);
-  app.use('/api', healthApi);
-
   // User routes
   app.post("/api/users", async (req, res) => {
     const result = insertUserSchema.safeParse(req.body);
@@ -50,27 +18,17 @@ export async function registerRoutes(app: Express) {
   });
 
   app.get("/api/users/:id", async (req, res) => {
-    try {
-      const user = await storage.getUser(parseInt(req.params.id));
-      if (!user) return res.status(404).json({ error: "User not found" });
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: "Server error" });
-    }
+    const user = await storage.getUser(parseInt(req.params.id));
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
   });
-
 
   // Workout routes
   app.get("/api/workouts", async (req, res) => {
-    try {
-      const userId = parseInt(req.query.userId as string);
-      if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
-
-      const workouts = await storage.getWorkouts(userId);
-      res.json(workouts);
-    } catch (error) {
-      res.status(500).json({ error: "Server error" });
-    }
+    const userId = parseInt(req.query.userId as string);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
+    const workouts = await storage.getWorkouts(userId);
+    res.json(workouts);
   });
 
   app.post("/api/workouts", async (req, res) => {
@@ -89,7 +47,6 @@ export async function registerRoutes(app: Express) {
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-
       const plans = await storage.getTrainingPlans(userId);
       res.json(plans);
     } catch (error) {
@@ -151,7 +108,7 @@ export async function registerRoutes(app: Express) {
         goal: preferences.goal,
         goalDescription: preferences.goalDescription,
         startDate: new Date(preferences.startDate),
-        endDate: preferences.targetRace?.date
+        endDate: preferences.targetRace?.date 
           ? new Date(preferences.targetRace.date)
           : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
@@ -229,16 +186,16 @@ export async function registerRoutes(app: Express) {
         res.json(adjustments);
       } catch (aiError) {
         console.error("AI service error:", aiError);
-        res.status(500).json({
+        res.status(500).json({ 
           error: "Failed to generate AI adjustments",
-          details: aiError.message
+          details: aiError.message 
         });
       }
     } catch (error) {
       console.error("Error adjusting training plan:", error);
-      res.status(500).json({
+      res.status(500).json({ 
         error: "Failed to adjust training plan",
-        details: error.message
+        details: error.message 
       });
     }
   });
@@ -351,6 +308,5 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  logger.info('API routes and WebSocket server registered successfully');
-  return server;
+  return createServer(app);
 }
