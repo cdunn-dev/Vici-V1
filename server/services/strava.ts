@@ -13,9 +13,7 @@ function getAppDomain() {
     // We're on Replit - construct the URL using Replit's domain format
     return `${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co`;
   }
-  // Use the active port that was dynamically assigned
-  const activePort = process.env.ACTIVE_PORT || '3000';
-  return `localhost:${activePort}`; // Local development fallback
+  return "localhost:5000"; // Local development fallback
 }
 
 const REDIRECT_URI = `https://${getAppDomain()}/api/strava/callback`;
