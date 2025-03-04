@@ -28,6 +28,10 @@ async function migrateData() {
 
     const data = JSON.parse(fs.readFileSync(dbFilePath, 'utf8'));
 
+    if (!db) {
+      throw new Error('Database connection not initialized');
+    }
+
     // Migrate users
     if (data.users && Object.keys(data.users).length > 0) {
       logger.info(`Migrating ${Object.keys(data.users).length} users...`);
@@ -40,7 +44,11 @@ async function migrateData() {
         }
 
         try {
-          await db.insert(users).values(user).onConflictDoUpdate({
+          await db.insert(users).values({
+            ...user,
+            connectedApps: Array.isArray(user.connectedApps) ? user.connectedApps : [],
+            stravaTokens: typeof user.stravaTokens === 'object' ? user.stravaTokens : null
+          }).onConflictDoUpdate({
             target: users.id,
             set: user
           });
@@ -58,7 +66,10 @@ async function migrateData() {
         const workout = workoutData as any;
 
         try {
-          await db.insert(workouts).values(workout).onConflictDoUpdate({
+          await db.insert(workouts).values({
+            ...workout,
+            day: new Date(workout.day).toISOString()
+          }).onConflictDoUpdate({
             target: workouts.id,
             set: workout
           });
@@ -76,9 +87,24 @@ async function migrateData() {
         const plan = planData as any;
 
         try {
-          await db.insert(trainingPlans).values(plan).onConflictDoUpdate({
+          // Ensure dates are properly formatted
+          const formattedPlan = {
+            ...plan,
+            startDate: new Date(plan.startDate).toISOString(),
+            endDate: new Date(plan.endDate).toISOString(),
+            weeklyPlans: plan.weeklyPlans.map((wp: any) => ({
+              ...wp,
+              phase: wp.phase || 'Base',
+              workouts: wp.workouts.map((w: any) => ({
+                ...w,
+                day: new Date(w.day).toISOString()
+              }))
+            }))
+          };
+
+          await db.insert(trainingPlans).values(formattedPlan).onConflictDoUpdate({
             target: trainingPlans.id,
-            set: plan
+            set: formattedPlan
           });
         } catch (error) {
           logger.error(`Error migrating training plan ${plan.id}:`, error);

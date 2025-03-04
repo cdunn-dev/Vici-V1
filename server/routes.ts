@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer } from "http";
+import { WebSocketServer } from "ws";
 import { storage } from "./storage";
 import { authenticate, AuthRequest } from "./middleware/auth";
 import authRoutes from "./routes/auth";
@@ -8,11 +9,31 @@ import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSugge
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import { generateTrainingPlan } from "./services/training-plan-generator";
 import express from "express";
-import healthApi from "./routes/health"; // Added health check route import
-import { logger } from "./utils/logger"; // Added logger import
-
+import healthApi from "./routes/health";
+import { logger } from "./utils/logger";
 
 export async function registerRoutes(app: Express) {
+  const server = createServer(app);
+
+  // Initialize WebSocket server on a distinct path
+  const wss = new WebSocketServer({ server, path: '/ws' });
+
+  wss.on('connection', (ws) => {
+    logger.info('New WebSocket connection established');
+
+    ws.on('message', (message) => {
+      logger.info('Received WebSocket message:', message.toString());
+    });
+
+    ws.on('close', () => {
+      logger.info('WebSocket connection closed');
+    });
+
+    ws.on('error', (error) => {
+      logger.error('WebSocket error:', error);
+    });
+  });
+
   // Auth routes
   app.use("/api/auth", authRoutes);
 
@@ -138,7 +159,7 @@ export async function registerRoutes(app: Express) {
         goal: preferences.goal,
         goalDescription: preferences.goalDescription,
         startDate: new Date(preferences.startDate),
-        endDate: preferences.targetRace?.date 
+        endDate: preferences.targetRace?.date
           ? new Date(preferences.targetRace.date)
           : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
@@ -216,16 +237,16 @@ export async function registerRoutes(app: Express) {
         res.json(adjustments);
       } catch (aiError) {
         console.error("AI service error:", aiError);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to generate AI adjustments",
-          details: aiError.message 
+          details: aiError.message
         });
       }
     } catch (error) {
       console.error("Error adjusting training plan:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to adjust training plan",
-        details: error.message 
+        details: error.message
       });
     }
   });
@@ -343,6 +364,5 @@ export async function registerRoutes(app: Express) {
   // Log registered routes
   logger.info('API routes registered successfully');
 
-
-  return createServer(app);
+  return server;
 }
