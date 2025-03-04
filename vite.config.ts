@@ -11,13 +11,14 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   server: {
     hmr: {
-      // Ensure HMR works correctly in Replit environment
+      // Enhanced HMR configuration for Replit
       clientPort: 443,
       protocol: 'wss',
-      host: process.env.REPL_SLUG 
-        ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` 
+      host: process.env.REPL_ID 
+        ? `${process.env.REPL_ID}-${process.env.REPL_OWNER}.replit.dev` 
         : undefined,
-      overlay: true
+      overlay: true,
+      timeout: 120000
     },
     watch: {
       usePolling: true,
@@ -26,6 +27,7 @@ export default defineConfig({
     host: '0.0.0.0',
     strictPort: false,
     port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+    cors: true
   },
   plugins: [
     react(),
