@@ -1,9 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { storage } from '../storage';
+import { logger } from '../utils/logger';
 
-// Secret key for JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environment variable in production
+// Validate JWT configuration at startup
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  logger.warn('JWT_SECRET not found in environment variables, using fallback secret. This is not secure for production.');
+}
+
+// Secret key for JWT - with startup logging
+logger.info('Initializing JWT authentication middleware');
+const jwtSecret = JWT_SECRET || 'your-secret-key'; // Use environment variable in production
 
 export interface AuthRequest extends Request {
   user?: {
@@ -23,7 +31,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; email: string };
+    const decoded = jwt.verify(token, jwtSecret) as { id: number; email: string };
     const user = await storage.getUser(decoded.id);
 
     if (!user) {
@@ -32,17 +40,18 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     // Attach user to request object
     req.user = { id: user.id, email: user.email };
+    logger.debug('Successfully authenticated request', { userId: user.id });
 
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
+    logger.error('Authentication error:', error);
     return res.status(401).json({ error: 'Invalid authentication token' });
   }
 };
 
-// Generate JWT token  - Modified to include email in payload
+// Generate JWT token
 export const generateToken = (userId: number, userEmail: string): string => {
-  return jwt.sign({ id: userId, email: userEmail }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: userId, email: userEmail }, jwtSecret, { expiresIn: '7d' });
 };
 
 // Placeholder for a hypothetical User type (needed for generateToken)
