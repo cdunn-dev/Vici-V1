@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { insertUserSchema } from "@shared/schema";
 import { SiStrava, SiGarmin, SiNike } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
@@ -23,13 +23,14 @@ export default function Profile() {
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/users/me"],
-    queryFn: async () => {
-      const response = await fetch('/api/user');
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
-      }
-      return response.json();
+    queryKey: ["/api/user"],
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      email: user?.email || "",
+      connectedApps: user?.connectedApps || [],
     },
   });
 
@@ -49,18 +50,6 @@ export default function Profile() {
     );
   }
 
-  const form = useForm({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: {
-      username: user?.username || "",
-      name: user?.name || "",
-      dateOfBirth: user?.dateOfBirth?.split('T')[0] || new Date().toISOString().split('T')[0],
-      gender: user?.gender || "",
-      personalBests: user?.personalBests || {},
-      connectedApps: user?.connectedApps || [],
-    },
-  });
-
   const handleStravaConnect = async () => {
     if (isConnecting) return;
 
@@ -71,15 +60,6 @@ export default function Profile() {
         throw new Error("User ID is required to connect Strava");
       }
 
-      // Clear any existing error states before attempting connection
-      localStorage.removeItem('strava_auth_error');
-      localStorage.removeItem('strava_auth_state');
-      localStorage.removeItem('strava_auth_challenge');
-      sessionStorage.clear();
-
-      // Add a small delay to prevent rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       const res = await fetch(`/api/strava/auth?userId=${user.id}`);
       if (!res.ok) {
         const errorData = await res.json();
@@ -87,11 +67,6 @@ export default function Profile() {
       }
 
       const { url } = await res.json();
-      console.log("Received Strava auth URL, redirecting...");
-
-      // Add a small delay before redirect
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
       window.location.href = url;
     } catch (error) {
       console.error("Strava connection error:", error);
@@ -131,36 +106,6 @@ export default function Profile() {
     }
   };
 
-  // Update the useEffect to handle errors better
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const error = urlParams.get('error');
-    const code = urlParams.get('code');
-
-    if (error) {
-      let errorMessage = "Failed to connect to Strava";
-      if (error.includes("challenge")) {
-        errorMessage = "Too many connection attempts. Please wait 30 seconds and try again.";
-        // Clear any cached state
-        localStorage.removeItem('strava_auth_error');
-        localStorage.removeItem('strava_auth_state');
-        localStorage.removeItem('strava_auth_challenge');
-        sessionStorage.clear();
-      }
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      // Clean up the URL
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (code) {
-      // Successfully got a code, clean up the URL
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, [toast]);
-
-
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <Form {...form}>
@@ -173,42 +118,10 @@ export default function Profile() {
               <div className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} disabled={!isEditing} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          {...field}
-                          disabled={!isEditing}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="gender"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gender</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input {...field} disabled={!isEditing} />
                       </FormControl>
@@ -291,37 +204,6 @@ export default function Profile() {
                   Sync Strava Activities
                 </Button>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Bests</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {["5K", "10K", "Half Marathon", "Marathon"].map((distance) => (
-                  <FormField
-                    key={distance}
-                    control={form.control}
-                    name={`personalBests.${distance.toLowerCase().replace(" ", "")}`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{distance}</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="time"
-                            step="1"
-                            {...field}
-                            disabled={!isEditing}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
             </CardContent>
           </Card>
         </form>
