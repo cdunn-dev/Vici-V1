@@ -121,36 +121,51 @@ async function initializeApplication() {
     logger.info('Starting application...');
     const { server } = await initializeApplication();
 
-    // Try primary port first, fallback to dynamic port assignment
-    const attemptListen = (preferredPort = env.PORT) => {
-      const port = preferredPort || 0; // Port 0 means random available port
-      logger.info(`Attempting to start server on port ${port === 0 ? 'any available' : port}...`);
+    // Enhanced port assignment strategy
+    const findAvailablePort = (startPort = 3000, maxAttempts = 10) => {
+      let currentPort = startPort;
+      let attempts = 0;
       
-      const serverInstance = server.listen({
-        port,
-        host: "0.0.0.0"
-      }, () => {
-        const actualPort = serverInstance.address().port;
-        logger.info(`Server successfully listening on port ${actualPort}`);
-        // Store the actual port for other services to reference
-        process.env.ACTIVE_PORT = String(actualPort);
-      });
+      const tryPort = () => {
+        attempts++;
+        logger.info(`Port attempt ${attempts}: trying port ${currentPort}...`);
+        
+        const serverInstance = server.listen({
+          port: currentPort,
+          host: "0.0.0.0"
+        }, () => {
+          const listeningPort = serverInstance.address().port;
+          logger.info(`✅ Server successfully listening on port ${listeningPort}`);
+          // Store the actual port for other services to reference
+          process.env.ACTIVE_PORT = String(listeningPort);
+          
+          // Save this port to environment for future use with front-end
+          process.env.PORT = String(listeningPort);
+          logger.info(`✅ Environment PORT set to ${listeningPort}`);
+        });
+        
+        serverInstance.on('error', (error) => {
+          logger.warn(`⚠️ Port ${currentPort} unavailable: ${error.message}`);
+          serverInstance.close();
+          
+          if (attempts < maxAttempts) {
+            // Try next port in sequence
+            currentPort++;
+            setTimeout(tryPort, 100);
+          } else {
+            // Last resort: random port assignment
+            logger.warn(`⚠️ Tried ${maxAttempts} ports, using random port assignment`);
+            currentPort = 0;
+            setTimeout(tryPort, 100);
+          }
+        });
+      };
       
-      serverInstance.on('error', (error) => {
-        if (error.code === 'EADDRINUSE' && preferredPort !== 0) {
-          logger.warn(`Port ${preferredPort} is in use, trying alternative port...`);
-          // Close the current instance and try again with port 0 (random assignment)
-          serverInstance.close(() => attemptListen(0));
-        } else {
-          logger.error('Server failed to start:', error);
-          process.exit(1);
-        }
-      });
-      
-      return serverInstance;
+      tryPort();
     };
     
-    attemptListen();
+    // Start with the configured port or default to 3000
+    findAvailablePort(env.PORT || 3000);
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     if (error instanceof Error) {

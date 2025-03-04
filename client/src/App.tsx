@@ -2,14 +2,14 @@ import { Switch, Route, Redirect, useLocation } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext"; // Ensure useAuth is correctly exported
 import Navbar from "./components/layout/navbar";
 import Training from "./pages/training";
 import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
-import ProtectedRoute from "./components/ProtectedRoute.tsx"; // Added import
+import ProtectedRoute from "./components/ProtectedRoute"; // Corrected import
 
 // AuthRequired component
 const AuthRequired = ({ children }: { children: React.ReactNode }) => {
@@ -48,17 +48,17 @@ function Router() {
           </Route>
           <Route path="/auth" component={Auth} />
           <Route path="/training">
-            <ProtectedRoute> {/* Changed to ProtectedRoute */}
+            <ProtectedRoute>
               <Training />
             </ProtectedRoute>
           </Route>
           <Route path="/profile">
-            <ProtectedRoute> {/* Changed to ProtectedRoute */}
+            <ProtectedRoute>
               <Profile />
             </ProtectedRoute>
           </Route>
           <Route path="/log">
-            <ProtectedRoute> {/* Changed to ProtectedRoute */}
+            <ProtectedRoute>
               <Log />
             </ProtectedRoute>
           </Route>
