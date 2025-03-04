@@ -38,7 +38,6 @@ export class MemStorage implements IStorage {
   private workouts: Map<number, Workout>;
   private trainingPlans: Map<number, TrainingPlan>;
   private currentIds: { [key: string]: number };
-  private dbFilePath: string;
   public sessionStore: session.Store;
 
   constructor() {
@@ -65,8 +64,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       id,
       ...insertUser,
-      personalBests: insertUser.personalBests || null,
-      connectedApps: insertUser.connectedApps || [],
+      connectedApps: [],
       stravaTokens: null
     };
     this.users.set(id, user);
@@ -77,11 +75,10 @@ export class MemStorage implements IStorage {
     const user = await this.getUser(id);
     if (!user) throw new Error("User not found");
 
-    const updatedUser: User = {
+    const updatedUser = {
       ...user,
       ...userData,
-      personalBests: userData.personalBests || user.personalBests,
-      connectedApps: userData.connectedApps || user.connectedApps,
+      connectedApps: user.connectedApps,
       stravaTokens: user.stravaTokens
     };
 
