@@ -53,26 +53,16 @@ export function getStravaAuthUrl(userId: string): string {
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: "read,activity:read_all,profile:read_all",
-    state: userId, // Using userId as state for verification
+    state: userId,
     approval_prompt: "auto"
   });
 
-  const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
-  console.log("Generated Strava auth URL with params:", {
-    client_id: STRAVA_CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    state: userId,
-    scope: "read,activity:read_all,profile:read_all"
-  });
-  return authUrl;
+  return `${STRAVA_AUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
     console.log("Attempting to exchange Strava code for tokens...");
-
-    // Add a small delay to prevent rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
@@ -91,12 +81,10 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
     console.error("Full error response:", JSON.stringify(error.response?.data, null, 2));
 
-    // Check for specific error types
     if (error.response?.status === 429) {
       throw new Error("Too many requests. Please wait a moment and try again.");
     }
 
-    // If there's a specific OAuth error, format it nicely
     if (error.response?.data?.errors) {
       throw new Error(`Strava Auth Error: ${error.response.data.errors[0]?.field}: ${error.response.data.errors[0]?.code}`);
     }
