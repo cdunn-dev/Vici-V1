@@ -2,6 +2,11 @@
 import * as bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
+
+// If db is null, we can't use this storage
+if (!db) {
+  throw new Error('Database client is not initialized. Cannot use DbStorage.');
+}
 import { 
   type User, 
   type InsertUser,

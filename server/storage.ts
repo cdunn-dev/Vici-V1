@@ -1,4 +1,3 @@
-
 import {
   type User,
   type InsertUser,
@@ -40,13 +39,13 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.dbFilePath = path.join(process.cwd(), 'db.json');
-    
+
     // Initialize with default values
     this.users = new Map();
     this.workouts = new Map();
     this.trainingPlans = new Map();
     this.currentIds = { users: 1, workouts: 1, trainingPlans: 1 };
-    
+
     // Load data from file if it exists
     this.loadFromFile();
   }
@@ -55,17 +54,17 @@ export class MemStorage implements IStorage {
     try {
       if (fs.existsSync(this.dbFilePath)) {
         const data = JSON.parse(fs.readFileSync(this.dbFilePath, 'utf8'));
-        
+
         // Restore users
         if (data.users) {
           this.users = new Map(Object.entries(data.users).map(([id, user]) => [Number(id), user as User]));
         }
-        
+
         // Restore workouts
         if (data.workouts) {
           this.workouts = new Map(Object.entries(data.workouts).map(([id, workout]) => [Number(id), workout as Workout]));
         }
-        
+
         // Restore training plans
         if (data.trainingPlans) {
           this.trainingPlans = new Map(Object.entries(data.trainingPlans).map(([id, plan]) => {
@@ -76,12 +75,12 @@ export class MemStorage implements IStorage {
             return [Number(id), planObj];
           }));
         }
-        
+
         // Restore current IDs
         if (data.currentIds) {
           this.currentIds = data.currentIds;
         }
-        
+
         console.log('Loaded data from persistent storage');
       }
     } catch (error) {
@@ -98,7 +97,7 @@ export class MemStorage implements IStorage {
         trainingPlans: Object.fromEntries(this.trainingPlans),
         currentIds: this.currentIds
       };
-      
+
       fs.writeFileSync(this.dbFilePath, JSON.stringify(data, null, 2));
     } catch (error) {
       console.error('Error saving data to file:', error);
@@ -108,7 +107,7 @@ export class MemStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
-  
+
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(user => user.username === username);
   }
@@ -174,11 +173,13 @@ export class MemStorage implements IStorage {
 
 // Try to use the database storage, but fall back to memory storage if DATABASE_URL is not set
 let storage: IStorage;
+let db;
 
 try {
   if (process.env.DATABASE_URL) {
+    db = await DbStorage.connect(process.env.DATABASE_URL); //Added connect method and await
     console.log('Using database storage');
-    storage = new DbStorage();
+    storage = new DbStorage(db); // Pass db instance to DbStorage
   } else {
     console.log('DATABASE_URL not set, using memory storage');
     storage = new MemStorage();

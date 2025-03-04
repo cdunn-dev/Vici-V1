@@ -93,20 +93,31 @@ app.use((req, res, next) => {
   // Initialize the database before starting the server
   async function initializeDatabase() {
     try {
-      if (process.env.DATABASE_URL) {
-        // Check if the database is initialized by trying to perform a simple query
-        await db.select().from(db.schema.users).limit(1);
-        console.log('Database connected successfully');
+      if (process.env.DATABASE_URL && db) {
+        try {
+          // Check if the database is initialized by trying to perform a simple query
+          await db.select().from(db.schema.users).limit(1);
+          console.log('Database connected successfully');
 
-        // Only run migration if MIGRATE_DATA environment variable is set
-        if (process.env.MIGRATE_DATA === 'true') {
-          console.log('Running data migration...');
-          await migrateData();
+          // Only run migration if MIGRATE_DATA environment variable is set
+          if (process.env.MIGRATE_DATA === 'true') {
+            console.log('Running data migration...');
+            await migrateData();
+          }
+          return true;
+        } catch (error) {
+          console.error('Error connecting to database:', error);
+          console.log('Application will use file-based storage');
+          return false;
         }
+      } else {
+        console.log('No DATABASE_URL provided or database client not initialized. Using file-based storage.');
+        return false;
       }
     } catch (error) {
-      console.error('Error initializing database:', error);
+      console.error('Error in database initialization:', error);
       console.log('Application will use file-based storage');
+      return false;
     }
   }
 
