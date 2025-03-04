@@ -3,8 +3,10 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
 import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
-import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
+import { getStravaAuthUrl, exchangeStravaCode } from "./services/strava";
 import { generateTrainingPlan } from "./services/training-plan-generator";
+import { stravaService } from "./services/activity/factory";
+import type { ProviderCredentials } from "./services/activity/types";
 
 export async function registerRoutes(app: Express) {
   // User routes
@@ -108,7 +110,7 @@ export async function registerRoutes(app: Express) {
         goal: preferences.goal,
         goalDescription: preferences.goalDescription,
         startDate: new Date(preferences.startDate),
-        endDate: preferences.targetRace?.date 
+        endDate: preferences.targetRace?.date
           ? new Date(preferences.targetRace.date)
           : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
         weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
@@ -186,16 +188,16 @@ export async function registerRoutes(app: Express) {
         res.json(adjustments);
       } catch (aiError) {
         console.error("AI service error:", aiError);
-        res.status(500).json({ 
+        res.status(500).json({
           error: "Failed to generate AI adjustments",
-          details: aiError.message 
+          details: aiError.message
         });
       }
     } catch (error) {
       console.error("Error adjusting training plan:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to adjust training plan",
-        details: error.message 
+        details: error.message
       });
     }
   });
@@ -244,13 +246,20 @@ export async function registerRoutes(app: Express) {
 
       console.log("Exchanging code for tokens...");
       const tokens = await exchangeStravaCode(code as string);
-      console.log("Successfully obtained Strava tokens:", tokens); //Added more detailed logging
+      console.log("Successfully obtained Strava tokens");
 
       const user = await storage.getUser(parseInt(userId as string));
       if (!user) {
         console.error("User not found:", userId);
         return res.redirect("/profile?error=user_not_found");
       }
+
+      // Connect to Strava using our new service
+      await stravaService.connect({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        expiresAt: tokens.expires_at,
+      });
 
       // Update user with Strava tokens
       await storage.updateUser(user.id, {
@@ -283,25 +292,33 @@ export async function registerRoutes(app: Express) {
         return res.status(400).json({ error: "User not connected to Strava" });
       }
 
-      const activities = await getStravaActivities(user.stravaTokens.accessToken);
+      // Connect to Strava with user's tokens
+      await stravaService.connect(user.stravaTokens as ProviderCredentials);
 
-      // Convert Strava activities to our workout format
-      const workouts = activities.map(activity => ({
-        userId,
-        date: new Date(activity.start_date),
-        type: activity.type,
-        distance: activity.distance, // in meters
-        duration: activity.moving_time, // in seconds
-        perceivedEffort: activity.perceived_exertion || null,
-        notes: activity.description || null,
-      }));
+      // Fetch activities using our new service
+      const activities = await stravaService.syncActivities();
 
       // Save workouts
-      for (const workout of workouts) {
+      for (const activity of activities) {
+        const workout = {
+          userId,
+          date: activity.startTime,
+          type: activity.type,
+          distance: activity.distance,
+          duration: activity.duration,
+          perceivedEffort: activity.perceivedEffort || null,
+          notes: activity.notes || null,
+          heartRate: activity.heartRate,
+          elevation: activity.elevation,
+          pace: activity.pace,
+        };
         await storage.createWorkout(workout);
       }
 
-      res.json({ message: "Activities synced successfully", count: workouts.length });
+      res.json({
+        message: "Activities synced successfully",
+        count: activities.length
+      });
     } catch (error) {
       console.error("Error syncing Strava activities:", error);
       res.status(500).json({ error: "Failed to sync activities" });
