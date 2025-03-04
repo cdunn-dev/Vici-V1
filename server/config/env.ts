@@ -11,14 +11,14 @@ const envSchema = z.object({
   DATABASE_URL: z.string().optional(),
 
   // Authentication (required)
-  JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters long"),
+  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
 
   // OpenAI API Key (required)
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
 
   // Optional environment variables
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(0), // Using 0 will allow the OS to assign an available port
+  PORT: z.coerce.number().default(5000),
   MIGRATE_DATA: z.enum(['true', 'false']).optional(),
 
   // Strava integration (optional)
@@ -62,7 +62,7 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET!,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '0', 10) || 0, // Use 0 to let the OS assign an available port
+  PORT: parseInt(process.env.PORT || '5000', 10),
   MIGRATE_DATA: process.env.MIGRATE_DATA === 'true',
   STRAVA_CLIENT_ID: process.env.STRAVA_CLIENT_ID,
   STRAVA_CLIENT_SECRET: process.env.STRAVA_CLIENT_SECRET,

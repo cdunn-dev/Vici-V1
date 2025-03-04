@@ -24,7 +24,6 @@ logger.info('==========================================================');
 
 // Initialize the application
 async function initializeApplication() {
-  const startTime = Date.now();
   logger.info('Starting application initialization...');
 
   // Validate environment variables
@@ -93,8 +92,7 @@ async function initializeApplication() {
     logger.info('Vite setup completed');
   }
 
-  const initDuration = Date.now() - startTime;
-  logger.info(`Application initialization completed in ${initDuration}ms`);
+  logger.info('Application initialization completed');
   return { app, server };
 }
 
@@ -104,22 +102,14 @@ async function initializeApplication() {
     logger.info('Starting application...');
     const { server } = await initializeApplication();
 
-    const port = process.env.PORT || 5000;
-    logger.info(`Attempting to bind server to port ${port}...`);
-
-    const startBindTime = Date.now();
+    const port = 5000;
+    logger.info(`Starting server on port ${port}...`);
 
     server.listen({
       port,
       host: "0.0.0.0"
     }, () => {
-      const bindDuration = Date.now() - startBindTime;
-      logger.info(`Server successfully bound to port ${port} in ${bindDuration}ms`);
-    });
-
-    server.on('error', (error) => {
-      logger.error('Server failed to start:', error);
-      process.exit(1);
+      logger.info(`Server successfully bound to port ${port}`);
     });
 
   } catch (error) {
