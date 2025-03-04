@@ -50,7 +50,7 @@ interface PlanGeneratorProps {
   onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
 }
 
-const TOTAL_STEPS = 5; // Increased to include preview step
+const TOTAL_STEPS = 5;
 
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
@@ -63,6 +63,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
+      goal: TrainingGoals.FIRST_RACE,
+      goalDescription: "",
       startDate: new Date().toISOString(),
       runningExperience: {
         level: ExperienceLevels.BEGINNER,
@@ -81,8 +83,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const onSubmit = async (data: PlanGeneratorFormData) => {
     try {
       setIsSubmitting(true);
+      console.log("Generating preview with data:", data);
 
-      // Generate plan preview data
       const endDate = data.targetRace?.date
         ? new Date(data.targetRace.date)
         : addWeeks(new Date(data.startDate), 12);
@@ -92,13 +94,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         endDate,
       };
 
-      // For demonstration, simulate AI response time
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate AI processing time
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       setPreviewData(planData);
-      setCurrentStep(TOTAL_STEPS); // Move to preview step
+      setCurrentStep(TOTAL_STEPS);
     } catch (error) {
-      console.error("Form submission error:", error);
+      console.error("Error generating preview:", error);
       toast({
         title: "Error",
         description: "Failed to generate plan preview. Please try again.",
@@ -123,10 +125,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       // Simulate AI processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // For demonstration, just update the preview data
+      // Update the plan based on AI suggestions
       const updatedPlan = {
         ...previewData,
-        // Add modifications here based on AI suggestions
+        trainingPreferences: {
+          ...previewData.trainingPreferences,
+          weeklyRunningDays: Math.min(previewData.trainingPreferences.weeklyRunningDays + 1, 7),
+        },
       };
 
       setPreviewData(updatedPlan);
@@ -135,7 +140,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         description: "The training plan has been adjusted based on your feedback.",
       });
     } catch (error) {
-      console.error("Error requesting changes:", error);
+      console.error("Error updating plan:", error);
       toast({
         title: "Error",
         description: "Failed to update plan. Please try again.",
@@ -150,12 +155,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     if (currentStep === TOTAL_STEPS - 1) {
       form.handleSubmit(onSubmit)();
     } else {
-      setCurrentStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+      setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
     }
   };
 
   const handleBack = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    if (currentStep === TOTAL_STEPS) {
+      setPreviewData(null);
+    }
+    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   const isRaceGoal = form.watch("goal") === TrainingGoals.FIRST_RACE ||
@@ -195,7 +203,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
-              {/* Steps 1-4 remain the same */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <FormField
@@ -445,7 +452,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 </div>
               )}
 
-              {/* Step 5: Preview */}
               {currentStep === 5 && previewData && (
                 <div className="space-y-6">
                   <div className="p-6 bg-muted rounded-lg">
@@ -508,7 +514,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               )}
             </div>
 
-            {/* Navigation Footer */}
             <div className="border-t px-6 py-4 flex justify-between items-center">
               <Button
                 type="button"
