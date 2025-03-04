@@ -17,10 +17,7 @@ type LoginData = {
 type RegisterData = {
   email: string;
   password: string;
-  name: string;
-  username: string;
-  dateOfBirth: string;
-  gender: string;
+  confirmPassword: string;
 };
 
 type AuthContextType = {
@@ -78,7 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(result.error.format()._errors.join(", "));
       }
 
-      const res = await apiRequest("POST", "/api/register", data);
+      const res = await apiRequest("POST", "/api/register", {
+        email: data.email,
+        password: data.password
+      });
+
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Registration failed");
