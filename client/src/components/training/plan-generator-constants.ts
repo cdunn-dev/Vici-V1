@@ -1,11 +1,11 @@
 // Training Goals
 export const TrainingGoals = {
-  FIRST_RACE: "First Race",
-  PERSONAL_BEST: "Personal Best",
-  RUN_FAST: "Run Fast",
-  RUN_FAR: "Run Far",
-  GET_FIT: "Get Fit",
-  BE_HEALTHY: "Be Healthy",
+  FIRST_RACE: "My First Race",
+  PERSONAL_BEST: "A Personal Best",
+  RUN_FASTER: "To Run Faster",
+  RUN_FARTHER: "To Run Farther",
+  GET_FIT: "To Get Fit",
+  BE_HEALTHY: "To Be Healthy",
 } as const;
 
 // Race Distances
@@ -19,17 +19,24 @@ export const RaceDistances = {
   OTHER: "Other",
 } as const;
 
+export const DistanceUnits = {
+  MILES: "miles",
+  KILOMETERS: "kilometers",
+} as const;
+
 // Experience Levels with descriptions
 export const ExperienceLevels = {
   BEGINNER: "Beginner",
   INTERMEDIATE: "Intermediate",
   ADVANCED: "Advanced",
+  EXPERT: "Expert",
 } as const;
 
 export const ExperienceLevelDescriptions = {
   [ExperienceLevels.BEGINNER]: "New to running or have been running for less than a year",
   [ExperienceLevels.INTERMEDIATE]: "Regular runner with 1-3 years of experience",
   [ExperienceLevels.ADVANCED]: "Experienced runner with 3+ years of consistent training",
+  [ExperienceLevels.EXPERT]: "Highly experienced runner with 5+ years of dedicated training",
 } as const;
 
 // Fitness Levels with descriptions
@@ -81,7 +88,11 @@ export const isValidTimeFormat = (time: string): boolean => {
   return timeRegex.test(time);
 };
 
-export const isValidDistanceFormat = (distance: string): boolean => {
-  const distanceRegex = /^\d+(\.\d+)?\s*(km|mi|miles|kilometers)$/i;
-  return distanceRegex.test(distance);
+export const isValidDistanceFormat = (distance: string, unit: string): boolean => {
+  const number = parseFloat(distance);
+  return !isNaN(number) && number > 0 && Object.values(DistanceUnits).includes(unit as any);
+};
+
+export const formatDistance = (distance: number, unit: string): string => {
+  return `${distance} ${unit}`;
 };
