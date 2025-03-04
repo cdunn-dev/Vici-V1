@@ -10,8 +10,9 @@ import {
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser & { password?: string }): Promise<User>;
+  updateUser(id: number, user: Partial<InsertUser> & { password?: string }): Promise<User>;
 
   // Workout operations
   getWorkouts(userId: number): Promise<Workout[]>;
@@ -104,6 +105,10 @@ export class MemStorage implements IStorage {
 
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
