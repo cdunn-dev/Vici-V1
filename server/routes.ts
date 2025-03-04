@@ -1,204 +1,39 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
-import { getStravaAuthUrl, exchangeStravaCode } from "./services/strava";
-import { generateTrainingPlan } from "./services/training-plan-generator";
-import { stravaService } from "./services/activity/factory";
-import type { ProviderCredentials } from "./services/activity/types";
+import { insertUserSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express) {
-  // User routes
-  app.post("/api/users", async (req, res) => {
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
+  // Get current user
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "Not authenticated" });
     }
-    const user = await storage.createUser(result.data);
-    res.json(user);
+    res.json(req.user);
   });
 
-  app.get("/api/users/:id", async (req, res) => {
-    const user = await storage.getUser(parseInt(req.params.id));
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
-  });
-
-  // Workout routes
-  app.get("/api/workouts", async (req, res) => {
-    const userId = parseInt(req.query.userId as string);
-    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
-    const workouts = await storage.getWorkouts(userId);
-    res.json(workouts);
-  });
-
-  app.post("/api/workouts", async (req, res) => {
-    const result = insertWorkoutSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    const workout = await storage.createWorkout(result.data);
-    res.json(workout);
-  });
-
-  // Training plan routes
-  app.get("/api/training-plans", async (req, res) => {
+  // Update user
+  app.patch("/api/users/:id", async (req, res) => {
     try {
-      const userId = parseInt(req.query.userId as string);
-      if (isNaN(userId)) {
-        return res.status(400).json({ error: "Invalid user ID" });
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
       }
-      const plans = await storage.getTrainingPlans(userId);
-      res.json(plans);
-    } catch (error) {
-      console.error("Error fetching training plans:", error);
-      res.status(500).json({ error: "Failed to fetch training plans" });
-    }
-  });
 
-  app.get("/api/training-plans/:id", async (req, res) => {
-    try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid plan ID" });
+        return res.status(400).json({ error: "Invalid user ID" });
       }
-      const plan = await storage.getTrainingPlan(id);
-      if (!plan) {
-        return res.status(404).json({ error: "Training plan not found" });
+
+      // Only allow users to update their own profile
+      if (req.user?.id !== id) {
+        return res.status(403).json({ error: "Not authorized" });
       }
-      res.json(plan);
+
+      const user = await storage.updateUser(id, req.body);
+      res.json(user);
     } catch (error) {
-      console.error("Error fetching training plan:", error);
-      res.status(500).json({ error: "Failed to fetch training plan" });
-    }
-  });
-
-  app.post("/api/training-plans", async (req, res) => {
-    const result = insertTrainingPlanSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    const plan = await storage.createTrainingPlan(result.data);
-    res.json(plan);
-  });
-
-  app.patch("/api/training-plans/:id", async (req, res) => {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid plan ID" });
-
-    try {
-      const plan = await storage.updateTrainingPlan(id, req.body);
-      res.json(plan);
-    } catch (error) {
-      res.status(404).json({ error: "Training plan not found" });
-    }
-  });
-
-  // AI Training Plan Generation
-  app.post("/api/training-plans/generate", async (req, res) => {
-    try {
-      const preferences = req.body;
-      console.log("Generating training plan with preferences:", preferences);
-
-      const generatedPlan = await generateTrainingPlan(preferences);
-
-      // Convert the generated plan into a training plan
-      const trainingPlan = {
-        userId: parseInt(req.body.userId),
-        name: `AI Generated Plan - ${preferences.goal}`,
-        goal: preferences.goal,
-        goalDescription: preferences.goalDescription,
-        startDate: new Date(preferences.startDate),
-        endDate: preferences.targetRace?.date
-          ? new Date(preferences.targetRace.date)
-          : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks if no target race
-        weeklyMileage: preferences.trainingPreferences.maxWeeklyMileage,
-        weeklyPlans: generatedPlan.weeklyPlans,
-        targetRace: preferences.targetRace || null,
-        runningExperience: preferences.runningExperience,
-        trainingPreferences: preferences.trainingPreferences,
-      };
-
-      const plan = await storage.createTrainingPlan(trainingPlan);
-      res.json(plan);
-    } catch (error) {
-      console.error("Error generating training plan:", error);
-      res.status(500).json({ error: "Failed to generate training plan" });
-    }
-  });
-
-  // Real-time Plan Adjustments
-  app.post("/api/training-plans/:id/analyze", async (req, res) => {
-    try {
-      const planId = parseInt(req.params.id);
-      const { recentWorkouts } = req.body;
-
-      const plan = await storage.getTrainingPlan(planId);
-      if (!plan) {
-        return res.status(404).json({ error: "Training plan not found" });
-      }
-
-      const recommendations = await analyzeWorkoutAndSuggestAdjustments(
-        recentWorkouts,
-        {
-          goal: plan.name,
-          weeklyMileage: plan.weeklyMileage,
-          currentPhase: "Current", // You might want to calculate this based on the plan's progress
-        }
-      );
-
-      res.json(recommendations);
-    } catch (error) {
-      console.error("Error analyzing workouts:", error);
-      res.status(500).json({ error: "Failed to analyze workouts" });
-    }
-  });
-
-  // Add this new route after the existing training plan routes
-  app.post("/api/training-plans/:id/adjust", async (req, res) => {
-    try {
-      console.log("Received adjustment request:", {
-        planId: req.params.id,
-        feedback: req.body.feedback,
-        currentPlan: req.body.currentPlan ? "Present" : "Missing"
-      });
-
-      const { feedback, currentPlan } = req.body;
-      const planId = parseInt(req.params.id);
-
-      if (!feedback || !currentPlan) {
-        console.error("Missing required fields:", { feedback: !!feedback, currentPlan: !!currentPlan });
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      const plan = await storage.getTrainingPlan(planId);
-      if (!plan) {
-        console.error("Training plan not found:", planId);
-        return res.status(404).json({ error: "Training plan not found" });
-      }
-
-      try {
-        // Get AI suggestions for plan adjustments
-        const adjustments = await generateTrainingPlanAdjustments(
-          feedback,
-          currentPlan
-        );
-        console.log("AI adjustments generated successfully");
-        res.json(adjustments);
-      } catch (aiError) {
-        console.error("AI service error:", aiError);
-        res.status(500).json({
-          error: "Failed to generate AI adjustments",
-          details: aiError.message
-        });
-      }
-    } catch (error) {
-      console.error("Error adjusting training plan:", error);
-      res.status(500).json({
-        error: "Failed to adjust training plan",
-        details: error.message
-      });
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
     }
   });
 

@@ -1,33 +1,18 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { storage } from "./storage"; // Added import for storage
-
-async function ensureDefaultUser() {
-  try {
-    const user = await storage.getUser(1);
-    if (!user) {
-      console.log("Creating default user...");
-      await storage.createUser({
-        username: "default",
-        name: "Default User",
-        dateOfBirth: new Date("1990-01-01"),
-        gender: "Other",
-        personalBests: {},
-        connectedApps: [],
-        stravaTokens: null
-      });
-      console.log("Default user created successfully");
-    }
-  } catch (error) {
-    console.error("Error ensuring default user:", error);
-  }
-}
+import { storage } from "./storage";
+import { setupAuth } from "./auth";
 
 const app = express();
+console.log("[Startup] Express app created");
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+console.log("[Startup] Body parsing middleware configured");
 
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -46,47 +31,74 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });
 
   next();
 });
+console.log("[Startup] Request logging middleware configured");
+
+async function ensureDefaultUser() {
+  try {
+    console.log("[Startup] Checking for default user");
+    const user = await storage.getUser(1);
+    if (!user) {
+      console.log("[Startup] Creating default user...");
+      await storage.createUser({
+        email: "default@example.com",
+        password: "password",
+        connectedApps: [],
+        stravaTokens: null
+      });
+      console.log("[Startup] Default user created successfully");
+    } else {
+      console.log("[Startup] Default user already exists");
+    }
+  } catch (error) {
+    console.error("[Startup] Error ensuring default user:", error);
+  }
+}
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    console.log("[Startup] Beginning server initialization");
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Setup authentication before routes
+    console.log("[Startup] Setting up authentication");
+    setupAuth(app);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+    console.log("[Startup] Registering routes");
+    const server = await registerRoutes(app);
 
-  // Ensure we have a default user
-  await ensureDefaultUser();
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      console.error("[Error]", err);
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ error: message });
+    });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Ensure we have a default user
+    await ensureDefaultUser();
+
+    console.log("[Startup] Setting up Vite/Static serving");
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
+    }
+
+    const port = 5000;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`[Startup] Server listening on port ${port}`);
+    });
+  } catch (error) {
+    console.error("[Startup] Fatal error during initialization:", error);
+    process.exit(1);
   }
-
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
