@@ -132,12 +132,16 @@ export default function Training() {
   }, [currentWeek]);
 
   const handlePreviewPlan = (plan: any) => {
+    console.log("Previewing plan:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
     }
+
+    // Force set showPreview to true and update previewPlan state
     setPreviewPlan(plan);
     setShowPreview(true);
+    setActiveTab("overall"); // Switch to overall view when previewing
   };
 
   const handleConfirmPlan = async () => {
