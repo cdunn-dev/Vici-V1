@@ -121,15 +121,36 @@ async function initializeApplication() {
     logger.info('Starting application...');
     const { server } = await initializeApplication();
 
-    const port = env.PORT;
-    logger.info(`Attempting to start server on port ${port}...`);
-
-    server.listen({
-      port,
-      host: "0.0.0.0"
-    }, () => {
-      logger.info(`Server successfully listening on port ${port}`);
-    });
+    // Try primary port first, fallback to dynamic port assignment
+    const attemptListen = (preferredPort = env.PORT) => {
+      const port = preferredPort || 0; // Port 0 means random available port
+      logger.info(`Attempting to start server on port ${port === 0 ? 'any available' : port}...`);
+      
+      const serverInstance = server.listen({
+        port,
+        host: "0.0.0.0"
+      }, () => {
+        const actualPort = serverInstance.address().port;
+        logger.info(`Server successfully listening on port ${actualPort}`);
+        // Store the actual port for other services to reference
+        process.env.ACTIVE_PORT = String(actualPort);
+      });
+      
+      serverInstance.on('error', (error) => {
+        if (error.code === 'EADDRINUSE' && preferredPort !== 0) {
+          logger.warn(`Port ${preferredPort} is in use, trying alternative port...`);
+          // Close the current instance and try again with port 0 (random assignment)
+          serverInstance.close(() => attemptListen(0));
+        } else {
+          logger.error('Server failed to start:', error);
+          process.exit(1);
+        }
+      });
+      
+      return serverInstance;
+    };
+    
+    attemptListen();
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     if (error instanceof Error) {
