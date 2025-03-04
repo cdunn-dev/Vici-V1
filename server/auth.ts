@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, registerUserSchema } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -74,6 +74,12 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
+      // Validate registration data using the schema
+      const result = registerUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.format() });
+      }
+
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
@@ -81,8 +87,10 @@ export function setupAuth(app: Express) {
 
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
-        ...req.body,
+        ...result.data, // Use the validated and transformed data
         password: hashedPassword,
+        personalBests: {},
+        connectedApps: [],
       });
 
       // Log the user in after registration
