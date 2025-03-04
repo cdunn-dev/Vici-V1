@@ -10,6 +10,7 @@ deploymentTarget = "cloudrun"
 build = ["npm", "run", "build"]
 run = ["sh", "-c", "npm run start"]
 
+# Configure multiple possible ports to handle different scenarios
 [[ports]]
 localPort = 3000
 externalPort = 80
@@ -18,10 +19,10 @@ externalPort = 80
 localPort = 5000
 
 [[ports]]
-localPort = 5173
+localPort = 8080
 
 [[ports]]
-localPort = 8080
+localPort = 5173 # Vite dev server port
 
 [workflows]
 runButton = "Start application"

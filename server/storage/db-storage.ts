@@ -7,6 +7,11 @@ import { db as dbClient } from '../db';
 import { IStorage } from '../storage';
 import { logger } from '../utils/logger';
 
+// If db is null, we can't use this storage
+//This check is now handled within the DbStorage class
+//if (!db) {
+//  throw new Error('Database client is not initialized. Cannot use DbStorage.');
+//}
 import { 
   type User, 
   type InsertUser,
@@ -55,14 +60,9 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    try {
-      const results = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
-      return results.length > 0 ? results[0] : undefined;
-    } catch (error) {
-      logger.error('Error getting user by email:', error);
-      throw error;
-    }
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
   async createUser(userData: InsertUser & { password?: string }): Promise<User> {

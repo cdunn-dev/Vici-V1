@@ -1,9 +1,9 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-export interface User {
+interface User {
   id: number;
-  email: string;
+  username: string;
   name: string;
 }
 
@@ -11,14 +11,14 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
 
 interface RegisterData {
-  email: string;
+  username: string;
   password: string;
   name: string;
   dateOfBirth: string;
@@ -26,15 +26,6 @@ interface RegisterData {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Create a hook for using the auth context
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -46,16 +37,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
-
+    
     if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
       setToken(storedToken);
     }
-
+    
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
       setLoading(true);
       const response = await fetch('/api/auth/login', {
@@ -63,21 +54,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
 
       setUser(data.user);
       setToken(data.token);
-
+      
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token);
-
+      
       toast({
         title: 'Login successful',
         description: `Welcome back, ${data.user.name}!`,
@@ -106,17 +97,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const data = await response.json();
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
       }
 
       setUser(data.user);
       setToken(data.token);
-
+      
       localStorage.setItem('user', JSON.stringify(data.user));
       localStorage.setItem('token', data.token);
-
+      
       toast({
         title: 'Registration successful',
         description: `Welcome, ${data.user.name}!`,
@@ -145,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(null);
       localStorage.removeItem('user');
       localStorage.removeItem('token');
-
+      
       toast({
         title: 'Logged out',
         description: 'You have been logged out successfully.',
@@ -170,4 +161,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export { AuthContext };
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

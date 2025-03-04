@@ -11,23 +11,17 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   server: {
     hmr: {
-      // Enhanced HMR configuration for Replit
-      clientPort: 443,
-      protocol: 'wss',
-      host: process.env.REPL_ID 
-        ? `${process.env.REPL_ID}-${process.env.REPL_OWNER}.replit.dev` 
-        : undefined,
-      overlay: true,
-      timeout: 120000
+      // Ensure HMR works correctly in Replit environment
+      clientPort: 443, // Use HTTPS port for WebSocket
+      port: 5173,
+      host: '0.0.0.0',
     },
     watch: {
-      usePolling: true,
+      usePolling: true, // More reliable file watching in Replit
       interval: 1000,
     },
     host: '0.0.0.0',
-    strictPort: false,
-    port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
-    cors: true
+    strictPort: false, // Allow fallback to another port if needed
   },
   plugins: [
     react(),
