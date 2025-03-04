@@ -7,6 +7,21 @@ import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
 
+interface TrainingPlan {
+  id: number;
+  userId: number;
+  name: string;
+  goal: string;
+  goalDescription: string;
+  startDate: Date;
+  endDate: Date;
+  weeklyMileage: number;
+  weeklyPlans: any[];
+  targetRace: any;
+  runningExperience: any;
+  trainingPreferences: any;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -14,12 +29,17 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
 
+  // Training plan operations
+  getTrainingPlans(userId: number): Promise<TrainingPlan[]>;
+  createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan>;
+
   // Session store
   sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
+  private trainingPlans: Map<number, TrainingPlan>;
   private currentIds: { [key: string]: number };
   public sessionStore: session.Store;
 
@@ -29,7 +49,8 @@ export class MemStorage implements IStorage {
     });
 
     this.users = new Map();
-    this.currentIds = { users: 1 };
+    this.trainingPlans = new Map();
+    this.currentIds = { users: 1, trainingPlans: 1 };
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -67,6 +88,19 @@ export class MemStorage implements IStorage {
 
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async getTrainingPlans(userId: number): Promise<TrainingPlan[]> {
+    return Array.from(this.trainingPlans.values())
+      .filter(plan => plan.userId === userId)
+      .sort((a, b) => b.id - a.id); // Most recent first
+  }
+
+  async createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan> {
+    const id = this.currentIds.trainingPlans++;
+    const newPlan = { ...plan, id };
+    this.trainingPlans.set(id, newPlan);
+    return newPlan;
   }
 }
 
