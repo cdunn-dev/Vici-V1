@@ -9,7 +9,6 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
@@ -29,20 +28,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   // Check if user is already logged in
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
-    
-    if (storedUser && storedToken) {
+    if (storedUser) {
       setUser(JSON.parse(storedUser));
-      setToken(storedToken);
     }
-    
     setLoading(false);
   }, []);
 
@@ -58,17 +52,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
       }
 
       setUser(data.user);
-      setToken(data.token);
-      
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      
+
       toast({
         title: 'Login successful',
         description: `Welcome back, ${data.user.name}!`,
@@ -97,17 +88,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Registration failed');
       }
 
       setUser(data.user);
-      setToken(data.token);
-      
       localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('token', data.token);
-      
+
       toast({
         title: 'Registration successful',
         description: `Welcome, ${data.user.name}!`,
@@ -124,31 +112,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      setToken(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      
-      toast({
-        title: 'Logged out',
-        description: 'You have been logged out successfully.',
-      });
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    toast({
+      title: 'Logged out',
+      description: 'You have been logged out successfully.',
+    });
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         isAuthenticated: !!user,
         login,
         register,
