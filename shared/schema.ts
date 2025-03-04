@@ -46,10 +46,12 @@ export const trainingPlans = pgTable("training_plans", {
 
 export const insertTrainingPlanSchema = createInsertSchema(trainingPlans).omit({ id: true });
 
-// Existing schemas unchanged
+// Updated user schema with email field
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
   username: text("username").notNull().unique(),
+  password: text("password").notNull(),
   name: text("name").notNull(),
   dateOfBirth: timestamp("date_of_birth").notNull(),
   gender: text("gender").notNull(),
