@@ -23,8 +23,31 @@ export default function Profile() {
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/users/me"],
+    queryFn: async () => {
+      const response = await fetch('/api/user');
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+      return response.json();
+    },
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Please log in to view your profile</p>
+      </div>
+    );
+  }
 
   const form = useForm({
     resolver: zodResolver(insertUserSchema),
@@ -38,11 +61,16 @@ export default function Profile() {
     },
   });
 
-  async function handleStravaConnect() {
+  const handleStravaConnect = async () => {
     if (isConnecting) return;
 
     try {
       setIsConnecting(true);
+
+      if (!user?.id) {
+        throw new Error("User ID is required to connect Strava");
+      }
+
       // Clear any existing error states before attempting connection
       localStorage.removeItem('strava_auth_error');
       localStorage.removeItem('strava_auth_state');
@@ -52,7 +80,7 @@ export default function Profile() {
       // Add a small delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const res = await fetch(`/api/strava/auth?userId=${user?.id}`);
+      const res = await fetch(`/api/strava/auth?userId=${user.id}`);
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to get auth URL');
@@ -69,13 +97,13 @@ export default function Profile() {
       console.error("Strava connection error:", error);
       toast({
         title: "Error",
-        description: "Failed to connect to Strava. Please wait 30 seconds and try again.",
+        description: error instanceof Error ? error.message : "Failed to connect to Strava",
         variant: "destructive",
       });
     } finally {
       setIsConnecting(false);
     }
-  }
+  };
 
   const onSubmit = async (data: any) => {
     try {
@@ -132,13 +160,6 @@ export default function Profile() {
     }
   }, [toast]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading profile...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
