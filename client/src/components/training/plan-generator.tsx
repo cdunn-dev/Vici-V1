@@ -36,6 +36,7 @@ import { format, addWeeks, nextMonday } from "date-fns";
 import {
   TrainingGoals,
   RaceDistances,
+  DistanceUnits,
   ExperienceLevels,
   ExperienceLevelDescriptions,
   FitnessLevels,
@@ -79,6 +80,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       },
     },
   });
+
+  const isRaceGoal = form.watch("goal") === TrainingGoals.FIRST_RACE ||
+                     form.watch("goal") === TrainingGoals.PERSONAL_BEST;
+  const isCustomDistance = form.watch("targetRace.distance") === RaceDistances.OTHER;
 
   const onSubmit = async (data: PlanGeneratorFormData) => {
     try {
@@ -166,9 +171,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const isRaceGoal = form.watch("goal") === TrainingGoals.FIRST_RACE ||
-                     form.watch("goal") === TrainingGoals.PERSONAL_BEST;
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -203,6 +205,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
+              {/* Step 1: Training Goal */}
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <FormField
@@ -230,6 +233,139 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     )}
                   />
 
+                  {isRaceGoal && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="targetRace.distance"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Which race distance are you targeting?</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select race distance" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Object.entries(RaceDistances).map(([key, value]) => (
+                                  <SelectItem key={key} value={value}>
+                                    {value}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {isCustomDistance && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="targetRace.customDistance.value"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Distance</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    placeholder="Enter distance"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="targetRace.customDistance.unit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Unit</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {Object.entries(DistanceUnits).map(([key, value]) => (
+                                      <SelectItem key={key} value={value}>
+                                        {value}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+
+                      <FormField
+                        control={form.control}
+                        name="targetRace.date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>When is your race?</FormLabel>
+                            <Calendar
+                              mode="single"
+                              selected={field.value ? new Date(field.value) : undefined}
+                              onSelect={(date) => field.onChange(date?.toISOString())}
+                              disabled={(date) => date < new Date()}
+                              className="rounded-md border"
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {form.watch("goal") === TrainingGoals.PERSONAL_BEST && (
+                        <FormField
+                          control={form.control}
+                          name="targetRace.previousBest"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>What's your current personal best?</FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="HH:MM:SS"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      <FormField
+                        control={form.control}
+                        name="targetRace.goalTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>What's your goal time?</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="HH:MM:SS"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
+
                   <FormField
                     control={form.control}
                     name="goalDescription"
@@ -246,35 +382,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                       </FormItem>
                     )}
                   />
-
-                  {isRaceGoal && (
-                    <FormField
-                      control={form.control}
-                      name="targetRace.distance"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Which race distance are you targeting?</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select race distance" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.entries(RaceDistances).map(([key, value]) => (
-                                <SelectItem key={key} value={value}>
-                                  {value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
                 </div>
               )}
+
+              {/* Step 2: Experience Level */}
               {currentStep === 2 && (
                 <div className="space-y-6">
                   <FormField
@@ -334,6 +445,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   />
                 </div>
               )}
+
+              {/* Step 3: Training Preferences */}
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <FormField
@@ -370,7 +483,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         </FormDescription>
                         <FormControl>
                           <Slider
-                            min={5}
+                            min={0}
                             max={150}
                             step={5}
                             value={[field.value]}
@@ -380,6 +493,54 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         <div className="text-sm text-muted-foreground text-center">
                           {field.value} miles per week
                         </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="trainingPreferences.weeklyWorkouts"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>How many workouts/quality sessions per week?</FormLabel>
+                        <FormControl>
+                          <Slider
+                            min={0}
+                            max={3}
+                            step={1}
+                            value={[field.value]}
+                            onValueChange={(vals) => field.onChange(vals[0])}
+                          />
+                        </FormControl>
+                        <div className="text-sm text-muted-foreground text-center">
+                          {field.value} workouts per week
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="trainingPreferences.preferredLongRunDay"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Which day would you prefer for your long run?</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select preferred day" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(DaysOfWeek).map(([key, value]) => (
+                              <SelectItem key={key} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -414,6 +575,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   />
                 </div>
               )}
+
+              {/* Step 4: Schedule */}
               {currentStep === 4 && (
                 <div className="space-y-6">
                   <FormField
@@ -452,6 +615,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 </div>
               )}
 
+              {/* Step 5: Preview */}
               {currentStep === 5 && previewData && (
                 <div className="space-y-6">
                   <div className="p-6 bg-muted rounded-lg">
@@ -459,6 +623,55 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     <div className="space-y-4">
                       <div>
                         <span className="font-medium">Goal:</span> {previewData.goal}
+                        {previewData.goalDescription && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {previewData.goalDescription}
+                          </p>
+                        )}
+                      </div>
+                      {previewData.targetRace && (
+                        <>
+                          <div>
+                            <span className="font-medium">Target Race:</span>{" "}
+                            {previewData.targetRace.distance}
+                            {previewData.targetRace.customDistance && (
+                              <> ({previewData.targetRace.customDistance.value} {previewData.targetRace.customDistance.unit})</>
+                            )}
+                          </div>
+                          <div>
+                            <span className="font-medium">Race Date:</span>{" "}
+                            {format(new Date(previewData.targetRace.date), "PPP")}
+                          </div>
+                          {previewData.targetRace.previousBest && (
+                            <div>
+                              <span className="font-medium">Previous Best:</span>{" "}
+                              {previewData.targetRace.previousBest}
+                            </div>
+                          )}
+                          {previewData.targetRace.goalTime && (
+                            <div>
+                              <span className="font-medium">Goal Time:</span>{" "}
+                              {previewData.targetRace.goalTime}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      <div>
+                        <span className="font-medium">Experience Level:</span>{" "}
+                        {previewData.runningExperience.level}
+                      </div>
+                      <div>
+                        <span className="font-medium">Current Fitness:</span>{" "}
+                        {previewData.runningExperience.fitnessLevel}
+                      </div>
+                      <div>
+                        <span className="font-medium">Training Schedule:</span>
+                        <ul className="mt-2 space-y-1 text-sm">
+                          <li>• {previewData.trainingPreferences.weeklyRunningDays} running days per week</li>
+                          <li>• Up to {previewData.trainingPreferences.maxWeeklyMileage} miles per week</li>
+                          <li>• {previewData.trainingPreferences.weeklyWorkouts} quality sessions per week</li>
+                          <li>• Long runs on {previewData.trainingPreferences.preferredLongRunDay}</li>
+                        </ul>
                       </div>
                       <div>
                         <span className="font-medium">Start Date:</span>{" "}
@@ -468,15 +681,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                         <span className="font-medium">End Date:</span>{" "}
                         {format(new Date(previewData.endDate), "PPP")}
                       </div>
-                      <div>
-                        <span className="font-medium">Weekly Running Days:</span>{" "}
-                        {previewData.trainingPreferences.weeklyRunningDays}
-                      </div>
-                      <div>
-                        <span className="font-medium">Peak Weekly Mileage:</span>{" "}
-                        {previewData.trainingPreferences.maxWeeklyMileage} miles
-                      </div>
-                      {/* Add more preview details as needed */}
                     </div>
                   </div>
 
@@ -553,24 +757,3 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     </Dialog>
   );
 }
-
-const experienceLevelDescriptions = {
-  Beginner: "New to running or just starting structured training",
-  Intermediate: "Regular runner with some race experience",
-  Advanced: "Experienced runner with multiple races completed",
-};
-
-const fitnessLevelDescriptions = {
-  "Very fit": "Currently training regularly and feeling strong",
-  "Solid base": "Maintaining regular activity but room for improvement",
-  "Out of shape": "Getting back into fitness after a break",
-  "Never run before": "Starting from scratch with running",
-};
-
-const coachingStyleDescriptions = {
-  Authoritative: "Clear, structured guidance with detailed explanations",
-  Directive: "Direct instructions focusing on what needs to be done",
-  Motivational: "Encouraging approach emphasizing positive reinforcement",
-  Collaborative: "Interactive style working together to achieve goals",
-  Hybrid: "Flexible combination of different coaching approaches",
-};

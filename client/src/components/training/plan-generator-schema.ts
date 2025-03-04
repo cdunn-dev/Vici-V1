@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   TrainingGoals,
   RaceDistances,
+  DistanceUnits,
   ExperienceLevels,
   FitnessLevels,
   DaysOfWeek,
@@ -11,15 +12,14 @@ import {
 } from "./plan-generator-constants";
 
 // Sub-schemas for better modularity
+const customDistanceSchema = z.object({
+  value: z.number().positive("Distance must be positive"),
+  unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]),
+});
+
 const targetRaceSchema = z.object({
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]).optional(),
-  customDistance: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || isValidDistanceFormat(val),
-      "Please enter a valid distance (e.g., '50 km' or '31.1 miles')"
-    ),
+  customDistance: customDistanceSchema.optional(),
   date: z.coerce.date().optional(),
   previousBest: z
     .string()
@@ -44,7 +44,7 @@ const runningExperienceSchema = z.object({
 
 const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number().min(1).max(7),
-  maxWeeklyMileage: z.number().min(5).max(150),
+  maxWeeklyMileage: z.number().min(0).max(150),
   weeklyWorkouts: z.number().min(0).max(3),
   preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
   coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]),
@@ -57,31 +57,41 @@ export const planGeneratorSchema = z.object({
     .string()
     .min(1, "Please describe your goal")
     .max(500, "Description too long"),
+  targetRace: targetRaceSchema.optional(),
+  runningExperience: runningExperienceSchema,
+  trainingPreferences: trainingPreferencesSchema,
   startDate: z.coerce
     .date()
     .min(new Date(), "Start date must be in the future")
     .transform((date) => date.toISOString()),
-  targetRace: targetRaceSchema.optional(),
-  runningExperience: runningExperienceSchema,
-  trainingPreferences: trainingPreferencesSchema,
 }).refine(
   (data) => {
-    // If a race distance is selected, date should be provided
-    if (data.targetRace?.distance && !data.targetRace.date) {
-      return false;
+    // Validation rules for race-related fields
+    if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
+      // Race distance is required for race goals
+      if (!data.targetRace?.distance) {
+        return false;
+      }
+      // Date is required for race goals
+      if (!data.targetRace.date) {
+        return false;
+      }
+      // Custom distance validation
+      if (
+        data.targetRace.distance === RaceDistances.OTHER &&
+        !data.targetRace.customDistance
+      ) {
+        return false;
+      }
     }
-    // If custom distance is provided, it should be in valid format
-    if (
-      data.targetRace?.distance === RaceDistances.OTHER &&
-      !data.targetRace.customDistance
-    ) {
+    // Previous best is required for personal best goals
+    if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace?.previousBest) {
       return false;
     }
     return true;
   },
   {
-    message:
-      "Please provide a race date when selecting a race distance, or enter a custom distance when selecting 'Other'",
+    message: "Please fill in all required race information",
     path: ["targetRace"],
   }
 );
