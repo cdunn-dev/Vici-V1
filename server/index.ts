@@ -1,67 +1,136 @@
-import express from "express";
-import { logger } from './utils/logger';
+import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import * as dotenv from 'dotenv';
+import { migrateData } from './migrate-data';
+import { validateEnv, env } from './config/env';
+import { logger } from './utils/logger';
+import { verifyMigrations } from './db/migrate';
+import { errorHandler } from './middleware/errorHandler';
 
-const startTime = Date.now();
-logger.info(`Starting server initialization at ${new Date().toISOString()}`);
+// Load environment variables
+dotenv.config();
 
-// Log environment port settings
-logger.info('Environment port settings:', {
-  ENV_PORT: process.env.PORT,
-  REPL_SLUG: process.env.REPL_SLUG,
-  REPL_OWNER: process.env.REPL_OWNER,
-  REPL_ID: process.env.REPL_ID
-});
+// Display application banner
+logger.info('==========================================================');
+logger.info('  Training App Server');
+logger.info(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`  Database URL: ${process.env.DATABASE_URL ? 'configured' : 'not configured'}`);
+logger.info(`  JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'not configured'}`);
+logger.info(`  Migrate Data: ${process.env.MIGRATE_DATA || 'false'}`);
+logger.info('==========================================================');
 
-// Initialize Express app
-const app = express();
+// Initialize the application
+async function initializeApplication() {
+  const startTime = Date.now();
+  logger.info('Starting application initialization...');
 
-// Add basic health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Define potential ports to try
-const ports = [8080, 3000, 3001];
-let currentPortIndex = 0;
-
-function tryBindPort() {
-  if (currentPortIndex >= ports.length) {
-    logger.error('Failed to bind to any available ports');
-    process.exit(1);
-    return;
+  // Validate environment variables
+  logger.info('Validating environment variables...');
+  if (!validateEnv()) {
+    throw new Error('Environment validation failed');
   }
 
-  const port = ports[currentPortIndex];
-  logger.info(`Attempting to bind to port ${port}...`);
+  // Initialize Express app
+  logger.info('Initializing Express application...');
+  const app = express();
 
-  const server = app.listen(port, "0.0.0.0", async () => {
-    const bindDuration = Date.now() - startTime;
-    logger.info(`✅ Server successfully bound to port ${port} in ${bindDuration}ms`);
-    process.env.PORT = String(port);
-    process.env.ACTIVE_PORT = String(port);
+  // Basic middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+  app.use(cookieParser());
 
-    try {
-      await registerRoutes(app);
-      logger.info("Routes initialized successfully");
-    } catch (error) {
-      logger.error("Error initializing routes:", error);
-      server.close();
-      process.exit(1);
-    }
-  }).on('error', (error: NodeJS.ErrnoException) => {
-    if (error.code === 'EADDRINUSE') {
-      logger.warn(`Port ${port} is in use, trying next port...`);
-      currentPortIndex++;
-      tryBindPort();
-    } else {
-      logger.error('Server error:', error);
-      process.exit(1);
-    }
+  // Request logging middleware
+  app.use((req, res, next) => {
+    logger.info(`${req.method} ${req.path}`);
+    next();
   });
+
+  // Initialize database if configured
+  let dbInitialized = false;
+  if (env.DATABASE_URL) {
+    try {
+      logger.info('Initializing database connection...');
+      // Verify database migrations
+      dbInitialized = await verifyMigrations(env.DATABASE_URL);
+      logger.info('Database migrations verified successfully');
+
+      // Run data migration if explicitly requested
+      if (dbInitialized && env.MIGRATE_DATA === 'true') {
+        logger.info('Running data migration...');
+        await migrateData();
+        logger.info('Data migration completed');
+      }
+    } catch (error) {
+      logger.error('Database initialization failed:', error);
+      if (error instanceof Error) {
+        logger.error('Database error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      logger.warn('Application will use file-based storage');
+    }
+  } else {
+    logger.warn('No DATABASE_URL provided. Using file-based storage.');
+  }
+
+  // Register routes
+  logger.info('Registering application routes...');
+  const server = await registerRoutes(app);
+  logger.info('Routes registered successfully');
+
+  // Error handling middleware
+  app.use(errorHandler);
+
+  // Setup Vite or static serving based on environment
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Setting up Vite development server...');
+    await setupVite(app, server);
+    logger.info('Vite setup completed');
+  }
+
+  const initDuration = Date.now() - startTime;
+  logger.info(`Application initialization completed in ${initDuration}ms`);
+  return { app, server };
 }
 
-// Start trying to bind to ports
-tryBindPort();
+// Start the application
+(async () => {
+  try {
+    logger.info('Starting application...');
+    const { server } = await initializeApplication();
 
-logger.info('Server startup script completed, attempting port binding...');
+    const port = process.env.PORT || 5000;
+    logger.info(`Attempting to bind server to port ${port}...`);
+
+    const startBindTime = Date.now();
+
+    server.listen({
+      port,
+      host: "0.0.0.0"
+    }, () => {
+      const bindDuration = Date.now() - startBindTime;
+      logger.info(`Server successfully bound to port ${port} in ${bindDuration}ms`);
+    });
+
+    server.on('error', (error) => {
+      logger.error('Server failed to start:', error);
+      process.exit(1);
+    });
+
+  } catch (error) {
+    logger.error('Failed to initialize application:', error);
+    if (error instanceof Error) {
+      logger.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    process.exit(1);
+  }
+})();

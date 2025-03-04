@@ -14,7 +14,7 @@ import { logger } from './utils/logger';
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>; // Updated to use email
+  getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser & { password?: string }): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser> & { password?: string }): Promise<User>;
 
@@ -101,8 +101,8 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.username === username);
   }
 
   async createUser(insertUser: InsertUser & { password?: string | null }): Promise<User> {
