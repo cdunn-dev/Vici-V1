@@ -50,7 +50,7 @@ async function initializeApplication() {
   return { app, server };
 }
 
-// Start the application
+// Start the application 
 (async () => {
   try {
     logger.info('Starting application...');

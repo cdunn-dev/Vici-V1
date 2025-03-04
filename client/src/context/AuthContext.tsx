@@ -20,8 +20,6 @@ interface RegisterData {
   username: string;
   password: string;
   name: string;
-  dateOfBirth: string;
-  gender: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
