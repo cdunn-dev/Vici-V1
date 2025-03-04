@@ -70,7 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      const result = registerUserSchema.safeParse(data);
+      const result = registerUserSchema.safeParse({
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword
+      });
+
       if (!result.success) {
         throw new Error(result.error.format()._errors.join(", "));
       }

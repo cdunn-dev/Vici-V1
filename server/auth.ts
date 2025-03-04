@@ -5,13 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser, registerUserSchema } from "@shared/schema";
-
-declare global {
-  namespace Express {
-    interface User extends SelectUser {}
-  }
-}
+import { registerUserSchema } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
@@ -30,7 +24,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET || "default-secret-key",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
@@ -47,7 +41,7 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(
-      { usernameField: 'email' },
+      { usernameField: "email" },
       async (email, password, done) => {
         try {
           const user = await storage.getUserByEmail(email);
@@ -62,7 +56,7 @@ export function setupAuth(app: Express) {
     )
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user: any, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -74,18 +68,17 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      // Validate registration data using the schema
       const result = registerUserSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.format() });
       }
 
-      const existingUser = await storage.getUserByEmail(req.body.email);
+      const existingUser = await storage.getUserByEmail(result.data.email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      const hashedPassword = await hashPassword(req.body.password);
+      const hashedPassword = await hashPassword(result.data.password);
       const user = await storage.createUser({
         email: result.data.email,
         password: hashedPassword,
@@ -93,7 +86,6 @@ export function setupAuth(app: Express) {
         stravaTokens: null
       });
 
-      // Log the user in after registration
       req.login(user, (err) => {
         if (err) {
           return res.status(500).json({ error: "Failed to login after registration" });
@@ -106,21 +98,8 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ error: info.message || "Invalid credentials" });
-      }
-      req.login(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json(user);
-      });
-    })(req, res, next);
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    res.json(req.user);
   });
 
   app.post("/api/logout", (req, res, next) => {
