@@ -102,6 +102,7 @@ export default function Training() {
   const [activeTab, setActiveTab] = useState("current");
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
+  const [isSubmittingPlan, setIsSubmittingPlan] = useState(false); // Added loading state for plan creation
 
   // Derived state
   const currentWeek = getCurrentWeek(trainingPlan);
@@ -141,6 +142,7 @@ export default function Training() {
 
   const handleConfirmPlan = async () => {
     try {
+      setIsSubmittingPlan(true); 
       const response = await fetch(`/api/training-plans/generate`, {
         method: 'POST',
         headers: {
@@ -156,20 +158,35 @@ export default function Training() {
         throw new Error("Failed to generate plan");
       }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/training-plans"] });
+
       toast({
         title: "Success",
         description: "Training plan has been created",
         duration: 3000,
       });
+
       setShowPreview(false);
-      setActiveTab("current"); // Switch to This Week view after approval
+      setPreviewPlan(null);
+      setActiveTab("current");
+
+      setTimeout(() => {
+        const currentWeekElement = document.querySelector('[data-current-week]');
+        if (currentWeekElement) {
+          currentWeekElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+
     } catch (error) {
+      console.error('Plan creation error:', error);
       toast({
         title: "Error",
         description: "Failed to create training plan. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmittingPlan(false);
     }
   };
 
@@ -225,7 +242,6 @@ export default function Training() {
 
   const calculateCompletedMiles = () => {
     if (!currentWeek) return 0;
-    // TODO: In the future, this will come from completed workouts
     return 0;
   };
 
@@ -344,7 +360,6 @@ export default function Training() {
     ],
   } : null;
 
-  // If in preview mode or no plan exists, show the preview/creation flow
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -358,6 +373,7 @@ export default function Training() {
             onConfirm={handleConfirmPlan}
             onAdjust={handleAdjustPlan}
             onBack={() => setShowPreview(false)}
+            isSubmitting={isSubmittingPlan}
           />
         ) : (
           <div className="text-center">
@@ -369,7 +385,6 @@ export default function Training() {
     );
   }
 
-  // Show the main training interface with tabs
   return (
     <div className="space-y-6">
       <div className="text-center">
