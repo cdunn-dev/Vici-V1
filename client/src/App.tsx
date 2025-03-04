@@ -9,6 +9,7 @@ import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
+import ProtectedRoute from "./components/ProtectedRoute"; // Added import
 
 // AuthRequired component
 const AuthRequired = ({ children }: { children: React.ReactNode }) => {
@@ -47,19 +48,19 @@ function Router() {
           </Route>
           <Route path="/auth" component={Auth} />
           <Route path="/training">
-            <AuthRequired>
+            <ProtectedRoute> {/* Changed to ProtectedRoute */}
               <Training />
-            </AuthRequired>
+            </ProtectedRoute>
           </Route>
           <Route path="/profile">
-            <AuthRequired>
+            <ProtectedRoute> {/* Changed to ProtectedRoute */}
               <Profile />
-            </AuthRequired>
+            </ProtectedRoute>
           </Route>
           <Route path="/log">
-            <AuthRequired>
+            <ProtectedRoute> {/* Changed to ProtectedRoute */}
               <Log />
-            </AuthRequired>
+            </ProtectedRoute>
           </Route>
           <Route component={NotFound} />
         </Switch>

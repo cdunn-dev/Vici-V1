@@ -14,7 +14,7 @@ import { logger } from './utils/logger';
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>; // Updated to use email
   createUser(user: InsertUser & { password?: string }): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser> & { password?: string }): Promise<User>;
 

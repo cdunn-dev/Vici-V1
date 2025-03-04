@@ -29,7 +29,7 @@ export default function Profile() {
   const form = useForm({
     resolver: zodResolver(insertUserSchema),
     defaultValues: {
-      username: user?.username || "",
+      email: user?.email || "",
       name: user?.name || "",
       dateOfBirth: user?.dateOfBirth?.split('T')[0] || new Date().toISOString().split('T')[0],
       gender: user?.gender || "",
