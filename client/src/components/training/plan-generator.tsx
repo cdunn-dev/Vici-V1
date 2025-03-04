@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2, ChevronRight, ChevronLeft, ThumbsUp, MessageSquare } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft, ThumbsUp, MessageSquare, HelpCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks, nextMonday } from "date-fns";
 import {
@@ -51,11 +52,29 @@ interface PlanGeneratorProps {
   onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
 }
 
-const TOTAL_STEPS = 5;
+// Define all possible steps
+const STEPS = [
+  { id: "goal", label: "Training Goal" },
+  { id: "raceDistance", label: "Race Distance", conditional: (data: PlanGeneratorFormData) =>
+    data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST },
+  { id: "raceDate", label: "Race Date", conditional: (data: PlanGeneratorFormData) =>
+    data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST },
+  { id: "raceTimes", label: "Race Times", conditional: (data: PlanGeneratorFormData) =>
+    data.goal === TrainingGoals.PERSONAL_BEST },
+  { id: "experience", label: "Running Experience" },
+  { id: "fitness", label: "Current Fitness" },
+  { id: "runningDays", label: "Weekly Running Days" },
+  { id: "mileage", label: "Weekly Mileage" },
+  { id: "workouts", label: "Quality Sessions" },
+  { id: "longRunDay", label: "Long Run Day" },
+  { id: "coachingStyle", label: "Coaching Style" },
+  { id: "startDate", label: "Start Date" },
+  { id: "preview", label: "Preview Plan" }
+];
 
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
@@ -79,11 +98,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         coachingStyle: CoachingStyles.COLLABORATIVE,
       },
     },
+    mode: "onChange", // Enable real-time validation
   });
 
-  const isRaceGoal = form.watch("goal") === TrainingGoals.FIRST_RACE ||
-                     form.watch("goal") === TrainingGoals.PERSONAL_BEST;
-  const isCustomDistance = form.watch("targetRace.distance") === RaceDistances.OTHER;
+  // Get current visible steps based on form data
+  const visibleSteps = STEPS.filter(step =>
+    !step.conditional || step.conditional(form.getValues())
+  );
+
+  const currentStep = visibleSteps[currentStepIndex];
+  const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
 
   const onSubmit = async (data: PlanGeneratorFormData) => {
     try {
@@ -103,7 +127,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       await new Promise(resolve => setTimeout(resolve, 1500));
 
       setPreviewData(planData);
-      setCurrentStep(TOTAL_STEPS);
+      setCurrentStepIndex(visibleSteps.length - 1); // Move to preview step
     } catch (error) {
       console.error("Error generating preview:", error);
       toast({
@@ -114,6 +138,32 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleNext = async () => {
+    const isLastStep = currentStepIndex === visibleSteps.length - 2;
+
+    if (isLastStep) {
+      // Validate entire form before generating preview
+      const isValid = await form.trigger();
+      if (isValid) {
+        form.handleSubmit(onSubmit)();
+      }
+    } else {
+      // Validate current step before proceeding
+      const currentField = currentStep.id;
+      const isValid = await form.trigger(currentField as any);
+      if (isValid) {
+        setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+      }
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStepIndex === visibleSteps.length - 1) {
+      setPreviewData(null);
+    }
+    setCurrentStepIndex(prev => Math.max(prev - 1, 0));
   };
 
   const handleApprovePlan = () => {
@@ -156,19 +206,510 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  const handleNext = () => {
-    if (currentStep === TOTAL_STEPS - 1) {
-      form.handleSubmit(onSubmit)();
-    } else {
-      setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
-    }
-  };
 
-  const handleBack = () => {
-    if (currentStep === TOTAL_STEPS) {
-      setPreviewData(null);
+  // Render the current question based on step ID
+  const renderQuestion = () => {
+    switch (currentStep.id) {
+      case "goal":
+        return (
+          <FormField
+            control={form.control}
+            name="goal"
+            render={({ field }) => (
+              <FormItem className="space-y-4">
+                <FormLabel className="text-lg">What's your training goal?</FormLabel>
+                <FormDescription>
+                  Choose the primary goal you'd like to achieve through your training plan
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select your goal" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(TrainingGoals).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "raceDistance":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.distance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Which race distance are you targeting?</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select race distance" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(RaceDistances).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {form.watch("targetRace.distance") === RaceDistances.OTHER && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="targetRace.customDistance.value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Distance</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          placeholder="Enter distance"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="targetRace.customDistance.unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(DistanceUnits).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+          </>
+        );
+      case "raceDate":
+        return (
+          <FormField
+            control={form.control}
+            name="targetRace.date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When is your race?</FormLabel>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "raceTimes":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.previousBest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your current personal best?</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="HH:MM:SS"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="targetRace.goalTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your goal time?</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="HH:MM:SS"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        );
+      case "experience":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What's your running experience level?</FormLabel>
+                <FormDescription>
+                  {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(ExperienceLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "fitness":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.fitnessLevel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>How would you describe your current fitness level?</FormLabel>
+                <FormDescription>
+                  {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your fitness level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(FitnessLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "runningDays":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.weeklyRunningDays"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>How many days per week would you like to run?</FormLabel>
+                <FormControl>
+                  <Slider
+                    min={1}
+                    max={7}
+                    step={1}
+                    value={[field.value]}
+                    onValueChange={(vals) => field.onChange(vals[0])}
+                  />
+                </FormControl>
+                <div className="text-sm text-muted-foreground text-center">
+                  {field.value} days per week
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "mileage":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.maxWeeklyMileage"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What's your target weekly mileage?</FormLabel>
+                <FormDescription>
+                  This will be the peak mileage in your training plan
+                </FormDescription>
+                <FormControl>
+                  <Slider
+                    min={0}
+                    max={150}
+                    step={5}
+                    value={[field.value]}
+                    onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
+                  />
+                </FormControl>
+                <div className="text-sm text-muted-foreground text-center">
+                  {field.value} miles per week
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "workouts":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.weeklyWorkouts"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>How many workouts/quality sessions per week?</FormLabel>
+                <FormControl>
+                  <Slider
+                    min={0}
+                    max={3}
+                    step={1}
+                    value={[field.value]}
+                    onValueChange={(vals) => field.onChange(vals[0])}
+                  />
+                </FormControl>
+                <div className="text-sm text-muted-foreground text-center">
+                  {field.value} workouts per week
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "longRunDay":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.preferredLongRunDay"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Which day would you prefer for your long run?</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select preferred day" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(DaysOfWeek).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "coachingStyle":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.coachingStyle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What coaching style works best for you?</FormLabel>
+                <FormDescription>
+                  {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coaching style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(CoachingStyles).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "startDate":
+        return (
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>When would you like to start?</FormLabel>
+                <div className="flex gap-4 mb-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => field.onChange(new Date().toISOString())}
+                  >
+                    Start Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => field.onChange(nextMonday(new Date()).toISOString())}
+                  >
+                    Start Next Week
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border mx-auto"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "preview":
+        return previewData && (
+          <div className="space-y-6">
+            <div className="p-6 bg-muted rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Your Personalized Training Plan</h3>
+              <div className="space-y-4">
+                <div>
+                  <span className="font-medium">Goal:</span> {previewData.goal}
+                  {previewData.goalDescription && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {previewData.goalDescription}
+                    </p>
+                  )}
+                </div>
+                {previewData.targetRace && (
+                  <>
+                    <div>
+                      <span className="font-medium">Target Race:</span>{" "}
+                      {previewData.targetRace.distance}
+                      {previewData.targetRace.customDistance && (
+                        <> ({previewData.targetRace.customDistance.value} {previewData.targetRace.customDistance.unit})</>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-medium">Race Date:</span>{" "}
+                      {format(new Date(previewData.targetRace.date), "PPP")}
+                    </div>
+                    {previewData.targetRace.previousBest && (
+                      <div>
+                        <span className="font-medium">Previous Best:</span>{" "}
+                        {previewData.targetRace.previousBest}
+                      </div>
+                    )}
+                    {previewData.targetRace.goalTime && (
+                      <div>
+                        <span className="font-medium">Goal Time:</span>{" "}
+                        {previewData.targetRace.goalTime}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div>
+                  <span className="font-medium">Experience Level:</span>{" "}
+                  {previewData.runningExperience.level}
+                </div>
+                <div>
+                  <span className="font-medium">Current Fitness:</span>{" "}
+                  {previewData.runningExperience.fitnessLevel}
+                </div>
+                <div>
+                  <span className="font-medium">Training Schedule:</span>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    <li>• {previewData.trainingPreferences.weeklyRunningDays} running days per week</li>
+                    <li>• Up to {previewData.trainingPreferences.maxWeeklyMileage} miles per week</li>
+                    <li>• {previewData.trainingPreferences.weeklyWorkouts} quality sessions per week</li>
+                    <li>• Long runs on {previewData.trainingPreferences.preferredLongRunDay}</li>
+                  </ul>
+                </div>
+                <div>
+                  <span className="font-medium">Start Date:</span>{" "}
+                  {format(new Date(previewData.startDate), "PPP")}
+                </div>
+                <div>
+                  <span className="font-medium">End Date:</span>{" "}
+                  {format(new Date(previewData.endDate), "PPP")}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-40"
+                onClick={handleRequestChanges}
+                disabled={isRequestingChanges}
+              >
+                {isRequestingChanges ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Request Changes
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                className="w-40"
+                onClick={handleApprovePlan}
+                disabled={isRequestingChanges}
+              >
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                Approve Plan
+              </Button>
+            </div>
+          </div>
+        );
+      default:
+        return null;
     }
-    setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
   return (
@@ -181,541 +722,34 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       </DialogTrigger>
       <DialogContent className="max-w-2xl min-h-[80vh] flex flex-col p-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Create Training Plan</DialogTitle>
-          {existingPlan && (
-            <p className="text-sm text-muted-foreground">
-              You already have an active training plan. Creating a new plan will
-              replace your current one.
+          <DialogTitle className="flex items-center gap-2">
+            {currentStep.label}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" className="p-0">
+                  <HelpCircle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="max-w-xs">
+                  {/* Add help text based on current step */}
+                  Help text explaining the current question and its importance
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </DialogTitle>
+          <div className="mt-2">
+            <Progress value={progress} className="h-2" />
+            <p className="mt-2 text-sm text-muted-foreground text-center">
+              Step {currentStepIndex + 1} of {visibleSteps.length}
             </p>
-          )}
-        </DialogHeader>
-
-        <div className="px-6 py-4 border-b">
-          <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2" />
-          <div className="mt-2 text-sm text-muted-foreground text-center">
-            Step {currentStep} of {TOTAL_STEPS}:
-            {currentStep === 1 && " Training Goal"}
-            {currentStep === 2 && " Experience Level"}
-            {currentStep === 3 && " Training Preferences"}
-            {currentStep === 4 && " Schedule"}
-            {currentStep === 5 && " Preview Plan"}
           </div>
-        </div>
+        </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
-              {/* Step 1: Training Goal */}
-              {currentStep === 1 && (
-                <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="goal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What's your training goal?</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your goal" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(TrainingGoals).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {isRaceGoal && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="targetRace.distance"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Which race distance are you targeting?</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select race distance" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {Object.entries(RaceDistances).map(([key, value]) => (
-                                  <SelectItem key={key} value={value}>
-                                    {value}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {isCustomDistance && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name="targetRace.customDistance.value"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Distance</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.1"
-                                    placeholder="Enter distance"
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name="targetRace.customDistance.unit"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Unit</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select unit" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {Object.entries(DistanceUnits).map(([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      )}
-
-                      <FormField
-                        control={form.control}
-                        name="targetRace.date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>When is your race?</FormLabel>
-                            <Calendar
-                              mode="single"
-                              selected={field.value ? new Date(field.value) : undefined}
-                              onSelect={(date) => field.onChange(date?.toISOString())}
-                              disabled={(date) => date < new Date()}
-                              className="rounded-md border"
-                            />
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {form.watch("goal") === TrainingGoals.PERSONAL_BEST && (
-                        <FormField
-                          control={form.control}
-                          name="targetRace.previousBest"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>What's your current personal best?</FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="HH:MM:SS"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      <FormField
-                        control={form.control}
-                        name="targetRace.goalTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>What's your goal time?</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="HH:MM:SS"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  <FormField
-                    control={form.control}
-                    name="goalDescription"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tell us more about your goal</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="E.g., I want to complete my first marathon in under 4 hours"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Step 2: Experience Level */}
-              {currentStep === 2 && (
-                <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="runningExperience.level"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What's your running experience level?</FormLabel>
-                        <FormDescription>
-                          {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
-                        </FormDescription>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(ExperienceLevels).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="runningExperience.fitnessLevel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>How would you describe your current fitness level?</FormLabel>
-                        <FormDescription>
-                          {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
-                        </FormDescription>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your fitness level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(FitnessLevels).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Step 3: Training Preferences */}
-              {currentStep === 3 && (
-                <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="trainingPreferences.weeklyRunningDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>How many days per week would you like to run?</FormLabel>
-                        <FormControl>
-                          <Slider
-                            min={1}
-                            max={7}
-                            step={1}
-                            value={[field.value]}
-                            onValueChange={(vals) => field.onChange(vals[0])}
-                          />
-                        </FormControl>
-                        <div className="text-sm text-muted-foreground text-center">
-                          {field.value} days per week
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="trainingPreferences.maxWeeklyMileage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What's your target weekly mileage?</FormLabel>
-                        <FormDescription>
-                          This will be the peak mileage in your training plan
-                        </FormDescription>
-                        <FormControl>
-                          <Slider
-                            min={0}
-                            max={150}
-                            step={5}
-                            value={[field.value]}
-                            onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
-                          />
-                        </FormControl>
-                        <div className="text-sm text-muted-foreground text-center">
-                          {field.value} miles per week
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="trainingPreferences.weeklyWorkouts"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>How many workouts/quality sessions per week?</FormLabel>
-                        <FormControl>
-                          <Slider
-                            min={0}
-                            max={3}
-                            step={1}
-                            value={[field.value]}
-                            onValueChange={(vals) => field.onChange(vals[0])}
-                          />
-                        </FormControl>
-                        <div className="text-sm text-muted-foreground text-center">
-                          {field.value} workouts per week
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="trainingPreferences.preferredLongRunDay"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Which day would you prefer for your long run?</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select preferred day" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(DaysOfWeek).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="trainingPreferences.coachingStyle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>What coaching style works best for you?</FormLabel>
-                        <FormDescription>
-                          {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
-                        </FormDescription>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select coaching style" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Object.entries(CoachingStyles).map(([key, value]) => (
-                              <SelectItem key={key} value={value}>
-                                {value}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Step 4: Schedule */}
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>When would you like to start?</FormLabel>
-                        <div className="flex gap-4 mb-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => field.onChange(new Date().toISOString())}
-                          >
-                            Start Today
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => field.onChange(nextMonday(new Date()).toISOString())}
-                          >
-                            Start Next Week
-                          </Button>
-                        </div>
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => field.onChange(date?.toISOString())}
-                          disabled={(date) => date < new Date()}
-                          className="rounded-md border mx-auto"
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
-
-              {/* Step 5: Preview */}
-              {currentStep === 5 && previewData && (
-                <div className="space-y-6">
-                  <div className="p-6 bg-muted rounded-lg">
-                    <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <span className="font-medium">Goal:</span> {previewData.goal}
-                        {previewData.goalDescription && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {previewData.goalDescription}
-                          </p>
-                        )}
-                      </div>
-                      {previewData.targetRace && (
-                        <>
-                          <div>
-                            <span className="font-medium">Target Race:</span>{" "}
-                            {previewData.targetRace.distance}
-                            {previewData.targetRace.customDistance && (
-                              <> ({previewData.targetRace.customDistance.value} {previewData.targetRace.customDistance.unit})</>
-                            )}
-                          </div>
-                          <div>
-                            <span className="font-medium">Race Date:</span>{" "}
-                            {format(new Date(previewData.targetRace.date), "PPP")}
-                          </div>
-                          {previewData.targetRace.previousBest && (
-                            <div>
-                              <span className="font-medium">Previous Best:</span>{" "}
-                              {previewData.targetRace.previousBest}
-                            </div>
-                          )}
-                          {previewData.targetRace.goalTime && (
-                            <div>
-                              <span className="font-medium">Goal Time:</span>{" "}
-                              {previewData.targetRace.goalTime}
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <div>
-                        <span className="font-medium">Experience Level:</span>{" "}
-                        {previewData.runningExperience.level}
-                      </div>
-                      <div>
-                        <span className="font-medium">Current Fitness:</span>{" "}
-                        {previewData.runningExperience.fitnessLevel}
-                      </div>
-                      <div>
-                        <span className="font-medium">Training Schedule:</span>
-                        <ul className="mt-2 space-y-1 text-sm">
-                          <li>• {previewData.trainingPreferences.weeklyRunningDays} running days per week</li>
-                          <li>• Up to {previewData.trainingPreferences.maxWeeklyMileage} miles per week</li>
-                          <li>• {previewData.trainingPreferences.weeklyWorkouts} quality sessions per week</li>
-                          <li>• Long runs on {previewData.trainingPreferences.preferredLongRunDay}</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <span className="font-medium">Start Date:</span>{" "}
-                        {format(new Date(previewData.startDate), "PPP")}
-                      </div>
-                      <div>
-                        <span className="font-medium">End Date:</span>{" "}
-                        {format(new Date(previewData.endDate), "PPP")}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 justify-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-40"
-                      onClick={handleRequestChanges}
-                      disabled={isRequestingChanges}
-                    >
-                      {isRequestingChanges ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Request Changes
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      className="w-40"
-                      onClick={handleApprovePlan}
-                      disabled={isRequestingChanges}
-                    >
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      Approve Plan
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {renderQuestion()}
             </div>
 
             <div className="border-t px-6 py-4 flex justify-between items-center">
@@ -723,33 +757,35 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 type="button"
                 variant="outline"
                 onClick={handleBack}
-                disabled={currentStep === 1 || currentStep === 5}
+                disabled={currentStepIndex === 0}
               >
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
 
-              {currentStep < TOTAL_STEPS - 1 ? (
-                <Button type="button" onClick={handleNext}>
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : currentStep === TOTAL_STEPS - 1 ? (
+              {currentStepIndex < visibleSteps.length - 1 && (
                 <Button
                   type="button"
                   onClick={handleNext}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Preview...
-                    </>
+                  {currentStepIndex === visibleSteps.length - 2 ? (
+                    isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Preview...
+                      </>
+                    ) : (
+                      "Preview Plan"
+                    )
                   ) : (
-                    "Preview Plan"
+                    <>
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
                   )}
                 </Button>
-              ) : null}
+              )}
             </div>
           </form>
         </Form>
