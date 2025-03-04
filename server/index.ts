@@ -27,12 +27,6 @@ async function initializeApplication() {
   const startTime = Date.now();
   logger.info(`Starting application initialization at ${new Date().toISOString()}`);
 
-  // Validate environment variables
-  logger.info('Validating environment variables...');
-  if (!validateEnv()) {
-    throw new Error('Environment validation failed');
-  }
-
   // Initialize Express app
   logger.info('Initializing Express application...');
   const app = express();
@@ -46,56 +40,16 @@ async function initializeApplication() {
   app.use((req, res, next) => {
     const start = Date.now();
     const path = req.path;
-
-    // Capture JSON responses for logging
-    const originalJson = res.json;
-    res.json = function(body) {
+    res.on('finish', () => {
       const duration = Date.now() - start;
       if (path.startsWith("/api")) {
-        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-        if (body) {
-          const bodyStr = JSON.stringify(body);
-          logLine += ` :: ${bodyStr.length > 50 ? bodyStr.substring(0, 47) + '...' : bodyStr}`;
-        }
-        logger.info(logLine);
+        logger.info(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
       }
-      return originalJson.call(this, body);
-    };
-
+    });
     next();
   });
 
-  // Initialize database if configured
-  let dbInitialized = false;
-  if (env.DATABASE_URL) {
-    try {
-      logger.info('Initializing database connection...');
-      // Verify database migrations
-      dbInitialized = await verifyMigrations(env.DATABASE_URL);
-      logger.info('Database migrations verified successfully');
-
-      // Run data migration if explicitly requested
-      if (dbInitialized && env.MIGRATE_DATA === 'true') {
-        logger.info('Running data migration...');
-        await migrateData();
-        logger.info('Data migration completed');
-      }
-    } catch (error) {
-      logger.error('Database initialization failed:', error);
-      if (error instanceof Error) {
-        logger.error('Database error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-      }
-      logger.warn('Application will use file-based storage');
-    }
-  } else {
-    logger.warn('No DATABASE_URL provided. Using file-based storage.');
-  }
-
-  // Register routes
+  // Register routes (temporarily skip database initialization)
   logger.info('Registering application routes...');
   const server = await registerRoutes(app);
   logger.info('Routes registered successfully');
@@ -103,13 +57,9 @@ async function initializeApplication() {
   // Error handling middleware
   app.use(errorHandler);
 
-  // Setup Vite or static serving based on environment
+  // Temporarily skip Vite setup in development
   if (process.env.NODE_ENV !== 'production') {
-    logger.info('Setting up Vite development server...');
-    await setupVite(app, server);
-    logger.info('Vite setup completed');
-  } else {
-    logger.info('Production mode detected, skipping static file serving');
+    logger.info('Development mode detected, skipping Vite setup temporarily');
   }
 
   const initDuration = Date.now() - startTime;
@@ -124,53 +74,22 @@ async function initializeApplication() {
     const { server } = await initializeApplication();
     logger.info('Initialization complete, attempting to bind to port...');
 
-    // Update the port finding strategy
-    const findAvailablePort = (startPort = 5000, maxAttempts = 10) => {
-      let currentPort = startPort;
-      let attempts = 0;
+    // Simplified port binding
+    const port = 5000;
+    const startTime = Date.now();
 
-      const tryPort = () => {
-        attempts++;
-        const attemptTime = Date.now();
-        logger.info(`[${new Date(attemptTime).toISOString()}] Port attempt ${attempts}: trying port ${currentPort}...`);
+    server.listen(port, "0.0.0.0", () => {
+      const bindDuration = Date.now() - startTime;
+      logger.info(`✅ Server successfully bound to port ${port} in ${bindDuration}ms`);
+      process.env.PORT = String(port);
+      process.env.ACTIVE_PORT = String(port);
+    });
 
-        const serverInstance = server.listen({
-          port: currentPort,
-          host: "0.0.0.0"
-        }, () => {
-          const listeningPort = serverInstance.address()?.port;
-          const bindDuration = Date.now() - attemptTime;
-          logger.info(`✅ Server successfully bound to port ${listeningPort} in ${bindDuration}ms`);
-
-          // Store the actual port for other services to reference
-          process.env.ACTIVE_PORT = String(listeningPort);
-          process.env.PORT = String(listeningPort);
-          logger.info(`✅ Environment PORT set to ${listeningPort}`);
-        });
-
-        serverInstance.on('error', (error) => {
-          const errorTime = Date.now() - attemptTime;
-          logger.warn(`⚠️ Port ${currentPort} unavailable after ${errorTime}ms: ${error.message}`);
-          serverInstance.close();
-
-          if (attempts < maxAttempts) {
-            currentPort++;
-            logger.info(`Retrying with port ${currentPort} in 100ms...`);
-            setTimeout(tryPort, 100);
-          } else {
-            logger.warn(`⚠️ Failed to bind after ${attempts} attempts, using random port`);
-            currentPort = 0;
-            setTimeout(tryPort, 100);
-          }
-        });
-      };
-
-      tryPort();
-    };
-
-    // Start with port 5000
-    logger.info('Beginning port binding process...');
-    findAvailablePort(5000);
+    server.on('error', (error) => {
+      const errorTime = Date.now() - startTime;
+      logger.error(`Failed to bind to port ${port} after ${errorTime}ms:`, error);
+      process.exit(1);
+    });
 
   } catch (error) {
     logger.error('Failed to initialize application:', error);
