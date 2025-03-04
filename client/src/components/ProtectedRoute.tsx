@@ -1,24 +1,27 @@
 
-import { Navigate } from 'wouter';
-import { useAuth } from '../hooks/useAuth';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import useAuth from '@/hooks/useAuth';
 
-type ProtectedRouteProps = {
+interface ProtectedRouteProps {
   children: React.ReactNode;
-};
+}
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  // Show loading state or splash screen while checking authentication
-  if (isLoading) {
-    return <div>Loading...</div>;
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  // Show loading state while auth is being checked
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  
+  // Redirect to login if user is not authenticated
+  if (!user) {
     return <Navigate to="/auth" />;
   }
-
-  // Render the protected content
+  
+  // Render children if user is authenticated
   return <>{children}</>;
-}
+};
+
+export default ProtectedRoute;
