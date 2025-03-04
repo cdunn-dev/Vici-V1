@@ -2,7 +2,7 @@
 import { useContext } from 'react';
 import { AuthContext } from '@/context/AuthContext';
 
-// Export as a named export for components using { useAuth }
+// Named export for consistent imports
 export const useAuth = () => {
   const context = useContext(AuthContext);
   
@@ -13,5 +13,5 @@ export const useAuth = () => {
   return context;
 };
 
-// Also export as default for components using useAuth
+// Default export for backward compatibility
 export default useAuth;

@@ -1,26 +1,26 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// Ensure the component is properly exported
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
   
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    setLocation("/auth");
+    return null;
   }
   
   return <>{children}</>;
 };
 
-// Also export as default
 export default ProtectedRoute;
