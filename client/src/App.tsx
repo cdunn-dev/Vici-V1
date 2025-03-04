@@ -9,7 +9,7 @@ import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
-import ProtectedRoute from "./components/ProtectedRoute"; // Added import
+import ProtectedRoute from "./components/ProtectedRoute.tsx"; // Added import
 
 // AuthRequired component
 const AuthRequired = ({ children }: { children: React.ReactNode }) => {

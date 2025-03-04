@@ -61,4 +61,6 @@ const useAuth = () => {
   return { user, isLoading, login, register, logout };
 };
 
-export default useAuth;
+export function useAuth() {
+
+}
