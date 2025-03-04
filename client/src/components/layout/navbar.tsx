@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Calendar, BookOpen, User, LogOut } from "lucide-react";
+import { Calendar, BookOpen, User, LogOut, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,6 @@ export default function Navbar() {
   const links = [
     { href: "/training", icon: Calendar, label: "Training" },
     { href: "/log", icon: BookOpen, label: "Log" },
-    { href: "/profile", icon: User, label: "Profile" },
   ];
 
   if (!user) {
@@ -61,6 +60,23 @@ export default function Navbar() {
                     <p className="text-sm font-medium leading-none">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <div className="flex items-center w-full cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/training?tab=stored">
+                    <div className="flex items-center w-full cursor-pointer">
+                      <Save className="mr-2 h-4 w-4" />
+                      <span>Saved Training Plans</span>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => logoutMutation.mutate()}
