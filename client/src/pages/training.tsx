@@ -18,6 +18,7 @@ import ProgressTracker from "@/components/training/progress-tracker";
 import { StoredPlans } from "@/components/training/stored-plans";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface WorkoutDetailType {
   date: Date;
@@ -76,20 +77,22 @@ const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | undefined |
 };
 
 export default function Training() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Query for training plan
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
-    queryKey: ["/api/training-plans", { userId: 1 }],
+    queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
-      const response = await fetch(`/api/training-plans?userId=1`);
+      const response = await fetch(`/api/training-plans?userId=${user?.id}`);
       if (!response.ok) {
         throw new Error("Failed to fetch training plan");
       }
       const plans = await response.json();
       return plans.length > 0 ? plans[plans.length - 1] : null;
     },
+    enabled: !!user?.id,
   });
 
   // State management
@@ -102,7 +105,7 @@ export default function Training() {
   const [activeTab, setActiveTab] = useState("current");
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
-  const [isSubmittingPlan, setIsSubmittingPlan] = useState(false); // Added loading state for plan creation
+  const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
 
   // Derived state
   const currentWeek = getCurrentWeek(trainingPlan);
@@ -141,12 +144,21 @@ export default function Training() {
     // Force set showPreview to true and update previewPlan state
     setPreviewPlan(plan);
     setShowPreview(true);
-    setActiveTab("overall"); // Switch to overall view when previewing
+    setActiveTab("overall");
   };
 
   const handleConfirmPlan = async () => {
     try {
-      setIsSubmittingPlan(true); 
+      if (!user?.id) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a training plan",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsSubmittingPlan(true);
       console.log("Attempting to create plan with data:", previewPlan);
 
       const response = await fetch(`/api/training-plans/generate`, {
@@ -156,17 +168,16 @@ export default function Training() {
         },
         body: JSON.stringify({
           ...previewPlan,
-          userId: 1, // TODO: Get from auth context
+          userId: user.id,
         }),
-        credentials: 'include', // Important: Include credentials for session
+        credentials: 'include',
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate plan");
+        throw new Error(data.error || "Failed to generate plan");
       }
 
-      const data = await response.json();
       console.log("Plan created successfully:", data);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
