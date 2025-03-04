@@ -147,6 +147,8 @@ export default function Training() {
   const handleConfirmPlan = async () => {
     try {
       setIsSubmittingPlan(true); 
+      console.log("Attempting to create plan with data:", previewPlan);
+
       const response = await fetch(`/api/training-plans/generate`, {
         method: 'POST',
         headers: {
@@ -154,13 +156,18 @@ export default function Training() {
         },
         body: JSON.stringify({
           ...previewPlan,
-          userId: 1,
+          userId: 1, // TODO: Get from auth context
         }),
+        credentials: 'include', // Important: Include credentials for session
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate plan");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate plan");
       }
+
+      const data = await response.json();
+      console.log("Plan created successfully:", data);
 
       await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
       await queryClient.refetchQueries({ queryKey: ["/api/training-plans"] });
@@ -175,6 +182,7 @@ export default function Training() {
       setPreviewPlan(null);
       setActiveTab("current");
 
+      // Scroll to current week after a short delay to allow for rendering
       setTimeout(() => {
         const currentWeekElement = document.querySelector('[data-current-week]');
         if (currentWeekElement) {
@@ -186,7 +194,7 @@ export default function Training() {
       console.error('Plan creation error:', error);
       toast({
         title: "Error",
-        description: "Failed to create training plan. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create training plan. Please try again.",
         variant: "destructive",
       });
     } finally {
