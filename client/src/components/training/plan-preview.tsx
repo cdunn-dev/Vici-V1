@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { format } from "date-fns";
 import ProgramOverview from "./program-overview";
-import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity } from "lucide-react";
+import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity, Loader2 } from "lucide-react";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -41,6 +41,7 @@ interface PlanPreviewProps {
   onConfirm: () => void;
   onAdjust: (feedback: string) => void;
   onBack: () => void;
+  isSubmitting?: boolean;
 }
 
 export default function PlanPreview({
@@ -48,6 +49,7 @@ export default function PlanPreview({
   onConfirm,
   onAdjust,
   onBack,
+  isSubmitting = false, //Added default value
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
@@ -221,13 +223,23 @@ export default function PlanPreview({
           )}
 
           <div className="flex justify-center mt-8">
-            <Button 
-              onClick={onConfirm} 
+            <Button
+              onClick={onConfirm}
               size="lg"
+              disabled={isSubmitting}
               className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
             >
-              <CheckCircle2 className="h-5 w-5" />
-              Approve Training Plan
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Creating Plan...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-5 w-5" />
+                  Approve Training Plan
+                </>
+              )}
             </Button>
           </div>
         </>
