@@ -116,7 +116,7 @@ app.use((req, res, next) => {
       try {
         // Verify database migrations
         dbInitialized = await verifyMigrations(env.DATABASE_URL);
-        
+
         // Run data migration if needed
         if (dbInitialized && env.MIGRATE_DATA) {
           logger.info('Running data migration from file to database...');
@@ -134,15 +134,19 @@ app.use((req, res, next) => {
     return dbInitialized;
   }
 
-  await initializeApplication();
+  try {
+    await initializeApplication();
 
-
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+    const port = 5000;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (error) {
+    logger.error('Failed to initialize application:', error);
+    process.exit(1);
+  }
 })();

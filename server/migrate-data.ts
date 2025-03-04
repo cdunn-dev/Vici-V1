@@ -92,8 +92,8 @@ async function migrateData() {
   }
 }
 
-// Only run migration if explicitly requested
-if (import.meta.url === (typeof document === 'undefined' ? new URL('file:' + process.argv[1]).href : undefined) && process.env.RUN_MIGRATION === 'true') {
+// Only run migration if explicitly requested and in a Node.js environment
+if (typeof process !== 'undefined' && process.argv && process.argv[1] && process.env.RUN_MIGRATION === 'true') {
   migrateData()
     .then(() => process.exit(0))
     .catch(error => {
