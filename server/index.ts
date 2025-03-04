@@ -17,33 +17,10 @@ dotenv.config();
 logger.info('==========================================================');
 logger.info('  Training App Server');
 logger.info(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`  Database URL: ${process.env.DATABASE_URL ? 'configured' : 'not configured'}`);
+logger.info(`  JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'not configured'}`);
+logger.info(`  Migrate Data: ${process.env.MIGRATE_DATA || 'false'}`);
 logger.info('==========================================================');
-
-async function ensureDefaultUser() {
-  try {
-    logger.info('Checking for default user...');
-    const user = await storage.getUser(1);
-    if (!user) {
-      logger.info("Creating default user...");
-      await storage.createUser({
-        username: "default",
-        name: "Default User",
-        dateOfBirth: new Date("1990-01-01"),
-        gender: "Other",
-        password: null,
-        personalBests: null,
-        connectedApps: null,
-        stravaTokens: null
-      });
-      logger.info("Default user created successfully");
-    } else {
-      logger.info("Default user already exists");
-    }
-  } catch (error) {
-    logger.error("Error ensuring default user:", error);
-    throw error; // Propagate the error to be handled by the caller
-  }
-}
 
 // Initialize the application
 async function initializeApplication() {
@@ -79,7 +56,7 @@ async function initializeApplication() {
           const bodyStr = JSON.stringify(body);
           logLine += ` :: ${bodyStr.length > 50 ? bodyStr.substring(0, 47) + '...' : bodyStr}`;
         }
-        log(logLine);
+        logger.info(logLine);
       }
       return originalJson.call(this, body);
     };
@@ -96,26 +73,25 @@ async function initializeApplication() {
       dbInitialized = await verifyMigrations(env.DATABASE_URL);
       logger.info('Database migrations verified successfully');
 
-      // Run data migration if needed
-      if (dbInitialized && env.MIGRATE_DATA) {
+      // Run data migration if explicitly requested
+      if (dbInitialized && env.MIGRATE_DATA === 'true') {
         logger.info('Running data migration...');
         await migrateData();
         logger.info('Data migration completed');
       }
     } catch (error) {
       logger.error('Database initialization failed:', error);
+      if (error instanceof Error) {
+        logger.error('Database error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
       logger.warn('Application will use file-based storage');
     }
   } else {
     logger.warn('No DATABASE_URL provided. Using file-based storage.');
-  }
-
-  // Ensure default user exists
-  try {
-    await ensureDefaultUser();
-  } catch (error) {
-    logger.error('Failed to ensure default user:', error);
-    throw error;
   }
 
   // Register routes
@@ -126,15 +102,13 @@ async function initializeApplication() {
   // Error handling middleware
   app.use(errorHandler);
 
-  // Setup Vite in development
-  if (process.env.NODE_ENV === 'development') {
+  // Setup Vite or static serving based on environment
+  if (process.env.NODE_ENV !== 'production') {
     logger.info('Setting up Vite development server...');
     await setupVite(app, server);
     logger.info('Vite setup completed');
   } else {
-    logger.info('Setting up static file serving...');
-    serveStatic(app);
-    logger.info('Static file serving setup completed');
+    logger.info('Production mode detected, skipping static file serving');
   }
 
   logger.info('Application initialization completed successfully');
@@ -148,15 +122,23 @@ async function initializeApplication() {
     const { server } = await initializeApplication();
 
     const port = env.PORT;
+    logger.info(`Attempting to start server on port ${port}...`);
+
     server.listen({
       port,
-      host: "0.0.0.0",
-      reusePort: true,
+      host: "0.0.0.0"
     }, () => {
-      logger.info(`Server listening on port ${port}`);
+      logger.info(`Server successfully listening on port ${port}`);
     });
   } catch (error) {
     logger.error('Failed to initialize application:', error);
+    if (error instanceof Error) {
+      logger.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
     process.exit(1);
   }
 })();
