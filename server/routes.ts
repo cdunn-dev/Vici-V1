@@ -2,15 +2,15 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { storage } from "./storage";
-import { authenticate, AuthRequest } from "./middleware/auth";
+import express from "express";
+import healthApi from "./routes/health";
+import { logger } from "./utils/logger";
 import authRoutes from "./routes/auth";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
 import { generateTrainingPlan } from "./services/training-plan-generator";
 import { analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
 import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
-import express from "express";
-import healthApi from "./routes/health";
-import { logger } from "./utils/logger";
+
 
 export async function registerRoutes(app: Express) {
   // Create HTTP server instance
@@ -49,35 +49,31 @@ export async function registerRoutes(app: Express) {
     res.json(user);
   });
 
-  app.get("/api/users/:id", authenticate, async (req: AuthRequest, res) => {
-    if (req.user?.id !== parseInt(req.params.id)) {
-      return res.status(403).json({ error: "Unauthorized access" });
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) return res.status(404).json({ error: "User not found" });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
     }
-
-    const user = await storage.getUser(parseInt(req.params.id));
-    if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
   });
+
 
   // Workout routes
-  app.get("/api/workouts", authenticate, async (req: AuthRequest, res) => {
-    const userId = parseInt(req.query.userId as string);
-    if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
+  app.get("/api/workouts", async (req, res) => {
+    try {
+      const userId = parseInt(req.query.userId as string);
+      if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
 
-    // Users can only access their own workouts
-    if (req.user?.id !== userId) {
-      return res.status(403).json({ error: "Unauthorized access" });
+      const workouts = await storage.getWorkouts(userId);
+      res.json(workouts);
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
     }
-
-    const workouts = await storage.getWorkouts(userId);
-    res.json(workouts);
   });
 
-  app.post("/api/workouts", authenticate, async (req: AuthRequest, res) => {
-    // Ensure the user can only create workouts for themselves
-    if (req.user?.id !== req.body.userId) {
-      return res.status(403).json({ error: "Unauthorized access" });
-    }
+  app.post("/api/workouts", async (req, res) => {
     const result = insertWorkoutSchema.safeParse(req.body);
     if (!result.success) {
       return res.status(400).json({ error: result.error });
@@ -87,16 +83,11 @@ export async function registerRoutes(app: Express) {
   });
 
   // Training plan routes
-  app.get("/api/training-plans", authenticate, async (req: AuthRequest, res) => {
+  app.get("/api/training-plans", async (req, res) => {
     try {
       const userId = parseInt(req.query.userId as string);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
-      }
-
-      // Users can only access their own training plans
-      if (req.user?.id !== userId) {
-        return res.status(403).json({ error: "Unauthorized access" });
       }
 
       const plans = await storage.getTrainingPlans(userId);

@@ -10,9 +10,6 @@ const envSchema = z.object({
   // Database (optional but validated if present)
   DATABASE_URL: z.string().optional(),
 
-  // Authentication (required)
-  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
-
   // OpenAI API Key (required)
   OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
 
@@ -59,7 +56,6 @@ export const validateEnv = () => {
 // Typed environment variables access
 export const env = {
   DATABASE_URL: process.env.DATABASE_URL,
-  JWT_SECRET: process.env.JWT_SECRET!,
   OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '5000', 10),
