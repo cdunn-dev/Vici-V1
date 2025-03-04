@@ -1,26 +1,25 @@
 
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import useAuth from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, loading } = useAuth();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
   
-  // Show loading state while auth is being checked
   if (loading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
   
-  // Redirect to login if user is not authenticated
-  if (!user) {
-    return <Navigate to="/auth" />;
+  if (!isAuthenticated) {
+    setLocation("/auth");
+    return null;
   }
   
-  // Render children if user is authenticated
   return <>{children}</>;
 };
 

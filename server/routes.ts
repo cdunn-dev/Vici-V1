@@ -5,9 +5,9 @@ import { storage } from "./storage";
 import { authenticate, AuthRequest } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import { insertUserSchema, insertWorkoutSchema, insertTrainingPlanSchema } from "@shared/schema";
-import { generateTrainingPlan as oldGenerateTrainingPlan, analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
-import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import { generateTrainingPlan } from "./services/training-plan-generator";
+import { analyzeWorkoutAndSuggestAdjustments, generateTrainingPlanAdjustments } from "./services/ai";
+import { getStravaAuthUrl, exchangeStravaCode, getStravaActivities } from "./services/strava";
 import express from "express";
 import healthApi from "./routes/health";
 import { logger } from "./utils/logger";
@@ -15,14 +15,24 @@ import { logger } from "./utils/logger";
 export async function registerRoutes(app: Express) {
   const server = createServer(app);
 
-  // Initialize WebSocket server on a distinct path
-  const wss = new WebSocketServer({ server, path: '/ws' });
+  // Initialize WebSocket server with more flexible configuration
+  const wss = new WebSocketServer({ 
+    server,
+    path: '/ws',
+    perMessageDeflate: false // Disable compression for better compatibility
+  });
 
-  wss.on('connection', (ws) => {
-    logger.info('New WebSocket connection established');
+  wss.on('connection', (ws, req) => {
+    const clientUrl = req.headers.origin || 'unknown';
+    logger.info(`New WebSocket connection from ${clientUrl}`);
 
     ws.on('message', (message) => {
-      logger.info('Received WebSocket message:', message.toString());
+      try {
+        const data = JSON.parse(message.toString());
+        logger.info('Received WebSocket message:', data);
+      } catch (error) {
+        logger.warn('Failed to parse WebSocket message:', message.toString());
+      }
     });
 
     ws.on('close', () => {
@@ -32,6 +42,9 @@ export async function registerRoutes(app: Express) {
     ws.on('error', (error) => {
       logger.error('WebSocket error:', error);
     });
+
+    // Send initial connection acknowledgment
+    ws.send(JSON.stringify({ type: 'connection_ack', timestamp: new Date().toISOString() }));
   });
 
   // Auth routes
@@ -361,8 +374,7 @@ export async function registerRoutes(app: Express) {
 
   app.use('/api', healthApi); // Added health check route registration
 
-  // Log registered routes
-  logger.info('API routes registered successfully');
+  logger.info('API routes and WebSocket server registered successfully');
 
   return server;
 }

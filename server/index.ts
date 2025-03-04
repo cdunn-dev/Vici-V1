@@ -24,7 +24,8 @@ logger.info('==========================================================');
 
 // Initialize the application
 async function initializeApplication() {
-  logger.info('Starting application initialization...');
+  const startTime = Date.now();
+  logger.info(`Starting application initialization at ${new Date().toISOString()}`);
 
   // Validate environment variables
   logger.info('Validating environment variables...');
@@ -111,7 +112,8 @@ async function initializeApplication() {
     logger.info('Production mode detected, skipping static file serving');
   }
 
-  logger.info('Application initialization completed successfully');
+  const initDuration = Date.now() - startTime;
+  logger.info(`Application initialization completed in ${initDuration}ms`);
   return { app, server };
 }
 
@@ -120,52 +122,56 @@ async function initializeApplication() {
   try {
     logger.info('Starting application...');
     const { server } = await initializeApplication();
+    logger.info('Initialization complete, attempting to bind to port...');
 
-    // Enhanced port assignment strategy
-    const findAvailablePort = (startPort = 3000, maxAttempts = 10) => {
+    // Update the port finding strategy
+    const findAvailablePort = (startPort = 5000, maxAttempts = 10) => {
       let currentPort = startPort;
       let attempts = 0;
-      
+
       const tryPort = () => {
         attempts++;
-        logger.info(`Port attempt ${attempts}: trying port ${currentPort}...`);
-        
+        const attemptTime = Date.now();
+        logger.info(`[${new Date(attemptTime).toISOString()}] Port attempt ${attempts}: trying port ${currentPort}...`);
+
         const serverInstance = server.listen({
           port: currentPort,
           host: "0.0.0.0"
         }, () => {
-          const listeningPort = serverInstance.address().port;
-          logger.info(`✅ Server successfully listening on port ${listeningPort}`);
+          const listeningPort = serverInstance.address()?.port;
+          const bindDuration = Date.now() - attemptTime;
+          logger.info(`✅ Server successfully bound to port ${listeningPort} in ${bindDuration}ms`);
+
           // Store the actual port for other services to reference
           process.env.ACTIVE_PORT = String(listeningPort);
-          
-          // Save this port to environment for future use with front-end
           process.env.PORT = String(listeningPort);
           logger.info(`✅ Environment PORT set to ${listeningPort}`);
         });
-        
+
         serverInstance.on('error', (error) => {
-          logger.warn(`⚠️ Port ${currentPort} unavailable: ${error.message}`);
+          const errorTime = Date.now() - attemptTime;
+          logger.warn(`⚠️ Port ${currentPort} unavailable after ${errorTime}ms: ${error.message}`);
           serverInstance.close();
-          
+
           if (attempts < maxAttempts) {
-            // Try next port in sequence
             currentPort++;
+            logger.info(`Retrying with port ${currentPort} in 100ms...`);
             setTimeout(tryPort, 100);
           } else {
-            // Last resort: random port assignment
-            logger.warn(`⚠️ Tried ${maxAttempts} ports, using random port assignment`);
+            logger.warn(`⚠️ Failed to bind after ${attempts} attempts, using random port`);
             currentPort = 0;
             setTimeout(tryPort, 100);
           }
         });
       };
-      
+
       tryPort();
     };
-    
-    // Start with the configured port or default to 3000
-    findAvailablePort(env.PORT || 3000);
+
+    // Start with port 5000
+    logger.info('Beginning port binding process...');
+    findAvailablePort(5000);
+
   } catch (error) {
     logger.error('Failed to initialize application:', error);
     if (error instanceof Error) {
