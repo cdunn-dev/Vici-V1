@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2 } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks, nextMonday } from "date-fns";
 import {
@@ -49,9 +50,12 @@ interface PlanGeneratorProps {
   onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
 }
 
+const TOTAL_STEPS = 4;
+
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const { toast } = useToast();
 
   const form = useForm<PlanGeneratorFormData>({
@@ -71,6 +75,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       },
     },
   });
+
+  const isRaceGoal = form.watch("goal") === TrainingGoals.FIRST_RACE ||
+                     form.watch("goal") === TrainingGoals.PERSONAL_BEST;
 
   const onSubmit = async (data: PlanGeneratorFormData) => {
     try {
@@ -102,6 +109,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  const handleNext = () => {
+    setCurrentStep((prev) => Math.min(prev + 1, TOTAL_STEPS));
+  };
+
+  const handleBack = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -110,8 +125,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           Create New Training Plan
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl min-h-[80vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Create Training Plan</DialogTitle>
           {existingPlan && (
             <p className="text-sm text-muted-foreground">
@@ -121,228 +136,307 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           )}
         </DialogHeader>
 
+        <div className="px-6 py-4 border-b">
+          <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2" />
+          <div className="mt-2 text-sm text-muted-foreground text-center">
+            Step {currentStep} of {TOTAL_STEPS}:
+            {currentStep === 1 && " Training Goal"}
+            {currentStep === 2 && " Experience Level"}
+            {currentStep === 3 && " Training Preferences"}
+            {currentStep === 4 && " Schedule"}
+          </div>
+        </div>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="goal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Training Goal</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your goal" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(TrainingGoals).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="goalDescription"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tell us more about your goal</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="E.g., I want to complete my first marathon in under 4 hours"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="runningExperience.level"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Running Experience Level</FormLabel>
-                  <FormDescription>
-                    {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
-                  </FormDescription>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ExperienceLevels).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="runningExperience.fitnessLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Fitness Level</FormLabel>
-                  <FormDescription>
-                    {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
-                  </FormDescription>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your fitness level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(FitnessLevels).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="trainingPreferences.weeklyRunningDays"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Weekly Running Days</FormLabel>
-                  <FormDescription>How many days per week would you like to run?</FormDescription>
-                  <FormControl>
-                    <Slider
-                      min={1}
-                      max={7}
-                      step={1}
-                      value={[field.value]}
-                      onValueChange={(vals) => field.onChange(vals[0])}
-                    />
-                  </FormControl>
-                  <div className="text-sm text-muted-foreground text-center">
-                    {field.value} days per week
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="trainingPreferences.maxWeeklyMileage"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Weekly Mileage</FormLabel>
-                  <FormDescription>
-                    What's the highest weekly mileage you'd like to reach during training?
-                  </FormDescription>
-                  <FormControl>
-                    <Slider
-                      min={5}
-                      max={150}
-                      step={5}
-                      value={[field.value]}
-                      onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
-                    />
-                  </FormControl>
-                  <div className="text-sm text-muted-foreground text-center">
-                    {field.value} miles per week
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="trainingPreferences.coachingStyle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Desired Coaching Style</FormLabel>
-                  <FormDescription>
-                    {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
-                  </FormDescription>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select coaching style" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(CoachingStyles).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="startDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>When would you like to start?</FormLabel>
-                  <div className="flex gap-4 mb-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => field.onChange(new Date().toISOString())}
-                    >
-                      Start Today
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => field.onChange(nextMonday(new Date()).toISOString())}
-                    >
-                      Start Next Week
-                    </Button>
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => field.onChange(date?.toISOString())}
-                    disabled={(date) => date < new Date()}
-                    className="rounded-md border"
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+            <div className="flex-1 px-6 py-4 overflow-y-auto">
+              {/* Step 1: Training Goal */}
+              {currentStep === 1 && (
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="goal"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>What's your training goal?</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your goal" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(TrainingGoals).map(([key, value]) => (
+                              <SelectItem key={key} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating Plan...
-                </>
-              ) : (
-                "Preview Plan"
+                  <FormField
+                    control={form.control}
+                    name="goalDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tell us more about your goal</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="E.g., I want to complete my first marathon in under 4 hours"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {isRaceGoal && (
+                    <FormField
+                      control={form.control}
+                      name="targetRace.distance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Which race distance are you targeting?</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select race distance" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.entries(RaceDistances).map(([key, value]) => (
+                                <SelectItem key={key} value={value}>
+                                  {value}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               )}
-            </Button>
+
+              {/* Step 2: Experience Level */}
+              {currentStep === 2 && (
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="runningExperience.level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>What's your running experience level?</FormLabel>
+                        <FormDescription>
+                          {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                        </FormDescription>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(ExperienceLevels).map(([key, value]) => (
+                              <SelectItem key={key} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="runningExperience.fitnessLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>How would you describe your current fitness level?</FormLabel>
+                        <FormDescription>
+                          {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                        </FormDescription>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your fitness level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(FitnessLevels).map(([key, value]) => (
+                              <SelectItem key={key} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Step 3: Training Preferences */}
+              {currentStep === 3 && (
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="trainingPreferences.weeklyRunningDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>How many days per week would you like to run?</FormLabel>
+                        <FormControl>
+                          <Slider
+                            min={1}
+                            max={7}
+                            step={1}
+                            value={[field.value]}
+                            onValueChange={(vals) => field.onChange(vals[0])}
+                          />
+                        </FormControl>
+                        <div className="text-sm text-muted-foreground text-center">
+                          {field.value} days per week
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="trainingPreferences.maxWeeklyMileage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>What's your target weekly mileage?</FormLabel>
+                        <FormDescription>
+                          This will be the peak mileage in your training plan
+                        </FormDescription>
+                        <FormControl>
+                          <Slider
+                            min={5}
+                            max={150}
+                            step={5}
+                            value={[field.value]}
+                            onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
+                          />
+                        </FormControl>
+                        <div className="text-sm text-muted-foreground text-center">
+                          {field.value} miles per week
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="trainingPreferences.coachingStyle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>What coaching style works best for you?</FormLabel>
+                        <FormDescription>
+                          {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                        </FormDescription>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select coaching style" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(CoachingStyles).map(([key, value]) => (
+                              <SelectItem key={key} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Step 4: Schedule */}
+              {currentStep === 4 && (
+                <div className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>When would you like to start?</FormLabel>
+                        <div className="flex gap-4 mb-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => field.onChange(new Date().toISOString())}
+                          >
+                            Start Today
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => field.onChange(nextMonday(new Date()).toISOString())}
+                          >
+                            Start Next Week
+                          </Button>
+                        </div>
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => field.onChange(date?.toISOString())}
+                          disabled={(date) => date < new Date()}
+                          className="rounded-md border mx-auto"
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Footer */}
+            <div className="border-t px-6 py-4 flex justify-between items-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                disabled={currentStep === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+
+              {currentStep < TOTAL_STEPS ? (
+                <Button type="button" onClick={handleNext}>
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              ) : (
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating Plan...
+                    </>
+                  ) : (
+                    "Preview Plan"
+                  )}
+                </Button>
+              )}
+            </div>
           </form>
         </Form>
       </DialogContent>
