@@ -49,7 +49,7 @@ export const insertTrainingPlanSchema = createInsertSchema(trainingPlans).omit({
 // Existing schemas unchanged
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password"),  // Added password field
   name: text("name").notNull(),
   dateOfBirth: timestamp("date_of_birth").notNull(),

@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environme
 export interface AuthRequest extends Request {
   user?: {
     id: number;
-    username: string;
+    email: string;
   };
 }
 
@@ -32,7 +32,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
     
     // Attach user to request object
-    req.user = { id: user.id, username: user.username };
+    req.user = { id: user.id, email: user.email };
     
     next();
   } catch (error) {
