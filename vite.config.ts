@@ -13,8 +13,8 @@ export default defineConfig({
     hmr: {
       // Ensure HMR works correctly in Replit environment
       clientPort: 443, // Use HTTPS port for WebSocket
-      port: 5173,
-      host: '0.0.0.0',
+      protocol: 'wss',
+      host: process.env.REPL_ID ? `${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co` : undefined,
     },
     watch: {
       usePolling: true, // More reliable file watching in Replit
