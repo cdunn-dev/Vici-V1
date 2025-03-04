@@ -83,6 +83,7 @@ export function setupAuth(app: Express) {
       const insertData = {
         email: registerResult.data.email,
         password: await hashPassword(registerResult.data.password),
+        emailVerified: true, // Default to true while email verification is disabled
         connectedApps: [],
         stravaTokens: null
       };

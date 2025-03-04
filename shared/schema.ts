@@ -1,12 +1,14 @@
-import { pgTable, text, serial, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, json, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Simplified user schema with only essential fields
+// User schema with optional email verification
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  emailVerified: boolean("email_verified").default(true), // Default to true while email verification is disabled
+  verificationToken: text("verification_token"),
   connectedApps: json("connected_apps").$type<string[]>().default([]),
   stravaTokens: json("strava_tokens").$type<{
     accessToken: string;
