@@ -80,7 +80,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [previewData, setPreviewData] = useState<any>(null);
   const { toast } = useToast();
 
-  // Update the useForm initialization
+  // Update the form initialization
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -151,6 +151,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  // Update the handleNext function for better validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -174,7 +175,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           await new Promise(resolve => setTimeout(resolve, 1500));
 
           setPreviewData(planData);
-          setCurrentStepIndex(prev => prev + 1); // Move to preview step
+          setCurrentStepIndex(prev => prev + 1);
         } catch (error) {
           console.error("Error generating preview:", error);
           toast({
@@ -185,13 +186,30 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         } finally {
           setIsSubmitting(false);
         }
+      } else {
+        // Show validation error toast
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly.",
+          variant: "destructive",
+        });
       }
     } else {
-      // Validate current step before proceeding
-      const currentField = currentStep.id;
-      const isValid = await form.trigger(currentField as any);
+      // Get all fields for the current step
+      const currentStepFields = getFieldsForStep(currentStep.id);
+
+      // Validate only the current step's fields
+      const isValid = await form.trigger(currentStepFields);
+
       if (isValid) {
         setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+      } else {
+        // Show validation error toast
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly.",
+          variant: "destructive",
+        });
       }
     }
   };
@@ -232,14 +250,46 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
 
-  // Update the Weekly Mileage field component
+  // Helper function to get fields for each step
+  const getFieldsForStep = (stepId: string): string[] => {
+    switch (stepId) {
+      case "goal":
+        return ["goal"];
+      case "raceDistance":
+        return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
+      case "raceDate":
+        return ["targetRace.date"];
+      case "raceTimes":
+        return ["targetRace.previousBest", "targetRace.goalTime"];
+      case "experience":
+        return ["runningExperience.level"];
+      case "fitness":
+        return ["runningExperience.fitnessLevel"];
+      case "runningDays":
+        return ["trainingPreferences.weeklyRunningDays"];
+      case "mileage":
+        return ["trainingPreferences.maxWeeklyMileage"];
+      case "workouts":
+        return ["trainingPreferences.weeklyWorkouts"];
+      case "longRunDay":
+        return ["trainingPreferences.preferredLongRunDay"];
+      case "coachingStyle":
+        return ["trainingPreferences.coachingStyle"];
+      case "startDate":
+        return ["startDate"];
+      default:
+        return [];
+    }
+  };
+
+  // Update Weekly Mileage field component
   const renderWeeklyMileageField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
-        // Ensure numeric value
-        const numericValue = Number(field.value);
+        // Ensure numeric value with proper default
+        const numericValue = typeof field.value === 'number' ? field.value : 0;
 
         return (
           <FormItem>
@@ -266,14 +316,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Update the Quality Sessions field component
+  // Update Quality Sessions field component
   const renderQualitySessionsField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
-        // Ensure numeric value
-        const numericValue = Number(field.value);
+        // Ensure numeric value with proper default
+        const numericValue = typeof field.value === 'number' ? field.value : 0;
 
         return (
           <FormItem>

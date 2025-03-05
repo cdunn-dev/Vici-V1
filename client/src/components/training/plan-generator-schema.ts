@@ -8,12 +8,11 @@ import {
   DaysOfWeek,
   CoachingStyles,
   isValidTimeFormat,
-  isValidDistanceFormat,
 } from "./plan-generator-constants";
 
 // Sub-schemas for better modularity
 const customDistanceSchema = z.object({
-  value: z.number().positive("Distance must be positive"),
+  value: z.number().min(0, "Distance must be positive"),
   unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]),
 });
 
@@ -40,15 +39,39 @@ const targetRaceSchema = z.object({
 const runningExperienceSchema = z.object({
   level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
   fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
-});
+}).refine(
+  (data) => !!data.level,
+  {
+    message: "Please select your experience level",
+    path: ["level"],
+  }
+).refine(
+  (data) => !!data.fitnessLevel,
+  {
+    message: "Please select your fitness level",
+    path: ["fitnessLevel"],
+  }
+);
 
 const trainingPreferencesSchema = z.object({
-  weeklyRunningDays: z.number().min(1).max(7),
-  maxWeeklyMileage: z.number().min(0).max(150),
-  weeklyWorkouts: z.number().min(0).max(3),
+  weeklyRunningDays: z.number().min(1, "Must run at least 1 day per week").max(7, "Maximum 7 days per week"),
+  maxWeeklyMileage: z.number().min(0, "Mileage cannot be negative").max(150, "Maximum 150 miles per week"),
+  weeklyWorkouts: z.number().min(0, "Cannot have negative workouts").max(3, "Maximum 3 quality sessions per week"),
   preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
   coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]),
-});
+}).refine(
+  (data) => !!data.preferredLongRunDay,
+  {
+    message: "Please select a day for your long run",
+    path: ["preferredLongRunDay"],
+  }
+).refine(
+  (data) => !!data.coachingStyle,
+  {
+    message: "Please select a coaching style",
+    path: ["coachingStyle"],
+  }
+);
 
 // Main schema
 export const planGeneratorSchema = z.object({
@@ -65,18 +88,20 @@ export const planGeneratorSchema = z.object({
     .min(new Date(), "Start date must be in the future")
     .transform((date) => date.toISOString()),
 }).refine(
+  (data) => !!data.goal,
+  {
+    message: "Please select a training goal",
+    path: ["goal"],
+  }
+).refine(
   (data) => {
-    // Validation rules for race-related fields
     if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
-      // Race distance is required for race goals
       if (!data.targetRace?.distance) {
         return false;
       }
-      // Date is required for race goals
       if (!data.targetRace.date) {
         return false;
       }
-      // Custom distance validation
       if (
         data.targetRace.distance === RaceDistances.OTHER &&
         !data.targetRace.customDistance
@@ -84,7 +109,6 @@ export const planGeneratorSchema = z.object({
         return false;
       }
     }
-    // Previous best is required for personal best goals
     if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace?.previousBest) {
       return false;
     }
