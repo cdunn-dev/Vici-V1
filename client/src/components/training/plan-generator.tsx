@@ -261,17 +261,9 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           coachingStyle: "Motivational",
         };
 
-        // Handle start date
-        if (!formData.startDate) {
-          formData.startDate = new Date().toISOString();
-        }
-
-        // Set default values for custom distance if not a custom race
-        if (formData.targetRace?.distance !== RaceDistances.OTHER) {
-          formData.targetRace.customDistance = {
-            value: 0,
-            unit: "miles",
-          };
+        // Clear race data if not a race goal
+        if (formData.goal !== TrainingGoals.FIRST_RACE && formData.goal !== TrainingGoals.PERSONAL_BEST) {
+          formData.targetRace = undefined;
         }
 
         // Request plan preview from backend
