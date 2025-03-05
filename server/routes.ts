@@ -1,7 +1,14 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
+import { generateTrainingPlan } from "./services/training-plan-generator";
 import { insertUserSchema } from "@shared/schema";
+
+function addWeeks(date: Date, weeks: number): Date {
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + weeks * 7);
+  return newDate;
+}
 
 export async function registerRoutes(app: Express) {
   // Get current user
@@ -34,6 +41,32 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error fetching training plans:", error);
       res.status(500).json({ error: "Failed to fetch training plans" });
+    }
+  });
+
+  // New endpoint for generating plan previews
+  app.post("/api/training-plans/preview", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      console.log("Generating training plan preview with data:", req.body);
+
+      // Generate a preview plan without saving
+      const previewPlan = generateTrainingPlan({
+        startDate: req.body.startDate,
+        endDate: req.body.targetRace?.date || addWeeks(new Date(req.body.startDate), 12).toISOString(),
+        goal: req.body.goal,
+        runningExperience: req.body.runningExperience,
+        trainingPreferences: req.body.trainingPreferences,
+        targetRace: req.body.targetRace,
+      });
+
+      res.json(previewPlan);
+    } catch (error) {
+      console.error("Error generating plan preview:", error);
+      res.status(500).json({ error: "Failed to generate plan preview" });
     }
   });
 
