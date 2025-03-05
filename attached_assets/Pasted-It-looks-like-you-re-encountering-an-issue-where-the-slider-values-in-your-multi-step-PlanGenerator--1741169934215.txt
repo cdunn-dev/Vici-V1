@@ -1,0 +1,54 @@
+It looks like you're encountering an issue where the slider values in your multi-step PlanGenerator component are not resetting or initializing correctly when moving between steps. This can lead to confusion for the user and potentially incorrect data being submitted.
+
+Here's a breakdown of why this might be happening and how to fix it:
+
+Why it's happening
+
+Form State: The react-hook-form library maintains the form's state, including the values of the input fields. When you move between steps, the form state is not automatically reset, so the slider values from the previous step might persist.
+Default Values: The defaultValues prop in useForm sets the initial values for the form fields when the component mounts. However, it doesn't reset the values when navigating between steps.
+How to fix it
+
+Reset Slider Values: You can use the resetField function provided by react-hook-form to reset the slider values when moving to a new step. You can do this in the handleNext or handleBack functions, depending on when you want the reset to occur.
+
+Example:
+
+JavaScript
+
+const handleNext = async () => {
+  // ... your existing code
+
+  if (isValid) {
+    // Reset slider values for the next step
+    form.resetField('trainingPreferences.maxWeeklyMileage');
+    form.resetField('trainingPreferences.weeklyWorkouts');
+    form.resetField('trainingPreferences.weeklyRunningDays');
+
+    setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+  }
+};
+Conditional Reset: You can add a condition to only reset the slider values if the next step is one of the steps containing the sliders. This prevents unnecessary resets and improves performance.
+JavaScript
+
+const handleNext = async () => {
+  // ... your existing code
+
+  if (isValid) {
+    const nextStepId = visibleSteps[currentStepIndex + 1]?.id;
+    if (nextStepId === 'mileage' || nextStepId === 'workouts' || nextStepId === 'runningDays') {
+      // Reset slider values only if navigating to a relevant step
+      form.resetField('trainingPreferences.maxWeeklyMileage');
+      form.resetField('trainingPreferences.weeklyWorkouts');
+      form.resetField('trainingPreferences.weeklyRunningDays');
+    }
+
+    setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+  }
+};
+Additional Considerations
+
+User Experience: Resetting the slider values might not always be the desired behavior. Consider if you want to preserve the user's previous selections or provide an option to reset the values explicitly.
+Performance: If you have a large number of fields or complex logic, resetting the entire form state might impact performance. Consider resetting only the necessary fields or using a more targeted approach.
+By implementing these changes, you can ensure that the slider values are reset correctly when navigating between steps, providing a better user experience and ensuring that the correct data is submitted to generate the training plan.
+
+
+Sources and related content
