@@ -440,7 +440,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         // This ensures we only use the form value on first render
         useEffect(() => {
           if (weeklyRunningDays === null) {
-            const currentValue = field.value;
+            const currentValue = form.getValues('trainingPreferences.weeklyRunningDays');
             if (typeof currentValue === 'number' && currentValue >= 1 && currentValue <= 7) {
               setWeeklyRunningDays(currentValue);
             } else {
@@ -449,7 +449,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               field.onChange(3);
             }
           }
-        }, [field]);
+        }, [form, weeklyRunningDays]);
 
         // Use local state with fallback to default
         const value = weeklyRunningDays !== null ? weeklyRunningDays : 3;
@@ -490,7 +490,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         // Initialize local state from form value if not already set
         useEffect(() => {
           if (weeklyMileage === null) {
-            const currentValue = field.value;
+            const currentValue = form.getValues('trainingPreferences.maxWeeklyMileage');
             if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 150) {
               setWeeklyMileage(currentValue);
             } else {
@@ -499,7 +499,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               field.onChange(15);
             }
           }
-        }, [field]);
+        }, [form, weeklyMileage]);
 
         // Use local state with fallback to default
         const value = weeklyMileage !== null ? weeklyMileage : 15;
@@ -541,21 +541,22 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
         // Initialize local state from form value if not already set
+        const [qualitySessions, setQualitySessions] = useState<number | null>(null);
         useEffect(() => {
-          if (weeklyWorkouts === null) {
-            const currentValue = field.value;
+          if (qualitySessions === null) {
+            const currentValue = form.getValues('trainingPreferences.weeklyWorkouts');
             if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 3) {
-              setWeeklyWorkouts(currentValue);
+              setQualitySessions(currentValue);
             } else {
               // Set default
-              setWeeklyWorkouts(1);
+              setQualitySessions(1);
               field.onChange(1);
             }
           }
-        }, [field]);
+        }, [form, qualitySessions]);
 
         // Use local state with fallback to default
-        const value = weeklyWorkouts !== null ? weeklyWorkouts : 1;
+        const value = qualitySessions !== null ? qualitySessions : 1;
 
         return (
           <FormItem>
@@ -572,7 +573,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 onValueChange={(vals) => {
                   // Ensure we only get integers from 0-3 and update both states
                   const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
-                  setWeeklyWorkouts(newValue);
+                  setQualitySessions(newValue);
                   field.onChange(newValue);
                 }}
               />
