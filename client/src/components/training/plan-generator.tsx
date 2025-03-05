@@ -46,6 +46,8 @@ import {
   CoachingStyles,
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
+import ProgramOverview from "./program-overview"; // Import the ProgramOverview component
+
 
 interface PlanGeneratorProps {
   existingPlan?: boolean;
@@ -76,29 +78,38 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [open, setOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRequestingChanges, setIsRequestingChanges] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
   const { toast } = useToast();
 
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
-      goal: TrainingGoals.FIRST_RACE,
+      goal: "", // Empty string as default
       goalDescription: "",
-      startDate: new Date().toISOString(),
+      startDate: "", // Empty string as default
       runningExperience: {
-        level: ExperienceLevels.BEGINNER,
-        fitnessLevel: FitnessLevels.SOLID_BASE,
+        level: "", // Empty string as default
+        fitnessLevel: "", // Empty string as default
       },
       trainingPreferences: {
-        weeklyRunningDays: 4,
-        maxWeeklyMileage: 20,
-        weeklyWorkouts: 1,
-        preferredLongRunDay: DaysOfWeek.SATURDAY,
-        coachingStyle: CoachingStyles.COLLABORATIVE,
+        weeklyRunningDays: 0,
+        maxWeeklyMileage: 0,
+        weeklyWorkouts: 0,
+        preferredLongRunDay: "", // Empty string as default
+        coachingStyle: "", // Empty string as default
+      },
+      targetRace: {
+        date: "",
+        distance: "",
+        customDistance: {
+          unit: "",
+          value: 0,
+        },
+        goalTime: "",
+        previousBest: "",
       },
     },
-    mode: "onChange", // Enable real-time validation
+    mode: "onChange",
   });
 
   // Get current visible steps based on form data
@@ -175,21 +186,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   const handleRequestChanges = async () => {
     try {
-      setIsRequestingChanges(true);
+      // setIsRequestingChanges(true); // Removed as it's handled by ProgramOverview
 
       // Simulate AI processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Update the plan based on AI suggestions
-      const updatedPlan = {
-        ...previewData,
-        trainingPreferences: {
-          ...previewData.trainingPreferences,
-          weeklyRunningDays: Math.min(previewData.trainingPreferences.weeklyRunningDays + 1, 7),
-        },
-      };
+      // Update the plan based on AI suggestions (This is now handled by ProgramOverview)
+      // const updatedPlan = { ... };
+      // setPreviewData(updatedPlan);
 
-      setPreviewData(updatedPlan);
       toast({
         title: "Plan Updated",
         description: "The training plan has been adjusted based on your feedback.",
@@ -202,7 +207,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         variant: "destructive",
       });
     } finally {
-      setIsRequestingChanges(false);
+      // setIsRequestingChanges(false); // Removed as it's handled by ProgramOverview
     }
   };
 
@@ -610,100 +615,20 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         return previewData && (
           <div className="space-y-6">
             <div className="p-6 bg-muted rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Your Personalized Training Plan</h3>
-              <div className="space-y-4">
-                <div>
-                  <span className="font-medium">Goal:</span> {previewData.goal}
-                  {previewData.goalDescription && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {previewData.goalDescription}
-                    </p>
-                  )}
-                </div>
-                {previewData.targetRace && (
-                  <>
-                    <div>
-                      <span className="font-medium">Target Race:</span>{" "}
-                      {previewData.targetRace.distance}
-                      {previewData.targetRace.customDistance && (
-                        <> ({previewData.targetRace.customDistance.value} {previewData.targetRace.customDistance.unit})</>
-                      )}
-                    </div>
-                    <div>
-                      <span className="font-medium">Race Date:</span>{" "}
-                      {format(new Date(previewData.targetRace.date), "PPP")}
-                    </div>
-                    {previewData.targetRace.previousBest && (
-                      <div>
-                        <span className="font-medium">Previous Best:</span>{" "}
-                        {previewData.targetRace.previousBest}
-                      </div>
-                    )}
-                    {previewData.targetRace.goalTime && (
-                      <div>
-                        <span className="font-medium">Goal Time:</span>{" "}
-                        {previewData.targetRace.goalTime}
-                      </div>
-                    )}
-                  </>
-                )}
-                <div>
-                  <span className="font-medium">Experience Level:</span>{" "}
-                  {previewData.runningExperience.level}
-                </div>
-                <div>
-                  <span className="font-medium">Current Fitness:</span>{" "}
-                  {previewData.runningExperience.fitnessLevel}
-                </div>
-                <div>
-                  <span className="font-medium">Training Schedule:</span>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    <li>• {previewData.trainingPreferences.weeklyRunningDays} running days per week</li>
-                    <li>• Up to {previewData.trainingPreferences.maxWeeklyMileage} miles per week</li>
-                    <li>• {previewData.trainingPreferences.weeklyWorkouts} quality sessions per week</li>
-                    <li>• Long runs on {previewData.trainingPreferences.preferredLongRunDay}</li>
-                  </ul>
-                </div>
-                <div>
-                  <span className="font-medium">Start Date:</span>{" "}
-                  {format(new Date(previewData.startDate), "PPP")}
-                </div>
-                <div>
-                  <span className="font-medium">End Date:</span>{" "}
-                  {format(new Date(previewData.endDate), "PPP")}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-4 justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-40"
-                onClick={handleRequestChanges}
-                disabled={isRequestingChanges}
-              >
-                {isRequestingChanges ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Request Changes
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                className="w-40"
-                onClick={handleApprovePlan}
-                disabled={isRequestingChanges}
-              >
-                <ThumbsUp className="mr-2 h-4 w-4" />
-                Approve Plan
-              </Button>
+              <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
+              {/* Import and use the ProgramOverview component */}
+              <ProgramOverview
+                plan={previewData}
+                onApprove={handleApprovePlan}
+                onAskQuestion={(question: string) => {
+                  // Handle AI interaction through program-overview.tsx
+                  console.log("Question asked:", question);
+                }}
+                onRequestChanges={(changes: string) => {
+                  // Handle change requests through program-overview.tsx
+                  console.log("Changes requested:", changes);
+                }}
+              />
             </div>
           </div>
         );
