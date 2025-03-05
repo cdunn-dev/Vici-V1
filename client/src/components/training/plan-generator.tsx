@@ -187,10 +187,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           setIsSubmitting(false);
         }
       } else {
-        // Show validation error toast
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields correctly.",
+          title: "Please complete all required fields",
+          description: "Some required information is missing or invalid.",
           variant: "destructive",
         });
       }
@@ -204,10 +203,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       if (isValid) {
         setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
       } else {
-        // Show validation error toast
+        // Show specific validation errors
+        const errors = form.formState.errors;
+        const errorMessages = Object.values(errors)
+          .map(error => error.message)
+          .join(", ");
+
         toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields correctly.",
+          title: "Please complete this step",
+          description: errorMessages || "Please fill in all required fields correctly.",
           variant: "destructive",
         });
       }
@@ -288,8 +292,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
-        // Ensure numeric value with proper default
-        const numericValue = typeof field.value === 'number' ? field.value : 0;
+        const value = typeof field.value === 'number' ? field.value : 0;
 
         return (
           <FormItem>
@@ -302,12 +305,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 min={0}
                 max={150}
                 step={5}
-                value={[numericValue]}
-                onValueChange={(vals) => field.onChange(vals[0])}
+                value={[value]}
+                onValueChange={(vals) => {
+                  field.onChange(vals[0]);
+                }}
               />
             </FormControl>
             <div className="text-sm text-muted-foreground text-center">
-              {numericValue} miles per week
+              {value} miles per week
             </div>
             <FormMessage />
           </FormItem>
@@ -322,8 +327,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
-        // Ensure numeric value with proper default
-        const numericValue = typeof field.value === 'number' ? field.value : 0;
+        const value = typeof field.value === 'number' ? field.value : 0;
 
         return (
           <FormItem>
@@ -336,12 +340,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 min={0}
                 max={3}
                 step={1}
-                value={[numericValue]}
-                onValueChange={(vals) => field.onChange(vals[0])}
+                value={[value]}
+                onValueChange={(vals) => {
+                  field.onChange(vals[0]);
+                }}
               />
             </FormControl>
             <div className="text-sm text-muted-foreground text-center">
-              {numericValue} quality sessions per week
+              {value} quality sessions per week
             </div>
             <FormMessage />
           </FormItem>
@@ -661,7 +667,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     min={1}
                     max={7}
                     step={1}
-                    value={[field.value]}
+                    value={[field.value as number]}
                     onValueChange={(vals) => field.onChange(vals[0])}
                   />
                 </FormControl>
