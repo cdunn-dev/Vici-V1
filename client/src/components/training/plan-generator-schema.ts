@@ -24,12 +24,12 @@ const customDistanceSchema = z.object({
 const targetRaceSchema = z.object({
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]], {
     required_error: "Please select a race distance",
-  }),
+  }).optional(),
   customDistance: customDistanceSchema.optional(),
   date: z.coerce.date({
     required_error: "Race date is required",
     invalid_type_error: "Invalid date format",
-  }),
+  }).optional(),
   previousBest: z.string().optional()
     .refine(val => !val || isValidTimeFormat(val), "Please enter a valid time in HH:MM:SS format"),
   goalTime: z.string().optional()
@@ -49,17 +49,24 @@ const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number({
     required_error: "Please specify weekly running days",
     invalid_type_error: "Weekly running days must be a number",
-  }).min(1, "Must run at least 1 day per week").max(7, "Maximum 7 days per week"),
+  }).int("Must be a whole number")
+    .min(1, "Must run at least 1 day per week")
+    .max(7, "Maximum 7 days per week"),
 
   maxWeeklyMileage: z.number({
     required_error: "Please specify weekly mileage",
     invalid_type_error: "Weekly mileage must be a number",
-  }).min(0, "Mileage cannot be negative").max(150, "Maximum 150 miles per week"),
+  }).int("Must be a whole number")
+    .min(0, "Mileage cannot be negative")
+    .max(150, "Maximum 150 miles per week")
+    .refine(val => val % 5 === 0, "Mileage must be in increments of 5"),
 
   weeklyWorkouts: z.number({
     required_error: "Please specify number of workouts",
     invalid_type_error: "Number of workouts must be a number",
-  }).min(0, "Cannot have negative workouts").max(3, "Maximum 3 quality sessions per week"),
+  }).int("Must be a whole number")
+    .min(0, "Cannot have negative workouts")
+    .max(3, "Maximum 3 quality sessions per week"),
 
   preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]], {
     required_error: "Please select your long run day",
@@ -90,11 +97,19 @@ export const planGeneratorSchema = z.object({
 }).refine(
   (data) => {
     if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
-      if (!data.targetRace?.distance) return false;
-      if (!data.targetRace.date) return false;
-      if (data.targetRace.distance === RaceDistances.OTHER && !data.targetRace.customDistance) return false;
+      if (!data.targetRace?.distance) {
+        return false;
+      }
+      if (data.targetRace.distance === RaceDistances.OTHER && !data.targetRace.customDistance) {
+        return false;
+      }
+      if (!data.targetRace.date) {
+        return false;
+      }
     }
-    if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace?.previousBest) return false;
+    if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace?.previousBest) {
+      return false;
+    }
     return true;
   },
   {

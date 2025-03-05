@@ -80,7 +80,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [previewData, setPreviewData] = useState<any>(null);
   const { toast } = useToast();
 
-  // Update the form initialization
+  // Update the form initialization with proper defaults
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -92,9 +92,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         fitnessLevel: "",
       },
       trainingPreferences: {
-        weeklyRunningDays: 0,
-        maxWeeklyMileage: 0,
-        weeklyWorkouts: 0,
+        weeklyRunningDays: 1, // Default to 1 day
+        maxWeeklyMileage: 0, // Default to 0 miles
+        weeklyWorkouts: 0, // Default to 0 sessions
         preferredLongRunDay: "",
         coachingStyle: "",
       },
@@ -102,8 +102,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         date: "",
         distance: "",
         customDistance: {
-          unit: "",
           value: 0,
+          unit: "",
         },
         goalTime: "",
         previousBest: "",
@@ -151,12 +151,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // Update the handleNext function for better validation
+  // Update handleNext to reset fields when moving between steps
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
-      // Validate entire form before generating preview
       const isValid = await form.trigger();
       if (isValid) {
         setIsSubmitting(true);
@@ -201,7 +200,19 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       const isValid = await form.trigger(currentStepFields);
 
       if (isValid) {
-        setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+        // Reset fields for the next step to ensure proper initialization
+        const nextStepIndex = currentStepIndex + 1;
+        const nextStepId = visibleSteps[nextStepIndex]?.id;
+
+        if (nextStepId === 'mileage') {
+          form.setValue('trainingPreferences.maxWeeklyMileage', 0);
+        } else if (nextStepId === 'workouts') {
+          form.setValue('trainingPreferences.weeklyWorkouts', 0);
+        } else if (nextStepId === 'runningDays') {
+          form.setValue('trainingPreferences.weeklyRunningDays', 1);
+        }
+
+        setCurrentStepIndex(nextStepIndex);
       } else {
         // Show specific validation errors
         const errors = form.formState.errors;
@@ -218,12 +229,24 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  // Update handleBack to reset fields when moving backward
   const handleBack = () => {
     if (currentStepIndex === visibleSteps.length - 1) {
       setPreviewData(null);
     }
-    // Get the previous step ID
+
     const prevStepIndex = Math.max(currentStepIndex - 1, 0);
+    const prevStepId = visibleSteps[prevStepIndex]?.id;
+
+    // Reset fields for the previous step
+    if (prevStepId === 'mileage') {
+      form.setValue('trainingPreferences.maxWeeklyMileage', 0);
+    } else if (prevStepId === 'workouts') {
+      form.setValue('trainingPreferences.weeklyWorkouts', 0);
+    } else if (prevStepId === 'runningDays') {
+      form.setValue('trainingPreferences.weeklyRunningDays', 1);
+    }
+
     setCurrentStepIndex(prevStepIndex);
   };
 
@@ -286,6 +309,38 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  // Update Weekly Running Days field component
+  const renderWeeklyRunningDaysField = () => (
+    <FormField
+      control={form.control}
+      name="trainingPreferences.weeklyRunningDays"
+      render={({ field }) => {
+        const value = typeof field.value === 'number' ? field.value : 1;
+
+        return (
+          <FormItem>
+            <FormLabel>How many days per week would you like to run?</FormLabel>
+            <FormControl>
+              <Slider
+                min={1}
+                max={7}
+                step={1}
+                value={[value]}
+                onValueChange={(vals) => {
+                  field.onChange(vals[0]);
+                }}
+              />
+            </FormControl>
+            <div className="text-sm text-muted-foreground text-center">
+              {value} days per week
+            </div>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
+    />
+  );
+
   // Update Weekly Mileage field component
   const renderWeeklyMileageField = () => (
     <FormField
@@ -307,7 +362,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={5}
                 value={[value]}
                 onValueChange={(vals) => {
-                  field.onChange(vals[0]);
+                  const roundedValue = Math.round(vals[0] / 5) * 5;
+                  field.onChange(roundedValue);
                 }}
               />
             </FormControl>
@@ -655,30 +711,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "runningDays":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.weeklyRunningDays"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How many days per week would you like to run?</FormLabel>
-                <FormControl>
-                  <Slider
-                    min={1}
-                    max={7}
-                    step={1}
-                    value={[field.value as number]}
-                    onValueChange={(vals) => field.onChange(vals[0])}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {field.value} days per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
+        return renderWeeklyRunningDaysField();
       case "mileage":
         return renderWeeklyMileageField();
       case "workouts":
