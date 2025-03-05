@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2, ChevronRight, ChevronLeft, HelpCircle } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft, HelpCircle, Bug } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -46,10 +46,9 @@ import {
   DaysOfWeek,
   CoachingStyles,
   CoachingStyleDescriptions,
-  isValidTimeFormat,
 } from "./plan-generator-constants";
 
-// Only keep the essential steps
+// Define steps with proper conditionals
 const STEPS = [
   { id: "goal", label: "Training Goal" },
   {
@@ -92,12 +91,12 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [previewData, setPreviewData] = useState<TrainingPlanWithWeeklyPlans | null>(null);
   const { toast } = useToast();
 
-  // Independent slider states
+  // Independent slider states with initial values
   const [runningDaysValue, setRunningDaysValue] = useState(3);
   const [mileageValue, setMileageValue] = useState(15);
   const [workoutsValue, setWorkoutsValue] = useState(1);
 
-  // Form initialization
+  // Form initialization with proper defaults
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -127,6 +126,33 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     },
     mode: "onBlur",
   });
+
+  // Reset slider states when form is reset
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "trainingPreferences.weeklyRunningDays") {
+        setRunningDaysValue(value.trainingPreferences?.weeklyRunningDays || 3);
+      }
+      if (name === "trainingPreferences.maxWeeklyMileage") {
+        setMileageValue(value.trainingPreferences?.maxWeeklyMileage || 15);
+      }
+      if (name === "trainingPreferences.weeklyWorkouts") {
+        setWorkoutsValue(value.trainingPreferences?.weeklyWorkouts || 1);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
+
+  // Debug function to show form state
+  const showDebugInfo = () => {
+    console.log("Form Values:", form.getValues());
+    console.log("Form Errors:", form.formState.errors);
+    toast({
+      title: "Debug Info",
+      description: "Check console for form values and errors",
+    });
+  };
 
   // Get visible steps and progress
   const visibleSteps = STEPS.filter((step) => !step.conditional || step.conditional(form.getValues()));
@@ -185,43 +211,55 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Handle next button click
+  // Handle next button click with proper validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
       const isValid = await form.trigger();
-      if (isValid) {
-        setIsSubmitting(true);
-        try {
-          const formData = form.getValues();
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please complete all required fields before generating preview.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-          // Request plan preview from backend
-          const response = await fetch('/api/training-plans/preview', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData),
-          });
+      setIsSubmitting(true);
+      try {
+        const formData = form.getValues();
 
-          if (!response.ok) {
-            throw new Error('Failed to generate plan preview');
-          }
+        // Ensure slider values are properly included
+        formData.trainingPreferences.weeklyRunningDays = runningDaysValue;
+        formData.trainingPreferences.maxWeeklyMileage = mileageValue;
+        formData.trainingPreferences.weeklyWorkouts = workoutsValue;
 
-          const previewData = await response.json();
-          setPreviewData(previewData);
-          setCurrentStepIndex((prev) => prev + 1);
-        } catch (error) {
-          console.error("Error generating preview:", error);
-          toast({
-            title: "Error",
-            description: "Failed to generate plan preview. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSubmitting(false);
+        // Request plan preview from backend
+        const response = await fetch('/api/training-plans/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate plan preview');
         }
+
+        const previewData = await response.json();
+        setPreviewData(previewData);
+        setCurrentStepIndex((prev) => prev + 1);
+      } catch (error) {
+        console.error("Error generating preview:", error);
+        toast({
+          title: "Error",
+          description: "Failed to generate plan preview. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
       const isValid = await validateCurrentStep();
@@ -236,49 +274,29 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     if (currentStepIndex === visibleSteps.length - 1) {
       setPreviewData(null);
     }
-
-    // Reset slider states when moving back
-    const prevStep = visibleSteps[currentStepIndex - 1];
-    if (prevStep) {
-      switch (prevStep.id) {
-        case "runningDays":
-          setRunningDaysValue(form.getValues().trainingPreferences.weeklyRunningDays);
-          break;
-        case "mileage":
-          setMileageValue(form.getValues().trainingPreferences.maxWeeklyMileage);
-          break;
-        case "workouts":
-          setWorkoutsValue(form.getValues().trainingPreferences.weeklyWorkouts);
-          break;
-      }
-    }
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // Handle plan approval
+  // Handle plan approval with proper error handling
   const handleApprovePlan = async () => {
     if (!previewData) return;
 
     try {
       setIsSubmitting(true);
 
-      // If onPreview callback is provided, call it with the plan data
       if (onPreview) {
         onPreview(previewData);
       }
 
-      // Close the dialog and reset form state
       setOpen(false);
       setCurrentStepIndex(0);
       form.reset();
 
-      // Show success message
       toast({
         title: "Plan Created",
         description: "Your training plan has been created successfully!",
       });
 
-      // Navigate to training home page
       window.location.href = "/training";
     } catch (error) {
       console.error("Error approving plan:", error);
@@ -292,7 +310,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Render the current question based on step ID
+  // Render the current step
   const renderQuestion = () => {
     switch (currentStep.id) {
       case "goal":
@@ -835,9 +853,19 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           </DialogTitle>
           <div className="mt-2">
             <Progress value={progress} className="h-2" />
-            <p className="mt-2 text-sm text-muted-foreground text-center">
-              Step {currentStepIndex + 1} of {visibleSteps.length}
-            </p>
+            <div className="mt-2 flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
+                Step {currentStepIndex + 1} of {visibleSteps.length}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={showDebugInfo}
+                className="px-2"
+              >
+                <Bug className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -873,10 +901,17 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 <Button
                   type="button"
                   onClick={handleNext}
-                  disabled={currentStepIndex === visibleSteps.length - 1}
+                  disabled={isSubmitting}
                 >
                   {currentStepIndex === visibleSteps.length - 2 ? (
-                    "Preview Plan"
+                    isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Preview...
+                      </>
+                    ) : (
+                      "Preview Plan"
+                    )
                   ) : (
                     <>
                       Next
