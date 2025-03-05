@@ -1,21 +1,10 @@
-import { addWeeks, eachWeekOfInterval, format } from 'date-fns';
-
-interface WorkoutDay {
-  day: string;
-  type: string;
-  distance: number;
-  description: string;
-}
-
-interface WeeklyPlan {
-  week: number;
-  totalMileage: number;
-  workouts: WorkoutDay[];
-}
+import { addWeeks, eachWeekOfInterval, format, addDays } from 'date-fns';
+import type { WeeklyPlan, TrainingPlanWithWeeklyPlans } from "@shared/schema";
 
 export function generateTrainingPlan(preferences: {
   startDate: string;
-  endDate: Date;
+  endDate: string;
+  goal: string;
   runningExperience: {
     level: string;
     fitnessLevel: string;
@@ -29,11 +18,17 @@ export function generateTrainingPlan(preferences: {
   targetRace?: {
     distance: string;
     date: string;
+    customDistance?: {
+      value: number;
+      unit: string;
+    };
+    previousBest?: string;
+    goalTime?: string;
   };
-}): { weeklyPlans: WeeklyPlan[] } {
+}): TrainingPlanWithWeeklyPlans {
   const startDate = new Date(preferences.startDate);
-  const endDate = preferences.endDate;
-  
+  const endDate = new Date(preferences.endDate);
+
   // Calculate total weeks
   const weeks = eachWeekOfInterval({
     start: startDate,
@@ -75,16 +70,14 @@ export function generateTrainingPlan(preferences: {
 
     weeklyMileage = Math.round(weeklyMileage);
 
-    // Generate workouts for the week
-    const workouts: WorkoutDay[] = [];
+    const workouts: WeeklyPlan['workouts'] = [];
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const preferredLongRunIndex = daysOfWeek.indexOf(preferences.trainingPreferences.preferredLongRunDay);
-    
+
     // Distribute workouts across the week
     for (let i = 0; i < preferences.trainingPreferences.weeklyRunningDays; i++) {
       const dayIndex = (preferredLongRunIndex + i) % 7;
-      const date = addWeeks(weekStart, 0);
-      date.setDate(date.getDate() + dayIndex);
+      const date = addDays(weekStart, dayIndex);
 
       let workoutType = "Easy Run";
       let distance = Math.round(weeklyMileage / preferences.trainingPreferences.weeklyRunningDays);
@@ -100,7 +93,7 @@ export function generateTrainingPlan(preferences: {
       else if (preferences.trainingPreferences.weeklyWorkouts > 0 && 
                i < preferences.trainingPreferences.weeklyWorkouts &&
                dayIndex !== (preferredLongRunIndex + 1) % 7) { // Avoid day after long run
-        
+
         if (preferences.targetRace?.distance.includes("5k") || preferences.targetRace?.distance.includes("10k")) {
           workoutType = "Speed Work";
           description = "Interval training: 8-12 x 400m repeats with 200m recovery jogs";
@@ -116,6 +109,7 @@ export function generateTrainingPlan(preferences: {
         type: workoutType,
         distance,
         description,
+        completed: false,
       });
     }
 
@@ -126,5 +120,15 @@ export function generateTrainingPlan(preferences: {
     };
   });
 
-  return { weeklyPlans };
+  return {
+    id: 0, // Will be assigned by database
+    userId: 0, // Will be assigned by database
+    goal: preferences.goal,
+    startDate: preferences.startDate,
+    endDate: preferences.endDate,
+    targetRace: preferences.targetRace,
+    runningExperience: preferences.runningExperience,
+    trainingPreferences: preferences.trainingPreferences,
+    weeklyPlans,
+  };
 }

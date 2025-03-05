@@ -1,4 +1,4 @@
-import { pgTable, text, serial, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, json, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -27,9 +27,63 @@ export const registerUserSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// Training Plan Types
+export const weeklyPlanSchema = z.object({
+  week: z.number(),
+  totalMileage: z.number(),
+  workouts: z.array(z.object({
+    day: z.string(),
+    type: z.string(),
+    distance: z.number(),
+    description: z.string(),
+    completed: z.boolean().optional(),
+  })),
+});
+
+export const targetRaceSchema = z.object({
+  distance: z.string(),
+  date: z.string(),
+  customDistance: z.object({
+    value: z.number(),
+    unit: z.string(),
+  }).optional(),
+  previousBest: z.string().optional(),
+  goalTime: z.string().optional(),
+});
+
+export const runningExperienceSchema = z.object({
+  level: z.string(),
+  fitnessLevel: z.string(),
+});
+
+export const trainingPreferencesSchema = z.object({
+  weeklyRunningDays: z.number(),
+  maxWeeklyMileage: z.number(),
+  weeklyWorkouts: z.number(),
+  preferredLongRunDay: z.string(),
+  coachingStyle: z.string(),
+});
+
+export const trainingPlanSchema = z.object({
+  id: z.number(),
+  userId: z.number(),
+  goal: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  targetRace: targetRaceSchema.optional(),
+  runningExperience: runningExperienceSchema,
+  trainingPreferences: trainingPreferencesSchema,
+  weeklyPlans: z.array(weeklyPlanSchema),
+});
+
 // Basic insert schema without confirmation password
 export const insertUserSchema = createInsertSchema(users).omit({ id: true });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
+export type WeeklyPlan = z.infer<typeof weeklyPlanSchema>;
+export type TrainingPlan = z.infer<typeof trainingPlanSchema>;
+export type TrainingPlanWithWeeklyPlans = TrainingPlan & {
+  weeklyPlans: WeeklyPlan[];
+};
