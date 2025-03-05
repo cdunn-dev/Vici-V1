@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,52 @@ interface TimeInputProps {
 }
 
 export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: TimeInputProps) {
-  const [hours, minutes, seconds] = value?.split(":").map(v => parseInt(v)) || [0, 0, 0];
+  const [hours, minutes, seconds] = value?.split(":").map(v => v ? parseInt(v) : "") || ["", "", ""];
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [pressCount, setPressCount] = useState(0);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pressTimer) {
+        clearInterval(pressTimer);
+      }
+    };
+  }, [pressTimer]);
+
+  const getIncrementAmount = (count: number) => {
+    if (count < 10) return 1;
+    if (count < 20) return 5;
+    return 10;
+  };
+
+  const startIncrement = (type: "hours" | "minutes" | "seconds", delta: number) => {
+    setPressCount(0);
+    updateTime(type, delta);
+
+    const timer = setInterval(() => {
+      setPressCount(count => {
+        const newCount = count + 1;
+        updateTime(type, delta * getIncrementAmount(newCount));
+        return newCount;
+      });
+    }, 150);
+
+    setPressTimer(timer);
+  };
+
+  const stopIncrement = () => {
+    if (pressTimer) {
+      clearInterval(pressTimer);
+      setPressTimer(null);
+    }
+    setPressCount(0);
+  };
 
   const updateTime = (type: "hours" | "minutes" | "seconds", delta: number) => {
-    let newHours = hours || 0;
-    let newMinutes = minutes || 0;
-    let newSeconds = seconds || 0;
+    let newHours = hours === "" ? 0 : hours;
+    let newMinutes = minutes === "" ? 0 : minutes;
+    let newSeconds = seconds === "" ? 0 : seconds;
 
     switch (type) {
       case "hours":
@@ -35,24 +75,36 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: "hours" | "minutes" | "seconds") => {
-    let val = parseInt(e.target.value) || 0;
-    
-    // Enforce limits
-    switch (type) {
-      case "hours":
-        val = Math.max(0, Math.min(23, val));
-        break;
-      case "minutes":
-      case "seconds":
-        val = Math.max(0, Math.min(59, val));
-        break;
+    const val = e.target.value === "" ? "" : parseInt(e.target.value);
+
+    // Allow empty string or valid number
+    if (val === "" || !isNaN(val)) {
+      let newHours = type === "hours" ? val : hours;
+      let newMinutes = type === "minutes" ? val : minutes;
+      let newSeconds = type === "seconds" ? val : seconds;
+
+      // Enforce limits if value is a number
+      if (typeof val === "number") {
+        switch (type) {
+          case "hours":
+            newHours = Math.max(0, Math.min(23, val));
+            break;
+          case "minutes":
+          case "seconds":
+            if (type === "minutes") newMinutes = Math.max(0, Math.min(59, val));
+            if (type === "seconds") newSeconds = Math.max(0, Math.min(59, val));
+            break;
+        }
+      }
+
+      // Only format as HH:MM:SS if all fields have values
+      if (newHours !== "" && newMinutes !== "" && newSeconds !== "") {
+        onChange(`${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}:${newSeconds.toString().padStart(2, "0")}`);
+      } else {
+        // Keep the raw values in the form state
+        onChange(`${newHours || "00"}:${newMinutes || "00"}:${newSeconds || "00"}`);
+      }
     }
-
-    let newHours = type === "hours" ? val : (hours || 0);
-    let newMinutes = type === "minutes" ? val : (minutes || 0);
-    let newSeconds = type === "seconds" ? val : (seconds || 0);
-
-    onChange(`${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}:${newSeconds.toString().padStart(2, "0")}`);
   };
 
   return (
@@ -66,7 +118,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               min="0"
               max="23"
               placeholder="HH"
-              value={hours || ""}
+              value={hours}
               onChange={(e) => handleInputChange(e, "hours")}
               className={`pr-8 ${error ? "border-destructive" : ""}`}
             />
@@ -77,7 +129,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("hours", 1)}
+              onMouseDown={() => startIncrement("hours", 1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -86,7 +140,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("hours", -1)}
+              onMouseDown={() => startIncrement("hours", -1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -101,7 +157,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               min="0"
               max="59"
               placeholder="MM"
-              value={minutes || ""}
+              value={minutes}
               onChange={(e) => handleInputChange(e, "minutes")}
               className={`pr-8 ${error ? "border-destructive" : ""}`}
             />
@@ -112,7 +168,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("minutes", 1)}
+              onMouseDown={() => startIncrement("minutes", 1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -121,7 +179,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("minutes", -1)}
+              onMouseDown={() => startIncrement("minutes", -1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -136,7 +196,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               min="0"
               max="59"
               placeholder="SS"
-              value={seconds || ""}
+              value={seconds}
               onChange={(e) => handleInputChange(e, "seconds")}
               className={`pr-8 ${error ? "border-destructive" : ""}`}
             />
@@ -147,7 +207,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("seconds", 1)}
+              onMouseDown={() => startIncrement("seconds", 1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -156,7 +218,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               variant="ghost"
               size="icon"
               className="h-1/2 w-6 p-0"
-              onClick={() => updateTime("seconds", -1)}
+              onMouseDown={() => startIncrement("seconds", -1)}
+              onMouseUp={stopIncrement}
+              onMouseLeave={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
