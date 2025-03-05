@@ -18,7 +18,10 @@ const customDistanceSchema = z.object({
 const targetRaceSchema = z.object({
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
   customDistance: customDistanceSchema.optional(),
-  date: z.coerce.date(),
+  date: z.coerce.date({
+    required_error: "Race date is required",
+    invalid_type_error: "Invalid date format",
+  }).transform(date => date.toISOString()),
   previousBest: z.string().optional(),
   goalTime: z.string().optional(),
 }).partial();
@@ -70,9 +73,9 @@ export const planGeneratorSchema = z.object({
   startDate: z.coerce.date({
     required_error: "Start date is required",
     invalid_type_error: "Invalid date format",
-  }).transform((date) => date.toISOString()),
+  }).transform(date => date.toISOString()),
 }).superRefine((data, ctx) => {
-  // Only validate race-related fields when a race goal is selected
+  // Validate race-related fields only for race goals
   if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
     if (!data.targetRace?.distance) {
       ctx.addIssue({
@@ -115,10 +118,8 @@ export const planGeneratorSchema = z.object({
       }
     }
   } else {
-    // For non-race goals, ensure targetRace is null/undefined
-    if (data.targetRace) {
-      data.targetRace = undefined;
-    }
+    // For non-race goals, remove targetRace data completely
+    data.targetRace = undefined;
   }
 });
 
