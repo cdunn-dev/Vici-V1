@@ -271,7 +271,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Which race distance are you targeting?</FormLabel>
-                <Select 
+                <Select
                   onValueChange={(value) => {
                     field.onChange(value);
                     if (value !== RaceDistances.OTHER) {
@@ -693,6 +693,58 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
+  // Add back handleApprovePlan function
+  const handleApprovePlan = async (data: PlanGeneratorFormData) => {
+    try {
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please complete all required fields before proceeding.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      // Calculate the end date
+      const endDate = data.targetRace?.date
+        ? new Date(data.targetRace.date)
+        : addWeeks(new Date(data.startDate), 12);
+
+      const planData = {
+        ...data,
+        endDate,
+      };
+
+      // If onPreview is provided, call it with the current data
+      if (onPreview) {
+        onPreview(planData);
+      }
+
+      // Close the dialog and reset
+      setOpen(false);
+      setCurrentStepIndex(0);
+      form.reset();
+
+      toast({
+        title: "Success",
+        description: "Your training plan has been created successfully!",
+      });
+    } catch (error) {
+      console.error("Error approving plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -741,20 +793,33 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 Back
               </Button>
 
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={currentStepIndex === visibleSteps.length - 1}
-              >
-                {currentStepIndex === visibleSteps.length - 2 ? (
-                  "Preview Plan"
-                ) : (
-                  <>
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
+              {currentStepIndex === visibleSteps.length - 1 ? (
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Plan...
+                    </>
+                  ) : (
+                    "Create Plan"
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={currentStepIndex === visibleSteps.length - 1}
+                >
+                  {currentStepIndex === visibleSteps.length - 2 ? (
+                    "Preview Plan"
+                  ) : (
+                    <>
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </form>
         </Form>
