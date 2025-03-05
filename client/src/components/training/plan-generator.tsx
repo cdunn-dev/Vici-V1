@@ -163,9 +163,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
     if (isValid) {
       if (isLastStep) {
-          onSubmit(form.getValues());
+        onSubmit(form.getValues());
       } else {
-          setCurrentStepIndex(currentStepIndex + 1);
+        setCurrentStepIndex(currentStepIndex + 1);
       }
     } else {
       // Show validation errors
@@ -335,7 +335,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
       defaultsToCheck.forEach(({ path, defaultValue, min, max }) => {
         const currentValue = form.getValues(path);
-        if (currentValue === undefined || currentValue === null || 
+        if (currentValue === undefined || currentValue === null ||
             currentValue < min || currentValue > max) {
           form.setValue(path, defaultValue, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
           valuesSet = true;
@@ -503,7 +503,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   Choose the primary goal you'd like to achieve through your training plan
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="Select your goal" />
@@ -524,93 +524,40 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         );
       case "raceDistance":
         return (
-          <>
-            <FormField
-              control={form.control}
-              name="targetRace.distance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Which race distance are you targeting?</FormLabel>
-                  <Select onValueChange={(value) => {
-                    field.onChange(value);
+          <FormField
+            control={form.control}
+            name="targetRace.distance"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Which race distance are you targeting?</FormLabel>
+                <Select onValueChange={(value) => {
+                  field.onChange(value);
 
-                    // If changing from "Other" to a standard distance, clear custom values
-                    if (value !== RaceDistances.OTHER) {
-                      form.setValue('targetRace.customDistance.value', 0);
-                      form.setValue('targetRace.customDistance.unit', '');
-                    }
-                  }} 
-                  defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select race distance" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(RaceDistances).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {form.watch("targetRace.distance") === RaceDistances.OTHER && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="targetRace.customDistance.value"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Distance</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          placeholder="Enter distance"
-                          {...field}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="targetRace.customDistance.unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(DistanceUnits).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                  // If changing from "Other" to a standard distance, clear custom values
+                  if (value !== RaceDistances.OTHER) {
+                    form.setValue('targetRace.customDistance.value', 0);
+                    form.setValue('targetRace.customDistance.unit', '');
+                  }
+                }}
+                value={field.value}
+                defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select race distance" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(RaceDistances).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
             )}
-          </>
+          />
         );
       case "raceDate":
         return (
@@ -750,7 +697,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select your level" />
@@ -780,7 +727,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select your fitness level" />
@@ -813,7 +760,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Which day would you prefer for your long run?</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select preferred day" />
@@ -843,7 +790,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select coaching style" />
@@ -863,74 +810,49 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "startDate":
-          return (
-            <div className="space-y-4">
-                <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>
-                      <div className="flex items-center space-x-2">
-                        <span>When would you like to start?</span>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Choose when you want to begin your training program
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </FormLabel>
-                    <div className="my-4 flex space-x-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          const today = new Date();
-                          field.onChange(today.toISOString());
-                          form.setValue('startDate', today.toISOString(), { shouldValidate: true });
-                        }}
-                      >
-                        Start Today
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          const nextMondayDate = nextMonday(new Date());
-                          field.onChange(nextMondayDate.toISOString());
-                          form.setValue('startDate', nextMondayDate.toISOString(), { shouldValidate: true });
-                        }}
-                      >
-                        Start Next Week
-                      </Button>
-                    </div>
-                    <FormControl>
-                      <div className="border rounded-md p-2">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date.toISOString());
-                              form.setValue('startDate', date.toISOString(), { shouldValidate: true });
-                            }
-                          }}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          );
+        return (
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When would you like to start?</FormLabel>
+                <div className="my-4 flex space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const today = new Date();
+                      field.onChange(today.toISOString());
+                    }}
+                  >
+                    Start Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const nextMondayDate = nextMonday(new Date());
+                      field.onChange(nextMondayDate.toISOString());
+                    }}
+                  >
+                    Start Next Week
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
       case "preview":
         return (
           <div className="space-y-6">
@@ -938,55 +860,21 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               <div className="flex flex-col items-center justify-center h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-lg font-medium">Generating your training plan...</p>
-                <p className="text-sm text-muted-foreground">
-                  This may take a few moments as we tailor a plan to your needs.
-                </p>
               </div>
             ) : previewData ? (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Your Personalized Training Plan</h2>
-                <div className="bg-muted p-4 rounded-md text-sm">
-                  <p className="font-medium">Training Period:</p>
-                  <p>{format(new Date(previewData.startDate), 'MMMM d, yyyy')} - {format(previewData.endDate, 'MMMM d, yyyy')}</p>
-                  <p className="font-medium mt-2">Goal:</p>
-                  <p>{previewData.goal}: {previewData.goalDescription}</p>
-                  <p className="font-medium mt-2">Weekly Schedule:</p>
-                  <p>{previewData.trainingPreferences.weeklyRunningDays} days per week, {previewData.trainingPreferences.maxWeeklyMileage} miles max, {previewData.trainingPreferences.weeklyWorkouts} quality sessions</p>
+                <h2 className="text-2xl font-bold">Your Training Plan Preview</h2>
+                <div className="bg-muted p-4 rounded-md">
+                  <p><strong>Goal:</strong> {previewData.goal}</p>
+                  <p><strong>Training Period:</strong> {format(new Date(previewData.startDate), 'PPP')} - {format(previewData.endDate, 'PPP')}</p>
+                  <p><strong>Weekly Schedule:</strong> {previewData.trainingPreferences.weeklyRunningDays} days/week</p>
+                  <p><strong>Peak Mileage:</strong> {previewData.trainingPreferences.maxWeeklyMileage} miles</p>
                 </div>
-
-                <ProgramOverview
-                  plan={previewData}
-                  onApprove={handleApprovePlan}
-                  onAskQuestion={handleAskQuestion}
-                  onRequestChanges={handleRequestChanges}
-                />
-
-                <div className="flex justify-between mt-6">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleBack}
-                  >
-                    Make Changes
-                  </Button>
-                  <Button 
-                    onClick={handleApprovePlan}
-                  >
-                    Approve Plan
-                  </Button>
-                </div>
+                <ProgramOverview plan={previewData} onApprove={handleSubmitPlan} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64">
-                <p className="text-lg font-medium">No preview available</p>
-                <p className="text-sm text-muted-foreground">
-                  Please complete previous steps to generate a plan preview.
-                </p>
-                <Button
-                  className="mt-4"
-                  onClick={() => setCurrentStepIndex(0)}
-                >
-                  Start Over
-                </Button>
+                <p className="text-lg font-medium">Please complete previous steps</p>
               </div>
             )}
           </div>
@@ -999,7 +887,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   // Function to properly update form values when slider changes
   const onSliderChange = (fieldName: string, value: number[]) => {
     const numValue = value[0];
-    form.setValue(fieldName, numValue, { 
+    form.setValue(fieldName, numValue, {
       shouldValidate: true,
       shouldDirty: true,
       shouldTouch: true
@@ -1151,365 +1039,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             />
           </div>
         );
-      case "startDate":
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">When would you like to start?</h3>
-            <div className="flex space-x-2 mb-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => form.setValue('startDate', new Date().toISOString(), { shouldValidate: true })}
-              >
-                Start Today
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => form.setValue('startDate', nextMonday(new Date()).toISOString(), { shouldValidate: true })}
-              >
-                Start Next Week
-              </Button>
-            </div>
-            <FormField
-              control={form.control}
-              name="startDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => {
-                      if (date) {
-                        form.setValue("startDate", date.toISOString(), { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-                      }
-                    }}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-      case "goal":
-        return (
-          <FormField
-            control={form.control}
-            name="goal"
-            render={({ field }) => (
-              <FormItem className="space-y-4">
-                <FormLabel className="text-lg">What's your training goal?</FormLabel>
-                <FormDescription>
-                  Choose the primary goal you'd like to achieve through your training plan
-                </FormDescription>
-                <Select onValueChange={(value) => {
-                          field.onChange(value);
-                          // Force validation after selection
-                          form.trigger("goal");
-                        }} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Select your goal" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(TrainingGoals).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-      case "raceDistance":
-        return (
-          <>
-            <FormField
-              control={form.control}
-              name="targetRace.distance"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Which race distance are you targeting?</FormLabel>
-                  <Select onValueChange={(value) => {
-                    field.onChange(value);
-
-                    // If changing from "Other" to a standard distance, clear custom values
-                    if (value !== RaceDistances.OTHER) {
-                      form.setValue('targetRace.customDistance.value', 0);
-                      form.setValue('targetRace.customDistance.unit', '');
-                    }
-                  }} 
-                  defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select race distance" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(RaceDistances).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {form.watch("targetRace.distance") === RaceDistances.OTHER && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                <FormField
-                  control={form.control}
-                  name="targetRace.customDistance.value"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Distance</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          placeholder="Enter distance"
-                          {...field}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="targetRace.customDistance.unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Object.entries(DistanceUnits).map(([key, value]) => (
-                            <SelectItem key={key} value={value}>
-                              {value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-          </>
-        );
-      case "raceDate":
-        return (
-          <FormField
-            control={form.control}
-            name="targetRace.date"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>When is your race?</FormLabel>
-                <Calendar
-                  mode="single"
-                  selected={field.value ? new Date(field.value) : undefined}
-                  onSelect={(date) => field.onChange(date?.toISOString())}
-                  disabled={(date) => date < new Date()}
-                  className="rounded-md border"
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-      case "raceTimes":
-        return (
-          <>
-            <FormField
-              control={form.control}
-              name="targetRace.previousBest"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>What's your current personal best?</FormLabel>
-                  <FormDescription>
-                    Enter your time in HH:MM:SS format
-                  </FormDescription>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="23"
-                      placeholder="HH"
-                      value={field.value.split(":")[0] || ""}
-                      onChange={(e) => {
-                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
-                        const newHH = e.target.value.padStart(2, "0");
-                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="MM"
-                      value={field.value.split(":")[1] || ""}
-                      onChange={(e) => {
-                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
-                        const newMM = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="SS"
-                      value={field.value.split(":")[2] || ""}
-                      onChange={(e) => {
-                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
-                        const newSS = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
-                      }}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="targetRace.goalTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>What's your goal time?</FormLabel>
-                  <FormDescription>
-                    Enter your time in HH:MM:SS format
-                  </FormDescription>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="23"
-                      placeholder="HH"
-                      value={field.value.split(":")[0] || ""}
-                      onChange={(e) => {
-                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
-                        const newHH = e.target.value.padStart(2, "0");
-                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="MM"
-                      value={field.value.split(":")[1] || ""}
-                      onChange={(e) => {
-                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
-                        const newMM = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="SS"
-                      value={field.value.split(":")[2] || ""}
-                      onChange={(e) => {
-                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
-                        const newSS = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
-                      }}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        );
-      case "experience":
-        return (
-          <FormField
-            control={form.control}
-            name="runningExperience.level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What's your running experience level?</FormLabel>
-                <FormDescription>
-                  {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
-                </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(ExperienceLevels).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-      case "fitness":
-        return (
-          <FormField
-            control={form.control}
-            name="runningExperience.fitnessLevel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How would you describe your current fitness level?</FormLabel>
-                <FormDescription>
-                  {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
-                </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your fitness level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(FitnessLevels).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-      case "runningDays":
-        return renderWeeklyRunningDaysField();
-      case "mileage":
-        return renderWeeklyMileageField();
-      case "workouts":
-        return renderQualitySessionsField();
       case "longRunDay":
         return (
           <FormField
@@ -1518,7 +1047,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Which day would you prefer for your long run?</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select preferred day" />
@@ -1548,7 +1077,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select coaching style" />
@@ -1568,74 +1097,49 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "startDate":
-          return (
-            <div className="space-y-4">
-                <FormField
-                control={form.control}
-                name="startDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>
-                      <div className="flex items-center space-x-2">
-                        <span>When would you like to start?</span>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Choose when you want to begin your training program
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </FormLabel>
-                    <div className="my-4 flex space-x-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          const today = new Date();
-                          field.onChange(today.toISOString());
-                          form.setValue('startDate', today.toISOString(), { shouldValidate: true });
-                        }}
-                      >
-                        Start Today
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          const nextMondayDate = nextMonday(new Date());
-                          field.onChange(nextMondayDate.toISOString());
-                          form.setValue('startDate', nextMondayDate.toISOString(), { shouldValidate: true });
-                        }}
-                      >
-                        Start Next Week
-                      </Button>
-                    </div>
-                    <FormControl>
-                      <div className="border rounded-md p-2">
-                        <Calendar
-                          mode="single"
-                          selected={field.value ? new Date(field.value) : undefined}
-                          onSelect={(date) => {
-                            if (date) {
-                              field.onChange(date.toISOString());
-                              form.setValue('startDate', date.toISOString(), { shouldValidate: true });
-                            }
-                          }}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          );
+        return (
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When would you like to start?</FormLabel>
+                <div className="my-4 flex space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const today = new Date();
+                      field.onChange(today.toISOString());
+                    }}
+                  >
+                    Start Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const nextMondayDate = nextMonday(new Date());
+                      field.onChange(nextMondayDate.toISOString());
+                    }}
+                  >
+                    Start Next Week
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
       case "preview":
         return (
           <div className="space-y-6">
@@ -1643,57 +1147,21 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               <div className="flex flex-col items-center justify-center h-64">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-lg font-medium">Generating your training plan...</p>
-                <p className="text-sm text-muted-foreground">
-                  This may take a few moments as we tailor a plan to your needs.
-                </p>
               </div>
             ) : previewData ? (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Your Personalized Training Plan</h2>
-                <div className="bg-muted p-4 rounded-md text-sm">
-                  <p className="font-medium">Training Period:</p>
-                  <p>{format(new Date(previewData.startDate), 'MMMM d, yyyy')} - {format(previewData.endDate, 'MMMM d, yyyy')}</p>
-                  <p className="font-medium mt-2">Goal:</p>
-                  <p>{previewData.goal}: {previewData.goalDescription}</p>
-                  <p className="font-medium mt-2">Weekly Schedule:</p>
-                  <p>{previewData.trainingPreferences.weeklyRunningDays} days per week, {previewData.trainingPreferences.maxWeeklyMileage} miles max, {previewData.trainingPreferences.weeklyWorkouts} quality sessions</p>
+                <h2 className="text-2xl font-bold">Your Training Plan Preview</h2>
+                <div className="bg-muted p-4 rounded-md">
+                  <p><strong>Goal:</strong> {previewData.goal}</p>
+                  <p><strong>Training Period:</strong> {format(new Date(previewData.startDate), 'PPP')} - {format(previewData.endDate, 'PPP')}</p>
+                  <p><strong>Weekly Schedule:</strong> {previewData.trainingPreferences.weeklyRunningDays} days/week</p>
+                  <p><strong>Peak Mileage:</strong> {previewData.trainingPreferences.maxWeeklyMileage} miles</p>
                 </div>
-
-                <ProgramOverview
-                  plan={previewData}
-                  onApprove={handleApprovePlan}
-                  onAskQuestion={handleAskQuestion}
-                  onRequestChanges={handleRequestChanges}
-                />
-
-                <div className="flex justify-between mt-6">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleBack}
-                  >
-                    Make Changes
-                  </Button>
-                  <Button 
-                    type="button" 
-                    onClick={handleApprovePlan}
-                    className="ml-auto"
-                  >
-                    Approve Plan
-                  </Button>
-                </div>
+                <ProgramOverview plan={previewData} onApprove={handleSubmitPlan} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64">
-                <p className="text-lg font-medium">No preview available</p>
-                <p className="text-sm text-muted-foreground">
-                  Please complete previous steps to generate a plan preview.
-                </p>
-                <Button
-                  className="mt-4"
-                  onClick={() => setCurrentStepIndex(0)}
-                >
-                  Start Over
-                </Button>
+                <p className="text-lg font-medium">Please complete previous steps</p>
               </div>
             )}
           </div>
@@ -1740,7 +1208,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmitPlan)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
-              {renderStepContent()}
+              {renderQuestion()}
             </div>
 
             <div className="border-t px-6 py-4 flex justify-between items-center">
