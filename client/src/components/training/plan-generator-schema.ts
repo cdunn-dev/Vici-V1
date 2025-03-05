@@ -27,80 +27,65 @@ const dateStringSchema = z.string().refine((date) => {
   return parsed.toISOString();
 });
 
-const targetRaceSchema = z.object({
-  distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
-  date: dateStringSchema,
-  customDistance: customDistanceSchema.optional(),
-  previousBest: z.string().optional(),
-  goalTime: z.string().optional(),
-});
-
-const runningExperienceSchema = z.object({
-  level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
-  fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
-});
-
-const trainingPreferencesSchema = z.object({
-  weeklyRunningDays: z.number()
-    .int("Must be a whole number")
-    .min(1, "Must run at least 1 day per week")
-    .max(7, "Maximum 7 days per week"),
-  maxWeeklyMileage: z.number()
-    .int("Must be a whole number")
-    .min(0, "Mileage cannot be negative")
-    .max(150, "Maximum 150 miles per week"),
-  weeklyWorkouts: z.number()
-    .int("Must be a whole number")
-    .min(0, "Cannot have negative workouts")
-    .max(3, "Maximum 3 quality sessions per week"),
-  preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
-  coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]).default("Motivational"),
-});
-
-export const planGeneratorSchema = z.object({
+// Base schemas without race-specific fields
+const baseFormSchema = z.object({
   goal: z.enum(Object.values(TrainingGoals) as [string, ...string[]]),
-  targetRace: targetRaceSchema.optional(),
-  runningExperience: runningExperienceSchema,
-  trainingPreferences: trainingPreferencesSchema,
+  runningExperience: z.object({
+    level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
+    fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
+  }),
+  trainingPreferences: z.object({
+    weeklyRunningDays: z.number()
+      .int("Must be a whole number")
+      .min(1, "Must run at least 1 day per week")
+      .max(7, "Maximum 7 days per week"),
+    maxWeeklyMileage: z.number()
+      .int("Must be a whole number")
+      .min(0, "Mileage cannot be negative")
+      .max(150, "Maximum 150 miles per week"),
+    weeklyWorkouts: z.number()
+      .int("Must be a whole number")
+      .min(0, "Cannot have negative workouts")
+      .max(3, "Maximum 3 quality sessions per week"),
+    preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
+    coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]).default("Motivational"),
+  }),
   startDate: dateStringSchema,
-}).superRefine((data, ctx) => {
-  if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
-    if (!data.targetRace) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Race information is required for race goals",
-        path: ["targetRace"],
-      });
-      return;
-    }
-
-    if (!data.targetRace.distance) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please select a race distance",
-        path: ["targetRace", "distance"],
-      });
-    }
-
-    if (!data.targetRace.date) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please select a race date",
-        path: ["targetRace", "date"],
-      });
-    }
-
-    if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace.previousBest) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Previous best time is required for Personal Best goals",
-        path: ["targetRace", "previousBest"],
-      });
-    }
-  } else {
-    // For non-race goals, remove targetRace completely
-    delete data.targetRace;
-  }
 });
+
+// Race-specific schema
+const raceFormSchema = baseFormSchema.extend({
+  targetRace: z.object({
+    distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
+    date: dateStringSchema,
+    customDistance: customDistanceSchema.optional(),
+    previousBest: z.string().optional(),
+    goalTime: z.string().optional(),
+  }),
+});
+
+// Combined schema with conditional validation
+export const planGeneratorSchema = z.discriminatedUnion("goal", [
+  // Race-specific goals
+  raceFormSchema.extend({
+    goal: z.literal("My First Race"),
+  }),
+  raceFormSchema.extend({
+    goal: z.literal("A Personal Best"),
+  }),
+  // Non-race goals
+  baseFormSchema.extend({
+    goal: z.literal("To Run Farther"),
+    targetRace: z.undefined(),
+  }),
+  baseFormSchema.extend({
+    goal: z.literal("To Run Faster"),
+    targetRace: z.undefined(),
+  }),
+  baseFormSchema.extend({
+    goal: z.literal("To Be Healthy"),
+    targetRace: z.undefined(),
+  }),
+]);
 
 export type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
