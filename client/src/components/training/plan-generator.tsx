@@ -157,7 +157,33 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       // Validate entire form before generating preview
       const isValid = await form.trigger();
       if (isValid) {
-        form.handleSubmit(onSubmit)();
+        setIsSubmitting(true);
+        try {
+          const data = form.getValues();
+          const endDate = data.targetRace?.date
+            ? new Date(data.targetRace.date)
+            : addWeeks(new Date(data.startDate), 12);
+
+          const planData = {
+            ...data,
+            endDate,
+          };
+
+          // Simulate AI processing time
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          setPreviewData(planData);
+          setCurrentStepIndex(prev => prev + 1); // Move to preview step
+        } catch (error) {
+          console.error("Error generating preview:", error);
+          toast({
+            title: "Error",
+            description: "Failed to generate plan preview. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
     } else {
       // Validate current step before proceeding
@@ -559,7 +585,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           <FormField
             control={form.control}
             name="trainingPreferences.weeklyWorkouts"
-            render={({ field }) => (
+            render={({ field: { value, onChange, ...field } }) => (
               <FormItem>
                 <FormLabel>How many quality sessions per week?</FormLabel>
                 <FormDescription>
@@ -570,12 +596,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     min={0}
                     max={3}
                     step={1}
-                    value={[field.value || 0]} // Ensure default of 0
-                    onValueChange={(vals) => field.onChange(vals[0])}
+                    value={[value ?? 0]} // Use null coalescing to ensure 0 default
+                    onValueChange={(vals) => onChange(vals[0])}
+                    {...field}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value || 0} quality sessions per week
+                  {value ?? 0} quality sessions per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -683,13 +710,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               <ProgramOverview
                 plan={previewData}
                 onApprove={handleApprovePlan}
-                onAskQuestion={(question: string) => {
+                onAskQuestion={async (question: string) => {
                   // Handle AI coach interaction
                   console.log("Question asked:", question);
+                  // TODO: Implement AI coach interaction
                 }}
-                onRequestChanges={(changes: string) => {
+                onRequestChanges={async (changes: string) => {
                   // Handle plan modification requests
                   console.log("Changes requested:", changes);
+                  await handleRequestChanges();
                 }}
               />
             </div>
@@ -757,15 +786,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   onClick={handleNext}
                   disabled={isSubmitting}
                 >
-                  {currentStepIndex === visibleSteps.length - 2 ? (
-                    isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Preview...
-                      </>
-                    ) : (
-                      "Preview Plan"
-                    )
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating Preview...
+                    </>
+                  ) : currentStepIndex === visibleSteps.length - 2 ? (
+                    "Preview Plan"
                   ) : (
                     <>
                       Next
