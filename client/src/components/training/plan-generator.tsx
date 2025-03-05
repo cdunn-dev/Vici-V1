@@ -123,6 +123,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     mode: "onBlur",
   });
 
+  // Initialize independent slider states
+  const [runningDaysValue, setRunningDaysValue] = useState<number>(3);
+  const [mileageValue, setMileageValue] = useState<number>(15);
+  const [workoutsValue, setWorkoutsValue] = useState<number>(1);
+
   // Get visible steps based on form data
   const visibleSteps = STEPS.filter((step) => !step.conditional || step.conditional(form.getValues()));
   const currentStep = visibleSteps[currentStepIndex];
@@ -186,6 +191,21 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     } else {
       const isValid = await validateCurrentStep();
       if (isValid) {
+        // Reset slider states when moving to next step
+        const nextStep = visibleSteps[currentStepIndex + 1];
+        if (nextStep) {
+          switch (nextStep.id) {
+            case "runningDays":
+              setRunningDaysValue(3);
+              break;
+            case "mileage":
+              setMileageValue(15);
+              break;
+            case "workouts":
+              setWorkoutsValue(1);
+              break;
+          }
+        }
         setCurrentStepIndex((prev) => prev + 1);
       }
     }
@@ -195,6 +215,21 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const handleBack = () => {
     if (currentStepIndex === visibleSteps.length - 1) {
       setPreviewData(null);
+    }
+    // Reset slider states when moving back
+    const prevStep = visibleSteps[currentStepIndex - 1];
+    if (prevStep) {
+      switch (prevStep.id) {
+        case "runningDays":
+          setRunningDaysValue(form.getValues().trainingPreferences.weeklyRunningDays);
+          break;
+        case "mileage":
+          setMileageValue(form.getValues().trainingPreferences.maxWeeklyMileage);
+          break;
+        case "workouts":
+          setWorkoutsValue(form.getValues().trainingPreferences.weeklyWorkouts);
+          break;
+      }
     }
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
@@ -499,27 +534,28 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             control={form.control}
             name="trainingPreferences.weeklyRunningDays"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>How many days per week would you like to run?</FormLabel>
-                <FormControl>
-                  <Slider
-                    min={1}
-                    max={7}
-                    step={1}
-                    defaultValue={[3]}
-                    value={[field.value ?? 3]}
-                    onValueChange={(vals) => {
-                      const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
-                      field.onChange(newValue);
-                    }}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {field.value ?? 3} days per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
+                <FormItem>
+                  <FormLabel>How many days per week would you like to run?</FormLabel>
+                  <FormDescription>Choose between 1 to 7 days per week</FormDescription>
+                  <FormControl>
+                    <Slider
+                      min={1}
+                      max={7}
+                      step={1}
+                      value={[runningDaysValue]}
+                      onValueChange={(vals) => {
+                        const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
+                        setRunningDaysValue(newValue);
+                        field.onChange(newValue);
+                      }}
+                    />
+                  </FormControl>
+                  <div className="text-sm text-muted-foreground text-center">
+                    {runningDaysValue} days per week
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
           />
         );
 
@@ -532,23 +568,23 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               <FormItem>
                 <FormLabel>What's your target weekly mileage?</FormLabel>
                 <FormDescription>
-                  This will be the peak mileage in your training plan
+                  This will be the peak mileage in your training plan (0-150 miles)
                 </FormDescription>
                 <FormControl>
                   <Slider
                     min={0}
                     max={150}
                     step={5}
-                    defaultValue={[15]}
-                    value={[field.value ?? 15]}
+                    value={[mileageValue]}
                     onValueChange={(vals) => {
                       const newValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
+                      setMileageValue(newValue);
                       field.onChange(newValue);
                     }}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value ?? 15} miles per week
+                  {mileageValue} miles per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -565,23 +601,23 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               <FormItem>
                 <FormLabel>How many quality sessions per week?</FormLabel>
                 <FormDescription>
-                  These are harder workouts like intervals, tempo runs, or progression runs
+                  These are harder workouts like intervals, tempo runs, or progression runs (0-3 sessions)
                 </FormDescription>
                 <FormControl>
                   <Slider
                     min={0}
                     max={3}
                     step={1}
-                    defaultValue={[1]}
-                    value={[field.value ?? 1]}
+                    value={[workoutsValue]}
                     onValueChange={(vals) => {
                       const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
+                      setWorkoutsValue(newValue);
                       field.onChange(newValue);
                     }}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value ?? 1} quality sessions per week
+                  {workoutsValue} quality sessions per week
                 </div>
                 <FormMessage />
               </FormItem>
