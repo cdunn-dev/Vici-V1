@@ -157,15 +157,34 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
     // Specially validate form when going to preview
     if (isLastStep) {
+      // Make sure we're using the most up-to-date slider values
+      if (weeklyRunningDays !== null) {
+        form.setValue('trainingPreferences.weeklyRunningDays', weeklyRunningDays, { 
+          shouldValidate: true 
+        });
+      }
+      
+      if (weeklyMileage !== null) {
+        form.setValue('trainingPreferences.maxWeeklyMileage', weeklyMileage, { 
+          shouldValidate: true 
+        });
+      }
+      
+      if (weeklyWorkouts !== null) {
+        form.setValue('trainingPreferences.weeklyWorkouts', weeklyWorkouts, { 
+          shouldValidate: true 
+        });
+      }
+      
       // Ensure all required fields are filled out
-      // Force validation on all fields for the final step
       let isValid = true;
       
-      // First check critical form sections
+      // First trigger validation on the entire form
       isValid = await form.trigger();
       
-      // Manually check key fields
+      // Manually check key fields with extended validation
       const formData = form.getValues();
+      console.log("Form data before validation:", formData);
       
       // Check if user has a goal set
       if (!formData.goal) {
@@ -186,41 +205,37 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       }
       
       // Verify training preferences are set
-      if (formData.trainingPreferences) {
-        if (!formData.trainingPreferences.preferredLongRunDay) {
-          form.setError('trainingPreferences.preferredLongRunDay', { 
-            type: 'required', 
-            message: 'Please select a preferred long run day' 
-          });
-          isValid = false;
-        }
-        
-        if (!formData.trainingPreferences.coachingStyle) {
-          form.setError('trainingPreferences.coachingStyle', { 
-            type: 'required', 
-            message: 'Please select a coaching style' 
-          });
-          isValid = false;
-        }
+      if (!formData.trainingPreferences?.preferredLongRunDay) {
+        form.setError('trainingPreferences.preferredLongRunDay', { 
+          type: 'required', 
+          message: 'Please select a preferred long run day' 
+        });
+        isValid = false;
+      }
+      
+      if (!formData.trainingPreferences?.coachingStyle) {
+        form.setError('trainingPreferences.coachingStyle', { 
+          type: 'required', 
+          message: 'Please select a coaching style' 
+        });
+        isValid = false;
       }
       
       // Verify experience fields
-      if (formData.runningExperience) {
-        if (!formData.runningExperience.level) {
-          form.setError('runningExperience.level', { 
-            type: 'required', 
-            message: 'Please select your experience level' 
-          });
-          isValid = false;
-        }
-        
-        if (!formData.runningExperience.fitnessLevel) {
-          form.setError('runningExperience.fitnessLevel', { 
-            type: 'required', 
-            message: 'Please select your fitness level' 
-          });
-          isValid = false;
-        }
+      if (!formData.runningExperience?.level) {
+        form.setError('runningExperience.level', { 
+          type: 'required', 
+          message: 'Please select your experience level' 
+        });
+        isValid = false;
+      }
+      
+      if (!formData.runningExperience?.fitnessLevel) {
+        form.setError('runningExperience.fitnessLevel', { 
+          type: 'required', 
+          message: 'Please select your fitness level' 
+        });
+        isValid = false;
       }
 
       if (isValid) {
@@ -366,13 +381,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  // Use state to track if initialization has happened
+  const [initializedDefaults, setInitializedDefaults] = useState(false);
+  
   // Initialize form values when the component mounts
   useEffect(() => {
-    // Only initialize values if they haven't been set by the user yet
-    // This prevents overriding user selections when navigating back and forth
-    
-    // Check if defaults need to be set - only do this once on component mount
-    if (!form.formState.isDirty) {
+    // Only initialize values once and only if they haven't been properly set
+    if (!initializedDefaults) {
       const defaultsToCheck = [
         {
           path: 'trainingPreferences.weeklyRunningDays',
@@ -394,26 +409,50 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         }
       ];
 
+      let valuesSet = false;
+      
       defaultsToCheck.forEach(({ path, defaultValue, min, max }) => {
         const currentValue = form.getValues(path);
         if (currentValue === undefined || currentValue === null || 
             currentValue < min || currentValue > max) {
-          form.setValue(path, defaultValue, { shouldDirty: true, shouldTouch: true });
+          form.setValue(path, defaultValue, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+          valuesSet = true;
         }
       });
+      
+      // Mark initialization as complete
+      setInitializedDefaults(true);
     }
-  }, []); // Empty dependency array ensures this only runs once on mount
+  }, [form, initializedDefaults]); // Add proper dependencies
 
+  // Use local state to track slider values independently
+  const [weeklyRunningDays, setWeeklyRunningDays] = useState<number | null>(null);
+  const [weeklyMileage, setWeeklyMileage] = useState<number | null>(null);
+  const [weeklyWorkouts, setWeeklyWorkouts] = useState<number | null>(null);
+  
   // Weekly Running Days field component that properly preserves state
   const renderWeeklyRunningDaysField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyRunningDays"
       render={({ field }) => {
-        // Get the current value from the form, with fallback to default
-        const value = typeof field.value === 'number' && field.value >= 1 && field.value <= 7 
-          ? field.value 
-          : 3; // Use 3 as default
+        // Initialize local state from form value if not already set
+        // This ensures we only use the form value on first render
+        useEffect(() => {
+          if (weeklyRunningDays === null) {
+            const currentValue = field.value;
+            if (typeof currentValue === 'number' && currentValue >= 1 && currentValue <= 7) {
+              setWeeklyRunningDays(currentValue);
+            } else {
+              // Set default
+              setWeeklyRunningDays(3);
+              field.onChange(3);
+            }
+          }
+        }, [field]);
+
+        // Use local state with fallback to default
+        const value = weeklyRunningDays !== null ? weeklyRunningDays : 3;
 
         return (
           <FormItem>
@@ -425,14 +464,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Set the value and mark the field as touched and dirty
+                  // Update both local state and form value
                   const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
+                  setWeeklyRunningDays(newValue);
                   field.onChange(newValue);
-                  form.setValue('trainingPreferences.weeklyRunningDays', newValue, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true
-                  });
                 }}
               />
             </FormControl>
@@ -452,10 +487,22 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
-        // Get the current value from the form, with fallback to default
-        const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 150 
-          ? field.value 
-          : 15; // Use 15 as default
+        // Initialize local state from form value if not already set
+        useEffect(() => {
+          if (weeklyMileage === null) {
+            const currentValue = field.value;
+            if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 150) {
+              setWeeklyMileage(currentValue);
+            } else {
+              // Set default
+              setWeeklyMileage(15);
+              field.onChange(15);
+            }
+          }
+        }, [field]);
+
+        // Use local state with fallback to default
+        const value = weeklyMileage !== null ? weeklyMileage : 15;
 
         return (
           <FormItem>
@@ -470,14 +517,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={5}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Always round to nearest 5 and ensure proper state update
+                  // Always round to nearest 5 and update both local state and form
                   const roundedValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
+                  setWeeklyMileage(roundedValue);
                   field.onChange(roundedValue);
-                  form.setValue('trainingPreferences.maxWeeklyMileage', roundedValue, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true
-                  });
                 }}
               />
             </FormControl>
@@ -497,10 +540,22 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
-        // Get the current value from the form, with fallback to default
-        const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 3 
-          ? field.value 
-          : 1; // Use 1 as default
+        // Initialize local state from form value if not already set
+        useEffect(() => {
+          if (weeklyWorkouts === null) {
+            const currentValue = field.value;
+            if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 3) {
+              setWeeklyWorkouts(currentValue);
+            } else {
+              // Set default
+              setWeeklyWorkouts(1);
+              field.onChange(1);
+            }
+          }
+        }, [field]);
+
+        // Use local state with fallback to default
+        const value = weeklyWorkouts !== null ? weeklyWorkouts : 1;
 
         return (
           <FormItem>
@@ -515,14 +570,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Ensure we only get integers from 0-3 and proper state update
+                  // Ensure we only get integers from 0-3 and update both states
                   const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
+                  setWeeklyWorkouts(newValue);
                   field.onChange(newValue);
-                  form.setValue('trainingPreferences.weeklyWorkouts', newValue, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true
-                  });
                 }}
               />
             </FormControl>
