@@ -92,8 +92,18 @@ export const planGeneratorSchema = z.object({
     required_error: "Start date is required",
     invalid_type_error: "Invalid date format",
   })
-  .min(new Date(), "Start date must be in the future")
-  .transform((date) => date.toISOString()),
+  .transform((date) => {
+    // Handle date parsing and validation
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // Set to start of today for comparison
+    
+    // Allow today's date (not strictly in the future)
+    if (date < now) {
+      const today = new Date();
+      return today.toISOString();
+    }
+    return date.toISOString();
+  }),
 }).refine(
   (data) => {
     if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
