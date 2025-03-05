@@ -274,7 +274,13 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             if (formData.targetRace.distance !== RaceDistances.OTHER) {
               formData.targetRace.customDistance = {
                 value: 0,
-                unit: "miles",
+                unit: "miles", // Always set a valid unit
+              };
+            } else if (!formData.targetRace.customDistance || !formData.targetRace.customDistance.unit) {
+              // Ensure custom distance has a valid unit for custom distances
+              formData.targetRace.customDistance = {
+                ...(formData.targetRace.customDistance || { value: 0 }),
+                unit: "miles"
               };
             }
           }
@@ -406,7 +412,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     field.onChange(value);
                     if (value !== RaceDistances.OTHER) {
                       form.setValue("targetRace.customDistance.value", 0);
-                      form.setValue("targetRace.customDistance.unit", "");
+                      form.setValue("targetRace.customDistance.unit", "miles"); // set default unit
                     }
                   }}
                   value={field.value}
@@ -424,6 +430,53 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     ))}
                   </SelectContent>
                 </Select>
+                {form.watch("targetRace.distance") === RaceDistances.OTHER && (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="targetRace.customDistance.value"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Distance</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.1"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="targetRace.customDistance.unit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Unit</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value || "miles"}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select unit" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="miles">Miles</SelectItem>
+                              <SelectItem value="kilometers">Kilometers</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
