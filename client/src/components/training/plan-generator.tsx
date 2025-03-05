@@ -991,7 +991,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-lg font-medium">Generating your training plan...</p>
                 <p className="text-sm text-muted-foreground">
-                  This may take a few moments as wetailor a plan to your needs.
+                  This may take a few moments as wetailor a plan toyour needs.
                 </p>
               </div>
             ) : previewData ? (
@@ -1811,3 +1811,147 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     </Dialog>
   );
 }
+
+const renderStartDateField = () => (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold">When would you like to start?</h2>
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            form.setValue("startDate", new Date().toISOString());
+            form.trigger("startDate");
+          }}
+        >
+          Start Today
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            form.setValue("startDate", nextMonday(new Date()).toISOString());
+            form.trigger("startDate");
+          }}
+        >
+          Start Next Week
+        </Button>
+      </div>
+
+      <FormField
+        control={form.control}
+        name="startDate"
+        render={({ field }) => (
+          <FormItem className="flex flex-col items-center">
+            <Calendar
+              className="rounded-md border"
+              mode="single"
+              selected={field.value ? new Date(field.value) : undefined}
+              onSelect={(date) => {
+                if (date) {
+                  field.onChange(date.toISOString());
+                  form.trigger("startDate");
+                }
+              }}
+              disabled={(date) => date < new Date()}
+              initialFocus
+            />
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    </div>
+  );
+
+const renderCurrentStep = () => {
+        const currentStep = visibleSteps[currentStepIndex];
+        if (!currentStep) return null;
+
+        switch (currentStep.id) {
+          case "goal":
+            return renderGoalField();
+          case "raceDistance":
+            return renderRaceDistanceField();
+          case "raceDate":
+            return renderRaceDateField();
+          case "raceTimes":
+            return renderRaceTimesField();
+          case "experience":
+            return renderExperienceLevelField();
+          case "fitness":
+            return renderFitnessLevelField();
+          case "runningDays":
+            return renderWeeklyRunningDaysField();
+          case "mileage":
+            return renderWeeklyMileageField();
+          case "workouts":
+            return renderQualitySessionsField();
+          case "longRunDay":
+            return renderLongRunDayField();
+          case "coachingStyle":
+            return renderCoachingStyleField();
+          case "startDate":
+            return renderStartDateField();
+          case "preview":
+            return renderPlanPreview();
+          default:
+            return null;
+        }
+      };
+
+const handleSubmitPlan = async (data: PlanGeneratorFormData) => {
+    console.log("Submitting plan with data:", data);
+
+    // Validate all fields before proceeding
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please complete all required fields before proceeding.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Calculate end date based on goal and race date
+      const planStartDate = new Date(data.startDate);
+      let endDate: Date;
+
+      if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
+        endDate = new Date(data.targetRace!.date);
+      } else {
+        // For general fitness, set end date to 12 weeks after start
+        endDate = addWeeks(planStartDate, 12);
+      }
+
+      // Prepare the plan data to preview
+      const planData = {
+        ...data,
+        endDate
+      };
+
+      // Send data to the parent component for preview
+      if (onPreview) {
+        onPreview(planData);
+      }
+
+      // Close the dialog
+      setOpen(false);
+
+      // Reset form and state
+      form.reset();
+      setCurrentStepIndex(0);
+    } catch (error) {
+      console.error("Error submitting plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
