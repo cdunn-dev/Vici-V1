@@ -91,9 +91,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         fitnessLevel: "", // Empty string as default
       },
       trainingPreferences: {
-        weeklyRunningDays: 0,
-        maxWeeklyMileage: 0, // Explicitly set to 0
-        weeklyWorkouts: 0, // Explicitly set to 0
+        weeklyRunningDays: 0, // Explicit numeric default
+        maxWeeklyMileage: 0, // Explicit numeric default
+        weeklyWorkouts: 0, // Explicit numeric default
         preferredLongRunDay: "", // Empty string as default
         coachingStyle: "", // Empty string as default
       },
@@ -104,8 +104,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           unit: "",
           value: 0,
         },
-        goalTime: "", // Empty string as default
-        previousBest: "", // Empty string as default
+        goalTime: "",
+        previousBest: "",
       },
     },
     mode: "onChange",
@@ -228,6 +228,66 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+
+  // Weekly Mileage Component Update
+  const renderWeeklyMileageField = () => (
+    <FormField
+      control={form.control}
+      name="trainingPreferences.maxWeeklyMileage"
+      render={({ field: { value, onChange, ...fieldProps } }) => (
+        <FormItem>
+          <FormLabel>What's your target weekly mileage?</FormLabel>
+          <FormDescription>
+            This will be the peak mileage in your training plan
+          </FormDescription>
+          <FormControl>
+            <Slider
+              min={0}
+              max={150}
+              step={5}
+              value={[value || 0]} // Ensure 0 as fallback
+              onValueChange={(vals) => onChange(vals[0])}
+              {...fieldProps}
+            />
+          </FormControl>
+          <div className="text-sm text-muted-foreground text-center">
+            {value || 0} miles per week
+          </div>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+
+  // Quality Sessions Component Update
+  const renderQualitySessionsField = () => (
+    <FormField
+      control={form.control}
+      name="trainingPreferences.weeklyWorkouts"
+      render={({ field: { value, onChange, ...fieldProps } }) => (
+        <FormItem>
+          <FormLabel>How many quality sessions per week?</FormLabel>
+          <FormDescription>
+            These are harder workouts like intervals, tempo runs, or progression runs
+          </FormDescription>
+          <FormControl>
+            <Slider
+              min={0}
+              max={3}
+              step={1}
+              value={[value || 0]} // Ensure 0 as fallback
+              onValueChange={(vals) => onChange(vals[0])}
+              {...fieldProps}
+            />
+          </FormControl>
+          <div className="text-sm text-muted-foreground text-center">
+            {value || 0} quality sessions per week
+          </div>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
 
   // Render the current question based on step ID
   const renderQuestion = () => {
@@ -553,62 +613,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "mileage":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.maxWeeklyMileage"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What's your target weekly mileage?</FormLabel>
-                <FormDescription>
-                  This will be the peak mileage in your training plan
-                </FormDescription>
-                <FormControl>
-                  <Slider
-                    min={0}
-                    max={150}
-                    step={5}
-                    value={[field.value || 0]} // Ensure default of 0
-                    onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {field.value || 0} miles per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
+        return renderWeeklyMileageField();
       case "workouts":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.weeklyWorkouts"
-            render={({ field: { value, onChange, ...field } }) => (
-              <FormItem>
-                <FormLabel>How many quality sessions per week?</FormLabel>
-                <FormDescription>
-                  These are harder workouts like intervals, tempo runs, or progression runs
-                </FormDescription>
-                <FormControl>
-                  <Slider
-                    min={0}
-                    max={3}
-                    step={1}
-                    value={[value ?? 0]} // Use null coalescing to ensure 0 default
-                    onValueChange={(vals) => onChange(vals[0])}
-                    {...field}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {value ?? 0} quality sessions per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
+        return renderQualitySessionsField();
       case "longRunDay":
         return (
           <FormField
