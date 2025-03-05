@@ -301,12 +301,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           ? field.value 
           : 1;
 
-        // Ensure field is initialized with proper value
+        // Ensure field is initialized with proper value - always run this effect
         useEffect(() => {
+          // Only update if value is invalid
           if (field.value === undefined || field.value === null || field.value < 1 || field.value > 7) {
             field.onChange(1);
           }
-        }, []);
+        }, [field]); // Adding field to dependencies
 
         return (
           <FormItem>
@@ -345,12 +346,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           ? field.value 
           : 0;
 
-        // Ensure field is initialized with proper value
+        // Always run this effect - don't conditionally execute hooks
         useEffect(() => {
+          // Only update if value is invalid
           if (field.value === undefined || field.value === null || field.value < 0 || field.value > 150) {
             field.onChange(0);
           }
-        }, []);
+        }, [field]); // Adding field to dependencies
 
         return (
           <FormItem>
@@ -392,12 +394,13 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           ? field.value 
           : 0;
 
-        // Ensure field is initialized with proper value
+        // Always run this effect - don't conditionally execute hooks
         useEffect(() => {
+          // Only update if value is invalid
           if (field.value === undefined || field.value === null || field.value < 0 || field.value > 3) {
             field.onChange(0);
           }
-        }, []);
+        }, [field]); // Adding field to dependencies
 
         return (
           <FormItem>
