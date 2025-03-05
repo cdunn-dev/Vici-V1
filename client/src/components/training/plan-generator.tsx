@@ -430,6 +430,27 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [weeklyMileage, setWeeklyMileage] = useState<number | null>(null);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number | null>(null);
 
+  // Combine all slider initializations into a single useEffect to avoid hook count changes
+  useEffect(() => {
+    // Initialize weekly running days if not set
+    if (weeklyRunningDays === null) {
+      const runningDaysValue = form.getValues('trainingPreferences.weeklyRunningDays');
+      setWeeklyRunningDays(runningDaysValue);
+    }
+
+    // Initialize weekly mileage if not set
+    if (weeklyMileage === null) {
+      const mileageValue = form.getValues('trainingPreferences.maxWeeklyMileage');
+      setWeeklyMileage(mileageValue);
+    }
+
+    // Initialize weekly workouts if not set
+    if (weeklyWorkouts === null) {
+      const workoutsValue = form.getValues('trainingPreferences.weeklyWorkouts');
+      setWeeklyWorkouts(workoutsValue);
+    }
+  }, [form, weeklyRunningDays, weeklyMileage, weeklyWorkouts]);
+
   // Weekly Running Days field component that properly preserves state
   const renderWeeklyRunningDaysField = () => {
     // The local state should be initialized outside of the render function
@@ -963,25 +984,67 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           </div>
         );
       case "preview":
-        return previewData && (
+        return (
           <div className="space-y-6">
-            <div className="p-6 bg-muted rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
-              <ProgramOverview
-                plan={previewData}
-                onApprove={handleApprovePlan}
-                onAskQuestion={async (question: string) => {
-                  // Handle AI coach interaction
-                  console.log("Question asked:", question);
-                  // TODO: Implement AI coach interaction
-                }}
-                onRequestChanges={async (changes: string) => {
-                  // Handle plan modification requests
-                  console.log("Changes requested:", changes);
-                  await handleRequestChanges();
-                }}
-              />
-            </div>
+            {isSubmitting ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-lg font-medium">Generating your training plan...</p>
+                <p className="text-sm text-muted-foreground">
+                  This may take a few moments as wetailor a plan to your needs.
+                </p>
+              </div>
+            ) : previewData ? (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Your Personalized Training Plan</h2>
+                <div className="bg-muted p-4 rounded-md text-sm">
+                  <p className="font-medium">Training Period:</p>
+                  <p>{format(new Date(previewData.startDate), 'MMMM d, yyyy')} - {format(previewData.endDate, 'MMMM d, yyyy')}</p>
+                  <p className="font-medium mt-2">Goal:</p>
+                  <p>{previewData.goal}: {previewData.goalDescription}</p>
+                  <p className="font-medium mt-2">Weekly Schedule:</p>
+                  <p>{previewData.trainingPreferences.weeklyRunningDays} days per week, {previewData.trainingPreferences.maxWeeklyMileage} miles max, {previewData.trainingPreferences.weeklyWorkouts} quality sessions</p>
+                </div>
+
+                <ProgramOverview
+                  plan={previewData}
+                  onApprove={handleApprovePlan}
+                  onAskQuestion={async (question) => {
+                    await handleRequestChanges();
+                  }}
+                  onRequestChanges={async (changes) => {
+                    await handleRequestChanges();
+                  }}
+                />
+
+                <div className="flex justify-between mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleBack}
+                  >
+                    Make Changes
+                  </Button>
+                  <Button 
+                    onClick={handleApprovePlan}
+                  >
+                    Approve Plan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64">
+                <p className="text-lg font-medium">No preview available</p>
+                <p className="text-sm text-muted-foreground">
+                  Please complete previous steps to generate a plan preview.
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setCurrentStepIndex(0)}
+                >
+                  Start Over
+                </Button>
+              </div>
+            )}
           </div>
         );
       default:
@@ -1601,25 +1664,67 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           </div>
         );
       case "preview":
-        return previewData && (
+        return (
           <div className="space-y-6">
-            <div className="p-6 bg-muted rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
-              <ProgramOverview
-                plan={previewData}
-                onApprove={handleApprovePlan}
-                onAskQuestion={async (question: string) => {
-                  // Handle AI coach interaction
-                  console.log("Question asked:", question);
-                  // TODO: Implement AI coach interaction
-                }}
-                onRequestChanges={async (changes: string) => {
-                  // Handle plan modification requests
-                  console.log("Changes requested:", changes);
-                  await handleRequestChanges();
-                }}
-              />
-            </div>
+            {isSubmitting ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-lg font-medium">Generating your training plan...</p>
+                <p className="text-sm text-muted-foreground">
+                  This may take a few moments as we tailor a plan to your needs.
+                </p>
+              </div>
+            ) : previewData ? (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">Your Personalized Training Plan</h2>
+                <div className="bg-muted p-4 rounded-md text-sm">
+                  <p className="font-medium">Training Period:</p>
+                  <p>{format(new Date(previewData.startDate), 'MMMM d, yyyy')} - {format(previewData.endDate, 'MMMM d, yyyy')}</p>
+                  <p className="font-medium mt-2">Goal:</p>
+                  <p>{previewData.goal}: {previewData.goalDescription}</p>
+                  <p className="font-medium mt-2">Weekly Schedule:</p>
+                  <p>{previewData.trainingPreferences.weeklyRunningDays} days per week, {previewData.trainingPreferences.maxWeeklyMileage} miles max, {previewData.trainingPreferences.weeklyWorkouts} quality sessions</p>
+                </div>
+
+                <ProgramOverview
+                  plan={previewData}
+                  onApprove={handleApprovePlan}
+                  onAskQuestion={async (question) => {
+                    await handleRequestChanges();
+                  }}
+                  onRequestChanges={async (changes) => {
+                    await handleRequestChanges();
+                  }}
+                />
+
+                <div className="flex justify-between mt-6">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleBack}
+                  >
+                    Make Changes
+                  </Button>
+                  <Button 
+                    onClick={handleApprovePlan}
+                  >
+                    Approve Plan
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64">
+                <p className="text-lg font-medium">No preview available</p>
+                <p className="text-sm text-muted-foreground">
+                  Please complete previous steps to generate a plan preview.
+                </p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setCurrentStepIndex(0)}
+                >
+                  Start Over
+                </Button>
+              </div>
+            )}
           </div>
         );
       default:
