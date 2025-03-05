@@ -216,11 +216,18 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
+      // Ensure all fields are validated
       const isValid = await form.trigger();
       if (!isValid) {
+        const errors = form.formState.errors;
+        const errorMessages = Object.entries(errors)
+          .map(([key, error]) => error?.message)
+          .filter(Boolean)
+          .join(", ");
+
         toast({
           title: "Validation Error",
-          description: "Please complete all required fields before generating preview.",
+          description: errorMessages || "Please complete all required fields before generating preview.",
           variant: "destructive",
         });
         return;
@@ -230,10 +237,18 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Ensure slider values are properly included
-        formData.trainingPreferences.weeklyRunningDays = runningDaysValue;
-        formData.trainingPreferences.maxWeeklyMileage = mileageValue;
-        formData.trainingPreferences.weeklyWorkouts = workoutsValue;
+        // Ensure slider values are included
+        formData.trainingPreferences = {
+          ...formData.trainingPreferences,
+          weeklyRunningDays: runningDaysValue,
+          maxWeeklyMileage: mileageValue,
+          weeklyWorkouts: workoutsValue,
+        };
+
+        // Standardize date handling
+        if (!formData.startDate) {
+          formData.startDate = new Date().toISOString();
+        }
 
         // Request plan preview from backend
         const response = await fetch('/api/training-plans/preview', {
@@ -245,7 +260,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to generate plan preview');
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to generate plan preview');
         }
 
         const previewData = await response.json();
@@ -255,7 +271,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         console.error("Error generating preview:", error);
         toast({
           title: "Error",
-          description: "Failed to generate plan preview. Please try again.",
+          description: error.message || "Failed to generate plan preview. Please try again.",
           variant: "destructive",
         });
       } finally {
