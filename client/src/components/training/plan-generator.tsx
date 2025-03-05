@@ -93,8 +93,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       },
       trainingPreferences: {
         weeklyRunningDays: 0,
-        maxWeeklyMileage: 0,
-        weeklyWorkouts: 0,
+        maxWeeklyMileage: 0, // Default to 0
+        weeklyWorkouts: 0, // Default to 0
         preferredLongRunDay: "", // Empty string as default
         coachingStyle: "", // Empty string as default
       },
@@ -105,8 +105,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           unit: "",
           value: 0,
         },
-        goalTime: "",
-        previousBest: "",
+        goalTime: "", // Empty string as default
+        previousBest: "", // Empty string as default
       },
     },
     mode: "onChange",
@@ -352,12 +352,47 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>What's your current personal best?</FormLabel>
-                  <FormControl>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <div className="grid grid-cols-3 gap-2">
                     <Input
-                      placeholder="HH:MM:SS"
-                      {...field}
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={field.value.split(":")[0] || ""}
+                      onChange={(e) => {
+                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
+                        const newHH = e.target.value.padStart(2, "0");
+                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                      }}
                     />
-                  </FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={field.value.split(":")[1] || ""}
+                      onChange={(e) => {
+                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
+                        const newMM = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={field.value.split(":")[2] || ""}
+                      onChange={(e) => {
+                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
+                        const newSS = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                      }}
+                    />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -368,12 +403,47 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>What's your goal time?</FormLabel>
-                  <FormControl>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <div className="grid grid-cols-3 gap-2">
                     <Input
-                      placeholder="HH:MM:SS"
-                      {...field}
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={field.value.split(":")[0] || ""}
+                      onChange={(e) => {
+                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
+                        const newHH = e.target.value.padStart(2, "0");
+                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                      }}
                     />
-                  </FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={field.value.split(":")[1] || ""}
+                      onChange={(e) => {
+                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
+                        const newMM = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={field.value.split(":")[2] || ""}
+                      onChange={(e) => {
+                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
+                        const newSS = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                      }}
+                    />
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
