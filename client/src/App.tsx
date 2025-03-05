@@ -9,20 +9,23 @@ import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
+import React from "react";
 
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType }) {
-  const { user, isLoading } = useAuth();
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Redirect to="/auth" />;
-  }
-
-  return <Component />;
-}
+//This is removed because it's causing the duplicate declaration error.  The imported version below will be used instead.
+//function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType }) {
+//  const { user, isLoading } = useAuth();
+//
+//  if (isLoading) {
+//    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+//  }
+//
+//  if (!user) {
+//    return <Redirect to="/auth" />;
+//  }
+//
+//  return <Component />;
+//}
 
 function Router() {
   const { user } = useAuth();
@@ -76,18 +79,33 @@ function App() {
 
 export default App;
 import React from "react";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/context/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
 import AuthPage from "@/pages/AuthPage";
 import Dashboard from "@/pages/Dashboard";
 import Profile from "@/pages/profile";
 import NotFound from "@/pages/NotFound";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { useAuth } from "@/hooks/use-auth";
 
-function App() {
+// ProtectedRoute component definition
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Redirect to="/auth" />;
+  }
+
+  return <>{children}</>;
+}
+
+function App2() {
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -113,4 +131,4 @@ function App() {
   );
 }
 
-export default App;
+export default App2;
