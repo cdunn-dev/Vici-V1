@@ -14,10 +14,18 @@ const customDistanceSchema = z.object({
   unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]).default("miles"),
 });
 
+// Improved date validation
 const dateStringSchema = z.string().refine((date) => {
+  if (!date) return false;
   const parsed = new Date(date);
-  return !isNaN(parsed.getTime());
-}, "Invalid date format");
+  if (isNaN(parsed.getTime())) {
+    return false;
+  }
+  return true;
+}, "Invalid date").transform(date => {
+  const parsed = new Date(date);
+  return parsed.toISOString();
+});
 
 const targetRaceSchema = z.object({
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),

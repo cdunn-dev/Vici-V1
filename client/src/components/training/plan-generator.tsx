@@ -215,7 +215,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Handle next button click with proper validation
+  // Update the handleNext function to properly handle date validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -261,32 +261,25 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         };
 
         // Handle dates and race information
-        formData.startDate = new Date(formData.startDate).toISOString();
-
         if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
           if (formData.targetRace) {
-            // Ensure date is in ISO format
-            if (formData.targetRace.date) {
-              formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
-            }
+            // Ensure date is properly formatted
+            formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
 
             // Handle custom distance
             if (formData.targetRace.distance !== RaceDistances.OTHER) {
               formData.targetRace.customDistance = {
                 value: 0,
-                unit: "miles", // Always set a valid unit
-              };
-            } else if (!formData.targetRace.customDistance || !formData.targetRace.customDistance.unit) {
-              // Ensure custom distance has a valid unit for custom distances
-              formData.targetRace.customDistance = {
-                ...(formData.targetRace.customDistance || { value: 0 }),
-                unit: "miles"
+                unit: "miles",
               };
             }
           }
         } else {
           delete formData.targetRace;
         }
+
+        // Format start date
+        formData.startDate = new Date(formData.startDate).toISOString();
 
         console.log("Submitting form data:", formData); // Debug log
 
