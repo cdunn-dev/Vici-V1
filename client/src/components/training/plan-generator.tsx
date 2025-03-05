@@ -262,60 +262,71 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
 
-  // Separate rendering functions for sliders
+  // Update the Weekly Mileage field component
   const renderWeeklyMileageField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>What's your target weekly mileage?</FormLabel>
-          <FormDescription>
-            This will be the peak mileage in your training plan
-          </FormDescription>
-          <FormControl>
-            <Slider
-              min={0}
-              max={150}
-              step={5}
-              value={[field.value || 0]}
-              onValueChange={(vals) => field.onChange(vals[0])}
-            />
-          </FormControl>
-          <div className="text-sm text-muted-foreground text-center">
-            {field.value || 0} miles per week
-          </div>
-          <FormMessage />
-        </FormItem>
-      )}
+      render={({ field }) => {
+        // Ensure numeric value
+        const numericValue = Number(field.value) || 0;
+
+        return (
+          <FormItem>
+            <FormLabel>What's your target weekly mileage?</FormLabel>
+            <FormDescription>
+              This will be the peak mileage in your training plan
+            </FormDescription>
+            <FormControl>
+              <Slider
+                min={0}
+                max={150}
+                step={5}
+                value={[numericValue]}
+                onValueChange={(vals) => field.onChange(vals[0])}
+              />
+            </FormControl>
+            <div className="text-sm text-muted-foreground text-center">
+              {numericValue} miles per week
+            </div>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
     />
   );
 
+  // Update the Quality Sessions field component
   const renderQualitySessionsField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>How many quality sessions per week?</FormLabel>
-          <FormDescription>
-            These are harder workouts like intervals, tempo runs, or progression runs
-          </FormDescription>
-          <FormControl>
-            <Slider
-              min={0}
-              max={3}
-              step={1}
-              value={[field.value || 0]}
-              onValueChange={(vals) => field.onChange(vals[0])}
-            />
-          </FormControl>
-          <div className="text-sm text-muted-foreground text-center">
-            {field.value || 0} quality sessions per week
-          </div>
-          <FormMessage />
-        </FormItem>
-      )}
+      render={({ field }) => {
+        // Ensure numeric value
+        const numericValue = Number(field.value) || 0;
+
+        return (
+          <FormItem>
+            <FormLabel>How many quality sessions per week?</FormLabel>
+            <FormDescription>
+              These are harder workouts like intervals, tempo runs, or progression runs
+            </FormDescription>
+            <FormControl>
+              <Slider
+                min={0}
+                max={3}
+                step={1}
+                value={[numericValue]}
+                onValueChange={(vals) => field.onChange(vals[0])}
+              />
+            </FormControl>
+            <div className="text-sm text-muted-foreground text-center">
+              {numericValue} quality sessions per week
+            </div>
+            <FormMessage />
+          </FormItem>
+        );
+      }}
     />
   );
 
