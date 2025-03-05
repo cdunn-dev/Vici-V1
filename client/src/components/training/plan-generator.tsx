@@ -46,12 +46,12 @@ import {
   DaysOfWeek,
   CoachingStyles,
   CoachingStyleDescriptions,
+  isValidTimeFormat,
 } from "./plan-generator-constants";
 
 // Define steps with proper conditionals
 const STEPS = [
   { id: "goal", label: "Training Goal" },
-  { id: "goalDescription", label: "Goal Description" },
   {
     id: "raceDistance",
     label: "Race Distance",
@@ -76,6 +76,7 @@ const STEPS = [
   { id: "mileage", label: "Weekly Mileage" },
   { id: "workouts", label: "Quality Sessions" },
   { id: "longRunDay", label: "Long Run Day" },
+  { id: "startDate", label: "Training Plan Start Date" },
   { id: "preview", label: "Preview Plan" },
 ];
 
@@ -96,7 +97,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
       goal: "",
-      goalDescription: "",
       startDate: new Date().toISOString(),
       runningExperience: {
         level: "",
@@ -108,6 +108,16 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         weeklyWorkouts: 1,
         preferredLongRunDay: "",
         coachingStyle: "",
+      },
+      targetRace: {
+        date: "",
+        distance: "",
+        customDistance: {
+          value: 0,
+          unit: "",
+        },
+        previousBest: "",
+        goalTime: "",
       },
     },
     mode: "onBlur",
@@ -138,36 +148,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
 
     return isValid;
-  };
-
-  // Helper function to get fields for each step
-  const getFieldsForStep = (stepId: string): string[] => {
-    switch (stepId) {
-      case "goal":
-        return ["goal"];
-      case "goalDescription":
-        return ["goalDescription"];
-      case "raceDistance":
-        return ["targetRace.distance"];
-      case "raceDate":
-        return ["targetRace.date"];
-      case "raceTimes":
-        return ["targetRace.previousBest", "targetRace.goalTime"];
-      case "experience":
-        return ["runningExperience.level"];
-      case "fitness":
-        return ["runningExperience.fitnessLevel"];
-      case "runningDays":
-        return ["trainingPreferences.weeklyRunningDays"];
-      case "mileage":
-        return ["trainingPreferences.maxWeeklyMileage"];
-      case "workouts":
-        return ["trainingPreferences.weeklyWorkouts"];
-      case "longRunDay":
-        return ["trainingPreferences.preferredLongRunDay"];
-      default:
-        return [];
-    }
   };
 
   // Handle next button click
@@ -219,28 +199,33 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // Handle plan approval
-  const handleApprovePlan = async (data: PlanGeneratorFormData) => {
-    try {
-      if (onPreview && previewData) {
-        onPreview(previewData);
-      }
-
-      setOpen(false);
-      form.reset();
-      setCurrentStepIndex(0);
-
-      toast({
-        title: "Success",
-        description: "Your training plan has been created!",
-      });
-    } catch (error) {
-      console.error("Error approving plan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create plan. Please try again.",
-        variant: "destructive",
-      });
+  // Helper function to get fields for each step
+  const getFieldsForStep = (stepId: string): string[] => {
+    switch (stepId) {
+      case "goal":
+        return ["goal"];
+      case "raceDistance":
+        return ["targetRace.distance"];
+      case "raceDate":
+        return ["targetRace.date"];
+      case "raceTimes":
+        return ["targetRace.previousBest", "targetRace.goalTime"];
+      case "experience":
+        return ["runningExperience.level"];
+      case "fitness":
+        return ["runningExperience.fitnessLevel"];
+      case "runningDays":
+        return ["trainingPreferences.weeklyRunningDays"];
+      case "mileage":
+        return ["trainingPreferences.maxWeeklyMileage"];
+      case "workouts":
+        return ["trainingPreferences.weeklyWorkouts"];
+      case "longRunDay":
+        return ["trainingPreferences.preferredLongRunDay"];
+      case "startDate":
+        return ["startDate"];
+      default:
+        return [];
     }
   };
 
@@ -272,21 +257,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     ))}
                   </SelectContent>
                 </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-
-      case "goalDescription":
-        return (
-          <FormField
-            control={form.control}
-            name="goalDescription"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Describe your goal in more detail:</FormLabel>
-                <Input placeholder="Enter goal description" {...field} />
                 <FormMessage />
               </FormItem>
             )}
@@ -349,6 +319,116 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               </FormItem>
             )}
           />
+        );
+
+      case "raceTimes":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.previousBest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your current personal best?</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={field.value?.split(":")[0] || ""}
+                      onChange={(e) => {
+                        const [_, mm, ss] = field.value?.split(":") || ["", "", ""];
+                        const newHH = e.target.value.padStart(2, "0");
+                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={field.value?.split(":")[1] || ""}
+                      onChange={(e) => {
+                        const [hh, _, ss] = field.value?.split(":") || ["", "", ""];
+                        const newMM = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={field.value?.split(":")[2] || ""}
+                      onChange={(e) => {
+                        const [hh, mm, _] = field.value?.split(":") || ["", "", ""];
+                        const newSS = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="mt-4">
+              <FormField
+                control={form.control}
+                name="targetRace.goalTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>What's your goal time?</FormLabel>
+                    <FormDescription>
+                      Enter your time in HH:MM:SS format
+                    </FormDescription>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="23"
+                        placeholder="HH"
+                        value={field.value?.split(":")[0] || ""}
+                        onChange={(e) => {
+                          const [_, mm, ss] = field.value?.split(":") || ["", "", ""];
+                          const newHH = e.target.value.padStart(2, "0");
+                          field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="59"
+                        placeholder="MM"
+                        value={field.value?.split(":")[1] || ""}
+                        onChange={(e) => {
+                          const [hh, _, ss] = field.value?.split(":") || ["", "", ""];
+                          const newMM = e.target.value.padStart(2, "0");
+                          field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                        }}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        max="59"
+                        placeholder="SS"
+                        value={field.value?.split(":")[2] || ""}
+                        onChange={(e) => {
+                          const [hh, mm, _] = field.value?.split(":") || ["", "", ""];
+                          const newSS = e.target.value.padStart(2, "0");
+                          field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                        }}
+                      />
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </>
         );
 
       case "experience":
@@ -426,6 +506,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     min={1}
                     max={7}
                     step={1}
+                    defaultValue={[3]}
                     value={[field.value]}
                     onValueChange={(vals) => {
                       field.onChange(Math.round(vals[0]));
@@ -457,6 +538,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     min={0}
                     max={150}
                     step={5}
+                    defaultValue={[15]}
                     value={[field.value]}
                     onValueChange={(vals) => {
                       field.onChange(Math.round(vals[0] / 5) * 5);
@@ -488,6 +570,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     min={0}
                     max={3}
                     step={1}
+                    defaultValue={[1]}
                     value={[field.value]}
                     onValueChange={(vals) => {
                       field.onChange(Math.round(vals[0]));
@@ -525,6 +608,51 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "startDate":
+        return (
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When would you like to start your training plan?</FormLabel>
+                <div className="my-4 flex space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const today = new Date();
+                      field.onChange(today.toISOString());
+                    }}
+                  >
+                    Start Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const nextMondayDate = nextMonday(new Date());
+                      field.onChange(nextMondayDate.toISOString());
+                    }}
+                  >
+                    Start Next Week
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
                 <FormMessage />
               </FormItem>
             )}
