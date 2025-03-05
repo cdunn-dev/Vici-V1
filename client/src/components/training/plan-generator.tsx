@@ -151,7 +151,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // Update handleNext to reset fields when moving between steps
+  // Update handleNext to properly validate and maintain slider values
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -200,19 +200,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       const isValid = await form.trigger(currentStepFields);
 
       if (isValid) {
-        // Reset fields for the next step to ensure proper initialization
-        const nextStepIndex = currentStepIndex + 1;
-        const nextStepId = visibleSteps[nextStepIndex]?.id;
-
-        if (nextStepId === 'mileage') {
-          form.setValue('trainingPreferences.maxWeeklyMileage', 0);
-        } else if (nextStepId === 'workouts') {
-          form.setValue('trainingPreferences.weeklyWorkouts', 0);
-        } else if (nextStepId === 'runningDays') {
-          form.setValue('trainingPreferences.weeklyRunningDays', 1);
-        }
-
-        setCurrentStepIndex(nextStepIndex);
+        // Move to the next step without resetting slider values
+        setCurrentStepIndex(currentStepIndex + 1);
       } else {
         // Show specific validation errors
         const errors = form.formState.errors;
@@ -229,25 +218,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // Update handleBack to reset fields when moving backward
+  // Update handleBack to maintain state properly
   const handleBack = () => {
     if (currentStepIndex === visibleSteps.length - 1) {
       setPreviewData(null);
     }
 
-    const prevStepIndex = Math.max(currentStepIndex - 1, 0);
-    const prevStepId = visibleSteps[prevStepIndex]?.id;
-
-    // Reset fields for the previous step
-    if (prevStepId === 'mileage') {
-      form.setValue('trainingPreferences.maxWeeklyMileage', 0);
-    } else if (prevStepId === 'workouts') {
-      form.setValue('trainingPreferences.weeklyWorkouts', 0);
-    } else if (prevStepId === 'runningDays') {
-      form.setValue('trainingPreferences.weeklyRunningDays', 1);
-    }
-
-    setCurrentStepIndex(prevStepIndex);
+    // Simply move back without resetting slider values
+    setCurrentStepIndex(Math.max(currentStepIndex - 1, 0));
   };
 
   const handleApprovePlan = () => {
@@ -309,13 +287,23 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // Update Weekly Running Days field component
+  // Update Weekly Running Days field component with improved state handling
   const renderWeeklyRunningDaysField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyRunningDays"
       render={({ field }) => {
-        const value = typeof field.value === 'number' ? field.value : 1;
+        // Ensure we have a valid default and handle field value correctly
+        const value = typeof field.value === 'number' && field.value >= 1 && field.value <= 7 
+          ? field.value 
+          : 1;
+
+        // Ensure field is initialized with proper value
+        React.useEffect(() => {
+          if (field.value === undefined || field.value === null || field.value < 1 || field.value > 7) {
+            field.onChange(1);
+          }
+        }, [field, currentStep.id]);
 
         return (
           <FormItem>
@@ -327,7 +315,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  field.onChange(vals[0]);
+                  // Ensure we only get integers from 1-7
+                  const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
+                  field.onChange(newValue);
                 }}
               />
             </FormControl>
@@ -341,13 +331,23 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Update Weekly Mileage field component
+  // Update Weekly Mileage field component with improved state handling
   const renderWeeklyMileageField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
-        const value = typeof field.value === 'number' ? field.value : 0;
+        // Ensure we have a valid default and handle field value correctly
+        const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 150 
+          ? field.value 
+          : 0;
+
+        // Ensure field is initialized with proper value
+        React.useEffect(() => {
+          if (field.value === undefined || field.value === null || field.value < 0 || field.value > 150) {
+            field.onChange(0);
+          }
+        }, [field, currentStep.id]);
 
         return (
           <FormItem>
@@ -362,7 +362,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={5}
                 value={[value]}
                 onValueChange={(vals) => {
-                  const roundedValue = Math.round(vals[0] / 5) * 5;
+                  // Always round to nearest 5
+                  const roundedValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
                   field.onChange(roundedValue);
                 }}
               />
@@ -377,13 +378,23 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Update Quality Sessions field component
+  // Update Quality Sessions field component with improved state handling
   const renderQualitySessionsField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
-        const value = typeof field.value === 'number' ? field.value : 0;
+        // Ensure we have a valid default and handle field value correctly
+        const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 3 
+          ? field.value 
+          : 0;
+
+        // Ensure field is initialized with proper value
+        React.useEffect(() => {
+          if (field.value === undefined || field.value === null || field.value < 0 || field.value > 3) {
+            field.onChange(0);
+          }
+        }, [field, currentStep.id]);
 
         return (
           <FormItem>
@@ -398,7 +409,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  field.onChange(vals[0]);
+                  // Ensure we only get integers from 0-3
+                  const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
+                  field.onChange(newValue);
                 }}
               />
             </FormControl>
@@ -454,7 +467,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Which race distance are you targeting?</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => {
+                    field.onChange(value);
+                    
+                    // If changing from "Other" to a standard distance, clear custom values
+                    if (value !== RaceDistances.OTHER) {
+                      form.setValue('targetRace.customDistance.value', 0);
+                      form.setValue('targetRace.customDistance.unit', '');
+                    }
+                  }} 
+                  defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select race distance" />
@@ -473,7 +495,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               )}
             />
             {form.watch("targetRace.distance") === RaceDistances.OTHER && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mt-4">
                 <FormField
                   control={form.control}
                   name="targetRace.customDistance.value"
@@ -487,7 +509,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                           step="0.1"
                           placeholder="Enter distance"
                           {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                            field.onChange(value);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
