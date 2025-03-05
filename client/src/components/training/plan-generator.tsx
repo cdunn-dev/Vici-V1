@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -261,7 +261,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       case "goal":
         return ["goal"];
       case "raceDistance":
-        return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
+        if (form.watch("targetRace.distance") === RaceDistances.OTHER) {
+          return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
+        }
+        return ["targetRace.distance"];
       case "raceDate":
         return ["targetRace.date"];
       case "raceTimes":
@@ -299,11 +302,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           : 1;
 
         // Ensure field is initialized with proper value
-        React.useEffect(() => {
+        useEffect(() => {
           if (field.value === undefined || field.value === null || field.value < 1 || field.value > 7) {
             field.onChange(1);
           }
-        }, [field, currentStep.id]);
+        }, []);
 
         return (
           <FormItem>
@@ -343,11 +346,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           : 0;
 
         // Ensure field is initialized with proper value
-        React.useEffect(() => {
+        useEffect(() => {
           if (field.value === undefined || field.value === null || field.value < 0 || field.value > 150) {
             field.onChange(0);
           }
-        }, [field, currentStep.id]);
+        }, []);
 
         return (
           <FormItem>
@@ -390,11 +393,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           : 0;
 
         // Ensure field is initialized with proper value
-        React.useEffect(() => {
+        useEffect(() => {
           if (field.value === undefined || field.value === null || field.value < 0 || field.value > 3) {
             field.onChange(0);
           }
-        }, [field, currentStep.id]);
+        }, []);
 
         return (
           <FormItem>
