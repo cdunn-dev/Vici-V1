@@ -12,7 +12,7 @@ import {
 
 const customDistanceSchema = z.object({
   value: z.number().min(0, "Distance must be positive"),
-  unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]),
+  unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]).default("miles"),
 });
 
 const targetRaceSchema = z.object({
@@ -57,16 +57,13 @@ const trainingPreferencesSchema = z.object({
 
   coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]], {
     required_error: "Please select your coaching style",
-  }),
+  }).default("Motivational"),
 });
 
 export const planGeneratorSchema = z.object({
   goal: z.enum(Object.values(TrainingGoals) as [string, ...string[]], {
     required_error: "Please select a training goal",
   }),
-  goalDescription: z.string()
-    .min(1, "Please describe your goal")
-    .max(500, "Description too long"),
   targetRace: targetRaceSchema.optional(),
   runningExperience: runningExperienceSchema,
   trainingPreferences: trainingPreferencesSchema,
