@@ -68,6 +68,7 @@ const STEPS = [
   { id: "preview", label: "Preview Plan" }
 ];
 
+// Component props
 interface PlanGeneratorProps {
   existingPlan?: boolean;
   onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
@@ -123,7 +124,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const validateCurrentStep = async () => {
     const currentFields = getFieldsForStep(currentStep.id);
     const isValid = await form.trigger(currentFields as any);
-
+    
     if (!isValid) {
       const errors = form.formState.errors;
       const errorMessages = Object.values(errors)
@@ -141,7 +142,145 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     return isValid;
   };
 
-  // Update the slider field components for proper default handling
+  // Handle next button click
+  const handleNext = async () => {
+    const isLastStep = currentStepIndex === visibleSteps.length - 2;
+
+    if (isLastStep) {
+      const isValid = await form.trigger();
+      if (isValid) {
+        setIsSubmitting(true);
+        try {
+          const data = form.getValues();
+          const endDate = data.targetRace?.date
+            ? new Date(data.targetRace.date)
+            : addWeeks(new Date(data.startDate), 12);
+
+          const planData = {
+            ...data,
+            endDate,
+          };
+
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          setPreviewData(planData);
+          setCurrentStepIndex(prev => prev + 1);
+        } catch (error) {
+          console.error("Error generating preview:", error);
+          toast({
+            title: "Error",
+            description: "Failed to generate plan preview. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
+      }
+    } else {
+      const isValid = await validateCurrentStep();
+      if (isValid) {
+        setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
+      }
+    }
+  };
+
+  // Handle back button click
+  const handleBack = () => {
+    if (currentStepIndex === visibleSteps.length - 1) {
+      setPreviewData(null);
+    }
+    setCurrentStepIndex(Math.max(currentStepIndex - 1, 0));
+  };
+
+  // Submit the plan
+  const handleSubmitPlan = async (data: PlanGeneratorFormData) => {
+    try {
+      // Validate all fields before proceeding
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please complete all required fields before proceeding.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+      
+      // Calculate end date
+      const planStartDate = new Date(data.startDate);
+      const endDate = data.targetRace?.date 
+        ? new Date(data.targetRace.date)
+        : addWeeks(planStartDate, 12);
+
+      // Prepare the plan data
+      const planData = {
+        ...data,
+        endDate,
+      };
+
+      // If onPreview is provided, call it with the current data
+      if (onPreview) {
+        onPreview(planData);
+      }
+
+      // Reset everything
+      setOpen(false);
+      form.reset();
+      setCurrentStepIndex(0);
+
+      toast({
+        title: "Plan Created",
+        description: "Your training plan has been created successfully!",
+      });
+    } catch (error) {
+      console.error("Error submitting plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Helper function to get fields for each step
+  const getFieldsForStep = (stepId: string): string[] => {
+    switch (stepId) {
+      case "goal":
+        return ["goal"];
+      case "raceDistance":
+        if (form.watch("targetRace.distance") === RaceDistances.OTHER) {
+          return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
+        }
+        return ["targetRace.distance"];
+      case "raceDate":
+        return ["targetRace.date"];
+      case "raceTimes":
+        return ["targetRace.previousBest", "targetRace.goalTime"];
+      case "experience":
+        return ["runningExperience.level"];
+      case "fitness":
+        return ["runningExperience.fitnessLevel"];
+      case "runningDays":
+        return ["trainingPreferences.weeklyRunningDays"];
+      case "mileage":
+        return ["trainingPreferences.maxWeeklyMileage"];
+      case "workouts":
+        return ["trainingPreferences.weeklyWorkouts"];
+      case "longRunDay":
+        return ["trainingPreferences.preferredLongRunDay"];
+      case "coachingStyle":
+        return ["trainingPreferences.coachingStyle"];
+      case "startDate":
+        return ["startDate"];
+      default:
+        return [];
+    }
+  };
+
+  // Render form fields
   const renderWeeklyRunningDaysField = () => (
     <FormField
       control={form.control}
@@ -156,7 +295,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               step={1}
               value={[field.value ?? 1]}
               onValueChange={(vals) => {
-                field.onChange(Math.round(vals[0]));
+                const value = Math.round(vals[0]);
+                field.onChange(value);
               }}
             />
           </FormControl>
@@ -217,7 +357,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               step={1}
               value={[field.value ?? 0]}
               onValueChange={(vals) => {
-                field.onChange(Math.round(vals[0]));
+                const value = Math.round(vals[0]);
+                field.onChange(value);
               }}
             />
           </FormControl>
@@ -229,186 +370,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       )}
     />
   );
-
-  // Update handleNext to reset fields properly
-  const handleNext = async () => {
-    const isLastStep = currentStepIndex === visibleSteps.length - 2;
-
-    if (isLastStep) {
-      const isValid = await form.trigger();
-      if (isValid) {
-        setIsSubmitting(true);
-        try {
-          const data = form.getValues();
-          const endDate = data.targetRace?.date
-            ? new Date(data.targetRace.date)
-            : addWeeks(new Date(data.startDate), 12);
-
-          const planData = {
-            ...data,
-            endDate,
-          };
-
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          setPreviewData(planData);
-          setCurrentStepIndex(prev => prev + 1);
-        } catch (error) {
-          console.error("Error generating preview:", error);
-          toast({
-            title: "Error",
-            description: "Failed to generate plan preview. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSubmitting(false);
-        }
-      }
-    } else {
-      const currentFields = getFieldsForStep(currentStep.id);
-      const isValid = await form.trigger(currentFields as any);
-
-      if (isValid) {
-        // Reset slider values when moving to a slider step
-        const nextStepIndex = currentStepIndex + 1;
-        const nextStepId = visibleSteps[nextStepIndex]?.id;
-
-        if (nextStepId === 'mileage') {
-          form.setValue('trainingPreferences.maxWeeklyMileage', 0);
-        } else if (nextStepId === 'workouts') {
-          form.setValue('trainingPreferences.weeklyWorkouts', 0);
-        } else if (nextStepId === 'runningDays') {
-          form.setValue('trainingPreferences.weeklyRunningDays', 1);
-        }
-
-        setCurrentStepIndex(nextStepIndex);
-      } else {
-        // Show validation errors
-        const errors = form.formState.errors;
-        const errorMessages = Object.values(errors)
-          .map(error => error.message)
-          .filter(Boolean)
-          .join(", ");
-
-        toast({
-          title: "Please complete this step",
-          description: errorMessages || "Please fill in all required fields correctly.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Handle back button click
-  const handleBack = () => {
-    if (currentStepIndex === visibleSteps.length - 1) {
-      setPreviewData(null);
-    }
-
-    const prevStepIndex = Math.max(currentStepIndex - 1, 0);
-    const prevStepId = visibleSteps[prevStepIndex]?.id;
-
-    // Reset slider values when moving back to a slider step
-    if (prevStepId === 'mileage') {
-      form.setValue('trainingPreferences.maxWeeklyMileage', 0);
-    } else if (prevStepId === 'workouts') {
-      form.setValue('trainingPreferences.weeklyWorkouts', 0);
-    } else if (prevStepId === 'runningDays') {
-      form.setValue('trainingPreferences.weeklyRunningDays', 1);
-    }
-
-    setCurrentStepIndex(prevStepIndex);
-  };
-
-  // Helper function to get fields for each step
-  const getFieldsForStep = (stepId: string): string[] => {
-    switch (stepId) {
-      case "goal":
-        return ["goal"];
-      case "raceDistance":
-        if (form.watch("targetRace.distance") === RaceDistances.OTHER) {
-          return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
-        }
-        return ["targetRace.distance"];
-      case "raceDate":
-        return ["targetRace.date"];
-      case "raceTimes":
-        return ["targetRace.previousBest", "targetRace.goalTime"];
-      case "experience":
-        return ["runningExperience.level"];
-      case "fitness":
-        return ["runningExperience.fitnessLevel"];
-      case "runningDays":
-        return ["trainingPreferences.weeklyRunningDays"];
-      case "mileage":
-        return ["trainingPreferences.maxWeeklyMileage"];
-      case "workouts":
-        return ["trainingPreferences.weeklyWorkouts"];
-      case "longRunDay":
-        return ["trainingPreferences.preferredLongRunDay"];
-      case "coachingStyle":
-        return ["trainingPreferences.coachingStyle"];
-      case "startDate":
-        return ["startDate"];
-      default:
-        return [];
-    }
-  };
-
-  // Render form fields for sliders
-
-  // Submit the plan
-  const handleSubmitPlan = async (data: PlanGeneratorFormData) => {
-    try {
-      // Validate all fields before proceeding
-      const isValid = await form.trigger();
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please complete all required fields before proceeding.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      setIsSubmitting(true);
-
-      // Calculate end date
-      const planStartDate = new Date(data.startDate);
-      const endDate = data.targetRace?.date
-        ? new Date(data.targetRace.date)
-        : addWeeks(planStartDate, 12);
-
-      // Prepare the plan data
-      const planData = {
-        ...data,
-        endDate,
-      };
-
-      // If onPreview is provided, call it with the current data
-      if (onPreview) {
-        onPreview(planData);
-      }
-
-      // Reset everything
-      setOpen(false);
-      form.reset();
-      setCurrentStepIndex(0);
-
-      toast({
-        title: "Plan Created",
-        description: "Your training plan has been created successfully!",
-      });
-    } catch (error) {
-      console.error("Error submitting plan:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create plan. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Render the current question based on step ID
   const renderQuestion = () => {
@@ -446,21 +407,23 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "raceDistance":
         return (
-          <>
+          <div className="space-y-4">
             <FormField
-              control={form.control}
+              control={form.control} 
               name="targetRace.distance"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Which race distance are you targeting?</FormLabel>
-                  <Select onValueChange={(value) => {
-                    field.onChange(value);
-                    if (value !== RaceDistances.OTHER) {
-                      form.setValue('targetRace.customDistance.value', 0);
-                      form.setValue('targetRace.customDistance.unit', '');
-                    }
-                  }}
-                  defaultValue={field.value}>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value !== RaceDistances.OTHER) {
+                        form.setValue('targetRace.customDistance.value', 0);
+                        form.setValue('targetRace.customDistance.unit', '');
+                      }
+                    }} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select race distance" />
@@ -478,8 +441,9 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 </FormItem>
               )}
             />
+
             {form.watch("targetRace.distance") === RaceDistances.OTHER && (
-              <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="targetRace.customDistance.value"
@@ -492,11 +456,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                           min="0"
                           step="0.1"
                           placeholder="Enter distance"
-                          {...field}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                            field.onChange(value);
-                          }}
+                          value={field.value}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -530,7 +491,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 />
               </div>
             )}
-          </>
+          </div>
         );
 
       case "raceDate":
