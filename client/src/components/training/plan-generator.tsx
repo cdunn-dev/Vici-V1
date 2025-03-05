@@ -107,18 +107,18 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         fitnessLevel: "",
       },
       trainingPreferences: {
-        weeklyRunningDays: 3,
-        maxWeeklyMileage: 15,
-        weeklyWorkouts: 1,
+        weeklyRunningDays: runningDaysValue,
+        maxWeeklyMileage: mileageValue,
+        weeklyWorkouts: workoutsValue,
         preferredLongRunDay: "",
-        coachingStyle: "Motivational", // Set a default coaching style
+        coachingStyle: "Motivational",
       },
       targetRace: {
         date: "",
         distance: "",
         customDistance: {
           value: 0,
-          unit: "miles", // Set default unit to avoid validation error
+          unit: "miles",
         },
         previousBest: "",
         goalTime: "",
@@ -216,9 +216,13 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
+      // Validate all fields before preview
       const isValid = await form.trigger();
       if (!isValid) {
         const errors = form.formState.errors;
+        console.log("Form Errors:", errors); // Debug log
+
+        // Extract error messages
         const errorMessages = Object.entries(errors)
           .map(([key, error]) => {
             if (typeof error === 'object' && error !== null) {
@@ -250,8 +254,13 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           weeklyRunningDays: runningDaysValue,
           maxWeeklyMileage: mileageValue,
           weeklyWorkouts: workoutsValue,
-          coachingStyle: formData.trainingPreferences.coachingStyle || "Motivational",
+          coachingStyle: "Motivational",
         };
+
+        // Handle start date
+        if (!formData.startDate) {
+          formData.startDate = new Date().toISOString();
+        }
 
         // Set default values for custom distance if not a custom race
         if (formData.targetRace?.distance !== RaceDistances.OTHER) {
