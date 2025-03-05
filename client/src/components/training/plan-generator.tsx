@@ -784,6 +784,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     onClick={() => {
                       const today = new Date();
                       field.onChange(today.toISOString());
+                      form.setValue("startDate", today.toISOString(), { 
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true
+                      });
                     }}
                   >
                     Start Today
@@ -795,6 +800,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     onClick={() => {
                       const nextMondayDate = nextMonday(new Date());
                       field.onChange(nextMondayDate.toISOString());
+                      form.setValue("startDate", nextMondayDate.toISOString(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true
+                      });
                     }}
                   >
                     Start Next Week
@@ -803,10 +813,39 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 <Calendar
                   mode="single"
                   selected={field.value ? new Date(field.value) : undefined}
-                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date.toISOString());
+                      form.setValue("startDate", date.toISOString(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true
+                      });
+                    }
+                  }}
                   disabled={(date) => date < new Date()}
                   className="rounded-md border"
                 />
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={async () => {
+                      const isValid = await form.trigger("startDate");
+                      if (isValid) {
+                        handleNext();
+                      } else {
+                        toast({
+                          title: "Please select a start date",
+                          description: "You must select a start date to continue",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Continue with Selected Date
+                  </Button>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
