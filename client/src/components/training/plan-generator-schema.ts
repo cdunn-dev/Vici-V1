@@ -114,6 +114,11 @@ export const planGeneratorSchema = z.object({
         });
       }
     }
+  } else {
+    // For non-race goals, ensure targetRace is null/undefined
+    if (data.targetRace) {
+      data.targetRace = undefined;
+    }
   }
 });
 
