@@ -215,7 +215,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Handle next button click with proper validation
+  // Update the handleNext function to properly handle validation and data submission
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -252,7 +252,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Ensure all required fields are set
+        // Ensure all preferences are set
         formData.trainingPreferences = {
           ...formData.trainingPreferences,
           weeklyRunningDays: runningDaysValue,
@@ -261,10 +261,20 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           coachingStyle: "Motivational",
         };
 
-        // Clear race data if not a race goal
+        // For non-race goals, ensure targetRace is removed
         if (formData.goal !== TrainingGoals.FIRST_RACE && formData.goal !== TrainingGoals.PERSONAL_BEST) {
-          formData.targetRace = undefined;
+          delete formData.targetRace;
+        } else if (formData.targetRace) {
+          // For race goals, ensure proper date format
+          if (formData.targetRace.date) {
+            formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
+          }
         }
+
+        // Ensure proper start date format
+        formData.startDate = new Date(formData.startDate).toISOString();
+
+        console.log("Submitting form data:", formData); // Debug log
 
         // Request plan preview from backend
         const response = await fetch('/api/training-plans/preview', {
