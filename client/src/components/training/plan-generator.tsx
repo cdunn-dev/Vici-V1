@@ -191,23 +191,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       const currentField = currentStep.id;
       const isValid = await form.trigger(currentField as any);
       if (isValid) {
-        // Get the next step ID
-        const nextStepIndex = Math.min(currentStepIndex + 1, visibleSteps.length - 1);
-        const nextStepId = visibleSteps[nextStepIndex]?.id;
-
-        // Reset slider values if navigating to specific steps that contain sliders
-        if (nextStepId === 'mileage' || nextStepId === 'workouts' || nextStepId === 'runningDays') {
-          // Only reset these fields if they're part of the next step
-          if (nextStepId === 'mileage') {
-            form.resetField('trainingPreferences.maxWeeklyMileage');
-          } else if (nextStepId === 'workouts') {
-            form.resetField('trainingPreferences.weeklyWorkouts');
-          } else if (nextStepId === 'runningDays') {
-            form.resetField('trainingPreferences.weeklyRunningDays');
-          }
-        }
-
-        setCurrentStepIndex(nextStepIndex);
+        setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
       }
     }
   };
@@ -218,20 +202,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
     // Get the previous step ID
     const prevStepIndex = Math.max(currentStepIndex - 1, 0);
-    const prevStepId = visibleSteps[prevStepIndex]?.id;
-
-    // Reset slider values if navigating to specific steps that contain sliders
-    if (prevStepId === 'mileage' || prevStepId === 'workouts' || prevStepId === 'runningDays') {
-      // Only reset these fields if they're part of the previous step
-      if (prevStepId === 'mileage') {
-        form.resetField('trainingPreferences.maxWeeklyMileage');
-      } else if (prevStepId === 'workouts') {
-        form.resetField('trainingPreferences.weeklyWorkouts');
-      } else if (prevStepId === 'runningDays') {
-        form.resetField('trainingPreferences.weeklyRunningDays');
-      }
-    }
-
     setCurrentStepIndex(prevStepIndex);
   };
 
@@ -269,7 +239,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
         // Ensure numeric value
-        const numericValue = Number(field.value) || 0;
+        const numericValue = Number(field.value);
 
         return (
           <FormItem>
@@ -303,7 +273,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
         // Ensure numeric value
-        const numericValue = Number(field.value) || 0;
+        const numericValue = Number(field.value);
 
         return (
           <FormItem>
