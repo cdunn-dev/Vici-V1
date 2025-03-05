@@ -16,7 +16,6 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressCount, setPressCount] = useState(0);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (pressTimer) {
@@ -77,13 +76,11 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: "hours" | "minutes" | "seconds") => {
     const val = e.target.value === "" ? "" : parseInt(e.target.value);
 
-    // Allow empty string or valid number
     if (val === "" || !isNaN(val)) {
       let newHours = type === "hours" ? val : hours;
       let newMinutes = type === "minutes" ? val : minutes;
       let newSeconds = type === "seconds" ? val : seconds;
 
-      // Enforce limits if value is a number
       if (typeof val === "number") {
         switch (type) {
           case "hours":
@@ -97,11 +94,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
         }
       }
 
-      // Only format as HH:MM:SS if all fields have values
       if (newHours !== "" && newMinutes !== "" && newSeconds !== "") {
         onChange(`${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}:${newSeconds.toString().padStart(2, "0")}`);
       } else {
-        // Keep the raw values in the form state
         onChange(`${newHours || "00"}:${newMinutes || "00"}:${newSeconds || "00"}`);
       }
     }
@@ -114,13 +109,12 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
         <div className="relative">
           <FormControl>
             <Input
-              type="number"
-              min="0"
-              max="23"
+              type="text"
+              inputMode="numeric"
               placeholder="HH"
               value={hours}
               onChange={(e) => handleInputChange(e, "hours")}
-              className={`pr-8 ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -153,13 +147,12 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
         <div className="relative">
           <FormControl>
             <Input
-              type="number"
-              min="0"
-              max="59"
+              type="text"
+              inputMode="numeric"
               placeholder="MM"
               value={minutes}
               onChange={(e) => handleInputChange(e, "minutes")}
-              className={`pr-8 ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -192,13 +185,12 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
         <div className="relative">
           <FormControl>
             <Input
-              type="number"
-              min="0"
-              max="59"
+              type="text"
+              inputMode="numeric"
               placeholder="SS"
               value={seconds}
               onChange={(e) => handleInputChange(e, "seconds")}
-              className={`pr-8 ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
