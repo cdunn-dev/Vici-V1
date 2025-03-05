@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, MessageSquare, ThumbsUp, Loader2, MapPin, Calendar } from "lucide-react";
+import { ChevronDown, ChevronRight, MessageSquare, ThumbsUp, Loader2, MapPin, Calendar, Check } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -9,9 +9,10 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 
 interface ProgramOverviewProps {
@@ -62,111 +63,117 @@ export default function ProgramOverview({
   const getWorkoutTypeColor = (type: string) => {
     switch (type) {
       case "Easy Run":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "Long Run":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "Speed Work":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
       case "Tempo Run":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
     }
+  };
+
+  const calculateWeeklyCompletion = (workouts: typeof plan.weeklyPlans[0]['workouts']) => {
+    const completed = workouts.filter(w => w.completed).length;
+    return (completed / workouts.length) * 100;
   };
 
   return (
     <div className="space-y-6">
-      <Accordion type="single" collapsible className="w-full space-y-4">
-        <AccordionItem value="overview">
-          <AccordionTrigger className="text-lg font-semibold">
-            Program Overview
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 p-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="font-medium">Goal:</span> {plan.goal}
-              </div>
-              <div>
-                <span className="font-medium">Experience Level:</span>{" "}
-                {plan.runningExperience.level}
-              </div>
-              <div>
-                <span className="font-medium">Current Fitness:</span>{" "}
-                {plan.runningExperience.fitnessLevel}
-              </div>
-              <div>
-                <span className="font-medium">Weekly Running Days:</span>{" "}
-                {plan.trainingPreferences.weeklyRunningDays}
-              </div>
-              <div>
-                <span className="font-medium">Peak Weekly Mileage:</span>{" "}
-                {plan.trainingPreferences.maxWeeklyMileage} miles
-              </div>
-              <div>
-                <span className="font-medium">Quality Sessions:</span>{" "}
-                {plan.trainingPreferences.weeklyWorkouts} per week
-              </div>
-            </div>
-            {plan.targetRace && (
-              <div className="mt-4 p-4 bg-muted rounded-lg">
-                <h3 className="font-semibold mb-2">Race Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="font-medium">Distance:</span>{" "}
-                    {plan.targetRace.distance}
-                  </div>
-                  <div>
-                    <span className="font-medium">Date:</span>{" "}
-                    {format(new Date(plan.targetRace.date), "PPP")}
-                  </div>
-                  {plan.targetRace.previousBest && (
-                    <div>
-                      <span className="font-medium">Previous Best:</span>{" "}
-                      {plan.targetRace.previousBest}
-                    </div>
-                  )}
-                  {plan.targetRace.goalTime && (
-                    <div>
-                      <span className="font-medium">Goal Time:</span>{" "}
-                      {plan.targetRace.goalTime}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </AccordionContent>
-        </AccordionItem>
+      {/* Overview Section */}
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight">{plan.goal}</h2>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(plan.startDate), "MMM d, yyyy")} - {format(new Date(plan.endDate), "MMM d, yyyy")}
+            </p>
+          </div>
+          {plan.targetRace && (
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {plan.targetRace.distance}
+            </Badge>
+          )}
+        </div>
+        <Separator />
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <p className="text-sm font-medium">Experience Level</p>
+            <p className="text-2xl font-bold">{plan.runningExperience.level}</p>
+            <p className="text-sm text-muted-foreground">{plan.runningExperience.fitnessLevel}</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Weekly Schedule</p>
+            <p className="text-2xl font-bold">{plan.trainingPreferences.weeklyRunningDays} days</p>
+            <p className="text-sm text-muted-foreground">{plan.trainingPreferences.weeklyWorkouts} quality sessions</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium">Peak Mileage</p>
+            <p className="text-2xl font-bold">{plan.trainingPreferences.maxWeeklyMileage}</p>
+            <p className="text-sm text-muted-foreground">miles per week</p>
+          </div>
+        </div>
+      </div>
 
-        {plan.weeklyPlans.map((week, index) => (
-          <AccordionItem key={week.week} value={`week-${week.week}`}>
-            <AccordionTrigger className="px-4 py-2 bg-muted hover:bg-muted/80 rounded-lg">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center space-x-4">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <span>Week {week.week}</span>
+      {/* Weekly Plans Accordion */}
+      <Accordion type="single" collapsible className="w-full space-y-2">
+        {plan.weeklyPlans.map((week) => (
+          <AccordionItem 
+            key={week.week} 
+            value={`week-${week.week}`}
+            className="border rounded-lg overflow-hidden"
+          >
+            <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50">
+              <div className="flex flex-1 items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-semibold">Week {week.week}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {week.totalMileage} miles planned
+                    </span>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {week.totalMileage} miles
+                <div className="flex items-center gap-4 mr-4">
+                  <div className="w-32">
+                    <Progress value={calculateWeeklyCompletion(week.workouts)} className="h-2" />
+                  </div>
                 </div>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 py-2">
-              <div className="space-y-3">
+            <AccordionContent>
+              <div className="px-4 py-2 space-y-2">
                 {week.workouts.map((workout, workoutIndex) => (
                   <div
                     key={workoutIndex}
                     className="flex items-center justify-between p-3 bg-background rounded-lg border"
                   >
-                    <div className="flex items-center space-x-4">
-                      <Badge variant="outline" className={getWorkoutTypeColor(workout.type)}>
-                        {workout.type}
-                      </Badge>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center h-8 w-8">
+                        {workout.completed ? (
+                          <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          </div>
+                        ) : (
+                          <div className="h-6 w-6 rounded-full border-2 border-muted" />
+                        )}
+                      </div>
                       <div>
-                        <div className="font-medium">
-                          {format(new Date(workout.day), "EEEE, MMM d")}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {workout.description}
+                        <Badge variant="outline" className={getWorkoutTypeColor(workout.type)}>
+                          {workout.type}
+                        </Badge>
+                        <div className="mt-1">
+                          <div className="font-medium">
+                            {format(new Date(workout.day), "EEEE, MMM d")}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {workout.description}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -181,6 +188,7 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
+      {/* Action Buttons */}
       {showActions && (
         <Card>
           <CardContent className="pt-6">
