@@ -75,6 +75,7 @@ const STEPS = [
   { id: "mileage", label: "Weekly Mileage" },
   { id: "workouts", label: "Quality Sessions" },
   { id: "longRunDay", label: "Long Run Day" },
+  { id: "coachingStyle", label: "Coaching Style" },
   { id: "startDate", label: "Training Plan Start Date" },
   { id: "preview", label: "Preview Plan" },
 ];
@@ -204,6 +205,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         return ["trainingPreferences.weeklyWorkouts"];
       case "longRunDay":
         return ["trainingPreferences.preferredLongRunDay"];
+      case "coachingStyle":
+        return ["trainingPreferences.coachingStyle"];
       case "startDate":
         return ["startDate"];
       default:
@@ -734,7 +737,37 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             )}
           />
         );
-
+      case "coachingStyle":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.coachingStyle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What type of coaching style would you prefer?</FormLabel>
+                <FormDescription>
+                  {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions] ||
+                    "Choose a coaching style that matches your preferences"}
+                </FormDescription>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coaching style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(CoachingStyles).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
       case "startDate":
         return (
           <FormField
