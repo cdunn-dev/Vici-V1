@@ -215,7 +215,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Update the handleNext function to properly handle validation and data submission
+  // Update the handleNext function to properly handle dates and validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -226,7 +226,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         const errors = form.formState.errors;
         console.log("Form Errors:", errors); // Debug log
 
-        // Extract error messages
         const errorMessages = Object.entries(errors)
           .map(([key, error]) => {
             if (typeof error === 'object' && error !== null) {
@@ -261,14 +260,19 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           coachingStyle: "Motivational",
         };
 
-        // For non-race goals, ensure targetRace is removed
-        if (formData.goal !== TrainingGoals.FIRST_RACE && formData.goal !== TrainingGoals.PERSONAL_BEST) {
-          delete formData.targetRace;
-        } else if (formData.targetRace) {
-          // For race goals, ensure proper date format
-          if (formData.targetRace.date) {
+        // Handle dates and race information
+        if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
+          if (formData.targetRace) {
             formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
+            if (formData.targetRace.distance !== RaceDistances.OTHER) {
+              formData.targetRace.customDistance = {
+                value: 0,
+                unit: "miles",
+              };
+            }
           }
+        } else {
+          delete formData.targetRace;
         }
 
         // Ensure proper start date format
@@ -276,7 +280,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
         console.log("Submitting form data:", formData); // Debug log
 
-        // Request plan preview from backend
         const response = await fetch('/api/training-plans/preview', {
           method: 'POST',
           headers: {
