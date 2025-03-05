@@ -48,7 +48,7 @@ import {
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
 
-// Define steps with proper conditionals
+// Update STEPS array to include a final confirmation step
 const STEPS = [
   { id: "goal", label: "Training Goal" },
   {
@@ -77,6 +77,7 @@ const STEPS = [
   { id: "longRunDay", label: "Long Run Day" },
   { id: "coachingStyle", label: "Coaching Style" },
   { id: "startDate", label: "Training Plan Start Date" },
+  { id: "confirmation", label: "Confirm Plan Generation" },
   { id: "preview", label: "Preview Plan" },
 ];
 
@@ -784,7 +785,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     onClick={() => {
                       const today = new Date();
                       field.onChange(today.toISOString());
-                      form.setValue("startDate", today.toISOString(), { 
+                      form.setValue("startDate", today.toISOString(), {
                         shouldValidate: true,
                         shouldDirty: true,
                         shouldTouch: true
@@ -826,30 +827,34 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   disabled={(date) => date < new Date()}
                   className="rounded-md border"
                 />
-                <div className="mt-4">
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={async () => {
-                      const isValid = await form.trigger("startDate");
-                      if (isValid) {
-                        handleNext();
-                      } else {
-                        toast({
-                          title: "Please select a start date",
-                          description: "You must select a start date to continue",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Continue with Selected Date
-                  </Button>
-                </div>
                 <FormMessage />
               </FormItem>
             )}
           />
+        );
+
+      case "confirmation":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Ready to Generate Your Plan</h2>
+            <p className="text-muted-foreground">
+              We'll create a personalized training plan based on your goals and preferences.
+              Click "Preview Plan" to see your customized training schedule.
+            </p>
+            <div className="bg-muted p-4 rounded-md">
+              <h3 className="font-semibold mb-2">Summary of Your Preferences:</h3>
+              <p><strong>Goal:</strong> {form.getValues().goal}</p>
+              <p>
+                <strong>Training Days:</strong> {form.getValues().trainingPreferences.weeklyRunningDays} days/week
+              </p>
+              <p>
+                <strong>Target Mileage:</strong> {form.getValues().trainingPreferences.maxWeeklyMileage} miles/week
+              </p>
+              <p>
+                <strong>Start Date:</strong> {format(new Date(form.getValues().startDate), "PPP")}
+              </p>
+            </div>
+          </div>
         );
 
       case "preview":
@@ -994,11 +999,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 Back
               </Button>
 
-              {currentStepIndex === visibleSteps.length - 1 ? (
+              {currentStep.id === "preview" ? (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4w-4 animate-spin" />
                       Creating Plan...
                     </>
                   ) : (
@@ -1011,7 +1016,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   onClick={handleNext}
                   disabled={isSubmitting}
                 >
-                  {currentStepIndex === visibleSteps.length - 2 ? (
+                  {currentStep.id === "confirmation" ? (
                     isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
