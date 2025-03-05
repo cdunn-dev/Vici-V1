@@ -30,11 +30,9 @@ const targetRaceSchema = z.object({
     required_error: "Race date is required",
     invalid_type_error: "Invalid date format",
   }),
-  previousBest: z.string().optional()
-    .refine(val => !val || isValidTimeFormat(val), "Please enter a valid time in HH:MM:SS format"),
-  goalTime: z.string().optional()
-    .refine(val => !val || isValidTimeFormat(val), "Please enter a valid time in HH:MM:SS format"),
-}).optional();
+  previousBest: z.string().optional(),
+  goalTime: z.string().optional(),
+}).partial().optional();
 
 const runningExperienceSchema = z.object({
   level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]], {
@@ -95,7 +93,7 @@ export const planGeneratorSchema = z.object({
     invalid_type_error: "Invalid date format",
   }).transform((date) => date.toISOString()),
 }).superRefine((data, ctx) => {
-  // Only validate race-related fields when a race goal is selected
+  // Only validate race fields when a race-related goal is selected
   if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
     if (!data.targetRace) {
       ctx.addIssue({
@@ -129,15 +127,15 @@ export const planGeneratorSchema = z.object({
         path: ["targetRace", "date"],
       });
     }
+  }
 
-    // Only validate previous best time for personal best goals
-    if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace.previousBest) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please enter your previous best time",
-        path: ["targetRace", "previousBest"],
-      });
-    }
+  // Validate personal best time only for PB goals
+  if (data.goal === TrainingGoals.PERSONAL_BEST && (!data.targetRace?.previousBest || !isValidTimeFormat(data.targetRace.previousBest))) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Please enter your previous best time",
+      path: ["targetRace", "previousBest"],
+    });
   }
 });
 
