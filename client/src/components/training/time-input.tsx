@@ -12,7 +12,8 @@ interface TimeInputProps {
 }
 
 export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: TimeInputProps) {
-  const [hours, minutes, seconds] = value?.split(":").map(v => v ? parseInt(v) : "") || ["", "", ""];
+  // Safely parse initial values
+  const [hours, minutes, seconds] = (value || "").split(":").map(v => v ? parseInt(v) : "");
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressCount, setPressCount] = useState(0);
 
@@ -54,9 +55,9 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
   };
 
   const updateTime = (type: "hours" | "minutes" | "seconds", delta: number) => {
-    let newHours = hours === "" ? 0 : hours;
-    let newMinutes = minutes === "" ? 0 : minutes;
-    let newSeconds = seconds === "" ? 0 : seconds;
+    let newHours = hours === "" ? 0 : Number(hours);
+    let newMinutes = minutes === "" ? 0 : Number(minutes);
+    let newSeconds = seconds === "" ? 0 : Number(seconds);
 
     switch (type) {
       case "hours":
