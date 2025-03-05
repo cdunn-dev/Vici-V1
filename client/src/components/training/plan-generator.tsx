@@ -215,7 +215,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Update the handleNext function to properly handle dates and validation
+  // Handle next button click with proper validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
@@ -261,9 +261,16 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         };
 
         // Handle dates and race information
+        formData.startDate = new Date(formData.startDate).toISOString();
+
         if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
           if (formData.targetRace) {
-            formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
+            // Ensure date is in ISO format
+            if (formData.targetRace.date) {
+              formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
+            }
+
+            // Handle custom distance
             if (formData.targetRace.distance !== RaceDistances.OTHER) {
               formData.targetRace.customDistance = {
                 value: 0,
@@ -274,9 +281,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         } else {
           delete formData.targetRace;
         }
-
-        // Ensure proper start date format
-        formData.startDate = new Date(formData.startDate).toISOString();
 
         console.log("Submitting form data:", formData); // Debug log
 

@@ -7,7 +7,6 @@ import {
   FitnessLevels,
   DaysOfWeek,
   CoachingStyles,
-  isValidTimeFormat,
 } from "./plan-generator-constants";
 
 const customDistanceSchema = z.object({
@@ -99,7 +98,7 @@ export const planGeneratorSchema = z.object({
     }
   } else {
     // For non-race goals, remove targetRace completely
-    data.targetRace = undefined;
+    delete data.targetRace;
   }
 });
 
