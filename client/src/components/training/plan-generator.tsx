@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2, ChevronRight, ChevronLeft, ThumbsUp, MessageSquare, HelpCircle } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft, HelpCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,6 +34,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks, nextMonday } from "date-fns";
+import ProgramOverview from "./program-overview";
 import {
   TrainingGoals,
   RaceDistances,
@@ -46,13 +47,6 @@ import {
   CoachingStyles,
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
-import ProgramOverview from "./program-overview"; // Import the ProgramOverview component
-
-
-interface PlanGeneratorProps {
-  existingPlan?: boolean;
-  onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
-}
 
 // Define all possible steps
 const STEPS = [
@@ -74,6 +68,11 @@ const STEPS = [
   { id: "preview", label: "Preview Plan" }
 ];
 
+interface PlanGeneratorProps {
+  existingPlan?: boolean;
+  onPreview?: (plan: PlanGeneratorFormData & { endDate: Date }) => void;
+}
+
 export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -93,8 +92,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       },
       trainingPreferences: {
         weeklyRunningDays: 0,
-        maxWeeklyMileage: 0, // Default to 0
-        weeklyWorkouts: 0, // Default to 0
+        maxWeeklyMileage: 0, // Explicitly set to 0
+        weeklyWorkouts: 0, // Explicitly set to 0
         preferredLongRunDay: "", // Empty string as default
         coachingStyle: "", // Empty string as default
       },
@@ -186,14 +185,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   const handleRequestChanges = async () => {
     try {
-      // setIsRequestingChanges(true); // Removed as it's handled by ProgramOverview
-
       // Simulate AI processing time
       await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Update the plan based on AI suggestions (This is now handled by ProgramOverview)
-      // const updatedPlan = { ... };
-      // setPreviewData(updatedPlan);
 
       toast({
         title: "Plan Updated",
@@ -206,8 +199,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         description: "Failed to update plan. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      // setIsRequestingChanges(false); // Removed as it's handled by ProgramOverview
     }
   };
 
@@ -551,12 +542,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     min={0}
                     max={150}
                     step={5}
-                    value={[field.value]}
+                    value={[field.value || 0]} // Ensure default of 0
                     onValueChange={(vals) => field.onChange(Math.round(vals[0] / 5) * 5)}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value} miles per week
+                  {field.value || 0} miles per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -570,18 +561,21 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             name="trainingPreferences.weeklyWorkouts"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>How many workouts/quality sessions per week?</FormLabel>
+                <FormLabel>How many quality sessions per week?</FormLabel>
+                <FormDescription>
+                  These are harder workouts like intervals, tempo runs, or progression runs
+                </FormDescription>
                 <FormControl>
                   <Slider
                     min={0}
                     max={3}
                     step={1}
-                    value={[field.value]}
+                    value={[field.value || 0]} // Ensure default of 0
                     onValueChange={(vals) => field.onChange(vals[0])}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value} workouts per week
+                  {field.value || 0} quality sessions per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -686,16 +680,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           <div className="space-y-6">
             <div className="p-6 bg-muted rounded-lg">
               <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
-              {/* Import and use the ProgramOverview component */}
               <ProgramOverview
                 plan={previewData}
                 onApprove={handleApprovePlan}
                 onAskQuestion={(question: string) => {
-                  // Handle AI interaction through program-overview.tsx
+                  // Handle AI coach interaction
                   console.log("Question asked:", question);
                 }}
                 onRequestChanges={(changes: string) => {
-                  // Handle change requests through program-overview.tsx
+                  // Handle plan modification requests
                   console.log("Changes requested:", changes);
                 }}
               />
