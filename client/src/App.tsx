@@ -75,3 +75,42 @@ function App() {
 }
 
 export default App;
+import React from "react";
+import { Route, Switch } from "wouter";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AuthPage from "@/pages/AuthPage";
+import Dashboard from "@/pages/Dashboard";
+import Profile from "@/pages/profile";
+import NotFound from "@/pages/NotFound";
+import { ThemeProvider } from "@/context/ThemeContext";
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Switch>
+            <Route path="/auth" component={AuthPage} />
+            <Route path="/">
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            </Route>
+            <Route path="/profile">
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            </Route>
+            <Route component={NotFound} />
+          </Switch>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
+export default App;
