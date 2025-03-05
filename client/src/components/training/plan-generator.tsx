@@ -47,7 +47,7 @@ import {
   CoachingStyles,
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
-import { TimeInput } from "./time-input"; 
+import { TimeInput } from "./time-input";
 
 // Update STEPS array to include a final confirmation step
 const STEPS = [
@@ -866,23 +866,76 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 <div className="border rounded-lg p-6">
                   <ProgramOverview
                     plan={previewData}
-                    showActions={false}
+                    showActions={true}
+                    onApprove={handleApprovePlan}
+                    onAskQuestion={async (question) => {
+                      setIsSubmitting(true);
+                      try {
+                        // Implementation for question handling
+                        const response = await fetch('/api/training-plans/ask', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            planId: previewData.id,
+                            question
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(await response.text());
+                        }
+
+                        toast({
+                          title: "Question Sent",
+                          description: "Your question has been sent to the AI coach.",
+                        });
+                      } catch (error) {
+                        console.error("Error asking question:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to send question. Please try again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                    onRequestChanges={async (changes) => {
+                      setIsSubmitting(true);
+                      try {
+                        // Implementation for changes handling
+                        const response = await fetch('/api/training-plans/modify', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            planId: previewData.id,
+                            changes
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(await response.text());
+                        }
+
+                        const updatedPlan = await response.json();
+                        setPreviewData(updatedPlan);
+
+                        toast({
+                          title: "Plan Updated",
+                          description: "Your training plan has been updated based on your feedback.",
+                        });
+                      } catch (error) {
+                        console.error("Error requesting changes:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to update plan. Please try again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
                   />
-                </div>
-                <div className="flex justify-end space-x-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    Make Changes
-                  </Button>
-                  <Button onClick={handleApprovePlan} disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving Plan...
-                      </>
-                    ) : (
-                      "Approve Plan"
-                    )}
-                  </Button>
                 </div>
               </div>
             ) : (

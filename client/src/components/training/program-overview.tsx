@@ -95,6 +95,11 @@ export default function ProgramOverview({
             <Badge variant="secondary" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               {plan.targetRace.distance}
+              {plan.targetRace.customDistance && (
+                <span>
+                  ({plan.targetRace.customDistance.value} {plan.targetRace.customDistance.unit})
+                </span>
+              )}
             </Badge>
           )}
         </div>
@@ -116,6 +121,32 @@ export default function ProgramOverview({
             <p className="text-sm text-muted-foreground">miles per week</p>
           </div>
         </div>
+        {plan.targetRace && (
+          <>
+            <Separator />
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Race Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Race Date</p>
+                  <p className="text-xl">{format(new Date(plan.targetRace.date), "PPP")}</p>
+                </div>
+                {plan.targetRace.previousBest && (
+                  <div>
+                    <p className="text-sm font-medium">Previous Best</p>
+                    <p className="text-xl">{plan.targetRace.previousBest}</p>
+                  </div>
+                )}
+                {plan.targetRace.goalTime && (
+                  <div>
+                    <p className="text-sm font-medium">Goal Time</p>
+                    <p className="text-xl">{plan.targetRace.goalTime}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Weekly Plans Accordion */}
