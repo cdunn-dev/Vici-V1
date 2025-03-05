@@ -96,7 +96,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [mileageValue, setMileageValue] = useState(15);
   const [workoutsValue, setWorkoutsValue] = useState(1);
 
-  // Form initialization with proper defaults
+  // Form initialization with proper defaults including coachingStyle
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -111,14 +111,14 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         maxWeeklyMileage: 15,
         weeklyWorkouts: 1,
         preferredLongRunDay: "",
-        coachingStyle: "",
+        coachingStyle: "Motivational", // Set a default coaching style
       },
       targetRace: {
         date: "",
         distance: "",
         customDistance: {
           value: 0,
-          unit: "",
+          unit: "miles", // Set default unit to avoid validation error
         },
         previousBest: "",
         goalTime: "",
@@ -216,12 +216,19 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
-      // Ensure all fields are validated
       const isValid = await form.trigger();
       if (!isValid) {
         const errors = form.formState.errors;
         const errorMessages = Object.entries(errors)
-          .map(([key, error]) => error?.message)
+          .map(([key, error]) => {
+            if (typeof error === 'object' && error !== null) {
+              return Object.values(error)
+                .map(err => err?.message)
+                .filter(Boolean)
+                .join(", ");
+            }
+            return error?.message;
+          })
           .filter(Boolean)
           .join(", ");
 
@@ -237,17 +244,21 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Ensure slider values are included
+        // Ensure all required fields are set
         formData.trainingPreferences = {
           ...formData.trainingPreferences,
           weeklyRunningDays: runningDaysValue,
           maxWeeklyMileage: mileageValue,
           weeklyWorkouts: workoutsValue,
+          coachingStyle: formData.trainingPreferences.coachingStyle || "Motivational",
         };
 
-        // Standardize date handling
-        if (!formData.startDate) {
-          formData.startDate = new Date().toISOString();
+        // Set default values for custom distance if not a custom race
+        if (formData.targetRace?.distance !== RaceDistances.OTHER) {
+          formData.targetRace.customDistance = {
+            value: 0,
+            unit: "miles",
+          };
         }
 
         // Request plan preview from backend
@@ -271,7 +282,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         console.error("Error generating preview:", error);
         toast({
           title: "Error",
-          description: error.message || "Failed to generate plan preview. Please try again.",
+          description: error instanceof Error ? error.message : "Failed to generate plan preview. Please try again.",
           variant: "destructive",
         });
       } finally {
