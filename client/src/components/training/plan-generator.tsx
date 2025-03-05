@@ -507,14 +507,15 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     max={7}
                     step={1}
                     defaultValue={[3]}
-                    value={[field.value]}
+                    value={[field.value ?? 3]}
                     onValueChange={(vals) => {
-                      field.onChange(Math.round(vals[0]));
+                      const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
+                      field.onChange(newValue);
                     }}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value} days per week
+                  {field.value ?? 3} days per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -539,14 +540,15 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     max={150}
                     step={5}
                     defaultValue={[15]}
-                    value={[field.value]}
+                    value={[field.value ?? 15]}
                     onValueChange={(vals) => {
-                      field.onChange(Math.round(vals[0] / 5) * 5);
+                      const newValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
+                      field.onChange(newValue);
                     }}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value} miles per week
+                  {field.value ?? 15} miles per week
                 </div>
                 <FormMessage />
               </FormItem>
@@ -571,14 +573,15 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     max={3}
                     step={1}
                     defaultValue={[1]}
-                    value={[field.value]}
+                    value={[field.value ?? 1]}
                     onValueChange={(vals) => {
-                      field.onChange(Math.round(vals[0]));
+                      const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
+                      field.onChange(newValue);
                     }}
                   />
                 </FormControl>
                 <div className="text-sm text-muted-foreground text-center">
-                  {field.value} quality sessions per week
+                  {field.value ?? 1} quality sessions per week
                 </div>
                 <FormMessage />
               </FormItem>
