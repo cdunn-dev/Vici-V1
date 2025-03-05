@@ -431,162 +431,120 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number | null>(null);
 
   // Weekly Running Days field component that properly preserves state
-  const renderWeeklyRunningDaysField = () => (
-    <FormField
-      control={form.control}
-      name="trainingPreferences.weeklyRunningDays"
-      render={({ field }) => {
-        // Initialize local state from form value if not already set
-        // This ensures we only use the form value on first render
-        useEffect(() => {
-          if (weeklyRunningDays === null) {
-            const currentValue = form.getValues('trainingPreferences.weeklyRunningDays');
-            if (typeof currentValue === 'number' && currentValue >= 1 && currentValue <= 7) {
-              setWeeklyRunningDays(currentValue);
-            } else {
-              // Set default
-              setWeeklyRunningDays(3);
-              field.onChange(3);
-            }
-          }
-        }, [form, weeklyRunningDays]);
+  const renderWeeklyRunningDaysField = () => {
+    // The local state should be initialized outside of the render function
+    // Instead of using useEffect in the render function, we'll use the existing form value 
+    // or default to 3 if not set
+    const formValue = form.getValues('trainingPreferences.weeklyRunningDays') || 3;
+    // Only set the state if it hasn't been initialized yet
+    if (weeklyRunningDays === null) {
+      setWeeklyRunningDays(formValue);
+    }
 
-        // Use local state with fallback to default
-        const value = weeklyRunningDays !== null ? weeklyRunningDays : 3;
+    // Use local state with fallback to default
+    const value = weeklyRunningDays !== null ? weeklyRunningDays : 3;
 
-        return (
-          <FormItem>
-            <FormLabel>How many days per week would you like to run?</FormLabel>
-            <FormControl>
-              <Slider
-                min={1}
-                max={7}
-                step={1}
-                value={[value]}
-                onValueChange={(vals) => {
-                  // Update both local state and form value
-                  const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
-                  setWeeklyRunningDays(newValue);
-                  field.onChange(newValue);
-                }}
-              />
-            </FormControl>
-            <div className="text-sm text-muted-foreground text-center">
-              {value} days per week
-            </div>
-            <FormMessage />
-          </FormItem>
-        );
-      }}
-    />
-  );
+    return (
+      <FormItem>
+        <FormLabel>How many days per week would you like to run?</FormLabel>
+        <FormControl>
+          <Slider
+            min={1}
+            max={7}
+            step={1}
+            value={[value]}
+            onValueChange={(vals) => {
+              // Update both local state and form value
+              const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
+              setWeeklyRunningDays(newValue);
+              form.setValue('trainingPreferences.weeklyRunningDays', newValue, { shouldValidate: true });
+            }}
+          />
+        </FormControl>
+        <div className="text-sm text-muted-foreground text-center">
+          {value} days per week
+        </div>
+        <FormMessage />
+      </FormItem>
+    );
+  };
 
   // Weekly Mileage field component that properly preserves state
-  const renderWeeklyMileageField = () => (
-    <FormField
-      control={form.control}
-      name="trainingPreferences.maxWeeklyMileage"
-      render={({ field }) => {
-        // Initialize local state from form value if not already set
-        useEffect(() => {
-          if (weeklyMileage === null) {
-            const currentValue = form.getValues('trainingPreferences.maxWeeklyMileage');
-            if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 150) {
-              setWeeklyMileage(currentValue);
-            } else {
-              // Set default
-              setWeeklyMileage(15);
-              field.onChange(15);
-            }
-          }
-        }, [form, weeklyMileage]);
+  const renderWeeklyMileageField = () => {
+    // Initialize from form value directly
+    const formValue = form.getValues('trainingPreferences.maxWeeklyMileage') || 15;
+    if (weeklyMileage === null) {
+      setWeeklyMileage(formValue);
+    }
 
-        // Use local state with fallback to default
-        const value = weeklyMileage !== null ? weeklyMileage : 15;
+    // Use local state with fallback to default
+    const value = weeklyMileage !== null ? weeklyMileage : 15;
 
-        return (
-          <FormItem>
-            <FormLabel>What's your target weekly mileage?</FormLabel>
-            <FormDescription>
-              This will be the peak mileage in your training plan
-            </FormDescription>
-            <FormControl>
-              <Slider
-                min={0}
-                max={150}
-                step={5}
-                value={[value]}
-                onValueChange={(vals) => {
-                  // Always round to nearest 5 and update both local state and form
-                  const roundedValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
-                  setWeeklyMileage(roundedValue);
-                  field.onChange(roundedValue);
-                }}
-              />
-            </FormControl>
-            <div className="text-sm text-muted-foreground text-center">
-              {value} miles per week
-            </div>
-            <FormMessage />
-          </FormItem>
-        );
-      }}
-    />
-  );
+    return (
+      <FormItem>
+        <FormLabel>What's your target weekly mileage?</FormLabel>
+        <FormDescription>
+          This will be the peak mileage in your training plan
+        </FormDescription>
+        <FormControl>
+          <Slider
+            min={0}
+            max={150}
+            step={5}
+            value={[value]}
+            onValueChange={(vals) => {
+              // Always round to nearest 5 and update both local state and form
+              const roundedValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
+              setWeeklyMileage(roundedValue);
+              form.setValue('trainingPreferences.maxWeeklyMileage', roundedValue, { shouldValidate: true });
+            }}
+          />
+        </FormControl>
+        <div className="text-sm text-muted-foreground text-center">
+          {value} miles per week
+        </div>
+        <FormMessage />
+      </FormItem>
+    );
+  };
 
   // Quality Sessions field component that properly preserves state
-  const renderQualitySessionsField = () => (
-    <FormField
-      control={form.control}
-      name="trainingPreferences.weeklyWorkouts"
-      render={({ field }) => {
-        // Initialize local state from form value if not already set
-        const [qualitySessions, setQualitySessions] = useState<number | null>(null);
-        useEffect(() => {
-          if (qualitySessions === null) {
-            const currentValue = form.getValues('trainingPreferences.weeklyWorkouts');
-            if (typeof currentValue === 'number' && currentValue >= 0 && currentValue <= 3) {
-              setQualitySessions(currentValue);
-            } else {
-              // Set default
-              setQualitySessions(1);
-              field.onChange(1);
-            }
-          }
-        }, [form, qualitySessions]);
+  const renderQualitySessionsField = () => {
+    const formValue = form.getValues('trainingPreferences.weeklyWorkouts') || 1;
+    if (weeklyWorkouts === null) {
+      setWeeklyWorkouts(formValue);
+    }
 
-        // Use local state with fallback to default
-        const value = qualitySessions !== null ? qualitySessions : 1;
+    // Use local state with fallback to default
+    const value = weeklyWorkouts !== null ? weeklyWorkouts : 1;
 
-        return (
-          <FormItem>
-            <FormLabel>How many quality sessions per week?</FormLabel>
-            <FormDescription>
-              These are harder workouts like intervals, tempo runs, or progression runs
-            </FormDescription>
-            <FormControl>
-              <Slider
-                min={0}
-                max={3}
-                step={1}
-                value={[value]}
-                onValueChange={(vals) => {
-                  // Ensure we only get integers from 0-3 and update both states
-                  const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
-                  setQualitySessions(newValue);
-                  field.onChange(newValue);
-                }}
-              />
-            </FormControl>
-            <div className="text-sm text-muted-foreground text-center">
-              {value} quality sessions per week
-            </div>
-            <FormMessage />
-          </FormItem>
-        );
-      }}
-    />
-  );
+    return (
+      <FormItem>
+        <FormLabel>How many quality sessions per week?</FormLabel>
+        <FormDescription>
+          These are harder workouts like intervals, tempo runs, or progression runs
+        </FormDescription>
+        <FormControl>
+          <Slider
+            min={0}
+            max={3}
+            step={1}
+            value={[value]}
+            onValueChange={(vals) => {
+              // Ensure we only get integers from 0-3 and update both states
+              const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
+              setWeeklyWorkouts(newValue);
+              form.setValue('trainingPreferences.weeklyWorkouts', newValue, { shouldValidate: true });
+            }}
+          />
+        </FormControl>
+        <div className="text-sm text-muted-foreground text-center">
+          {value} quality sessions per week
+        </div>
+        <FormMessage />
+      </FormItem>
+    );
+  };
 
   // Render the current question based on step ID
   const renderQuestion = () => {
@@ -963,73 +921,46 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         );
       case "startDate":
         return (
-          <FormField
-            control={form.control}
-            name="startDate"
-            render={({ field }) => {
-              // Ensure we have a valid date value
-              const dateValue = field.value ? new Date(field.value) : new Date();
-
-              return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">When would you like to start?</h3>
+            <div className="flex space-x-2 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', new Date().toISOString(), { shouldValidate: true })}
+              >
+                Start Today
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', nextMonday(new Date()).toISOString(), { shouldValidate: true })}
+              >
+                Start Next Week
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>When would you like to start?</FormLabel>
-                  <div className="flex gap-4 mb-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const today = new Date().toISOString();
-                        field.onChange(today);
-                        // Explicitly set value to ensure it's captured
-                        form.setValue('startDate', today, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true
-                        });
-                      }}
-                    >
-                      Start Today
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const nextMondayDate = nextMonday(new Date()).toISOString();
-                        field.onChange(nextMondayDate);
-                        // Explicitly set value to ensure it's captured
-                        form.setValue('startDate', nextMondayDate, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true
-                        });
-                      }}
-                    >
-                      Start Next Week
-                    </Button>
-                  </div>
                   <Calendar
                     mode="single"
-                    selected={dateValue}
+                    selected={field.value ? new Date(field.value) : undefined}
                     onSelect={(date) => {
                       if (date) {
-                        const isoDate = date.toISOString();
-                        field.onChange(isoDate);
-                        // Explicitly set value to ensure it's captured
-                        form.setValue('startDate', isoDate, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true
-                        });
+                        field.onChange(date.toISOString());
+                        form.trigger('startDate'); // Trigger validation
                       }
                     }}
                     disabled={(date) => date < new Date()}
-                    className="rounded-md border mx-auto"
+                    initialFocus
                   />
                   <FormMessage />
                 </FormItem>
-              );
-            }}
-          />
+              )}
+            />
+          </div>
         );
       case "preview":
         return previewData && (
