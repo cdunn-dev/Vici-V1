@@ -3,14 +3,16 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "./components/layout/navbar";
 import Training from "./pages/training";
 import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
+import React from "react";
 
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType }) {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -67,8 +69,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <Toaster />
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
