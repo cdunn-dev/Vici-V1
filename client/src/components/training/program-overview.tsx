@@ -81,66 +81,68 @@ export default function ProgramOverview({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Overview Section */}
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-        <div className="px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">{plan.goal}</h2>
-            <p className="text-sm text-muted-foreground">
-              {format(new Date(plan.startDate), "MMM d, yyyy")} - {format(new Date(plan.endDate), "MMM d, yyyy")}
-            </p>
+        <div className="px-4 sm:px-6 py-4 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">{plan.goal}</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {format(new Date(plan.startDate), "MMM d, yyyy")} - {format(new Date(plan.endDate), "MMM d, yyyy")}
+              </p>
+            </div>
+            {plan.targetRace && (
+              <Badge variant="secondary" className="flex items-center gap-2 whitespace-nowrap">
+                <MapPin className="h-4 w-4" />
+                {plan.targetRace.distance}
+                {plan.targetRace.customDistance && (
+                  <span className="hidden sm:inline">
+                    ({plan.targetRace.customDistance.value} {plan.targetRace.customDistance.unit})
+                  </span>
+                )}
+              </Badge>
+            )}
           </div>
-          {plan.targetRace && (
-            <Badge variant="secondary" className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              {plan.targetRace.distance}
-              {plan.targetRace.customDistance && (
-                <span>
-                  ({plan.targetRace.customDistance.value} {plan.targetRace.customDistance.unit})
-                </span>
-              )}
-            </Badge>
-          )}
         </div>
         <Separator />
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <p className="text-sm font-medium">Experience Level</p>
-            <p className="text-2xl font-bold">{plan.runningExperience.level}</p>
+            <p className="text-xl sm:text-2xl font-bold mt-1">{plan.runningExperience.level}</p>
             <p className="text-sm text-muted-foreground">{plan.runningExperience.fitnessLevel}</p>
           </div>
           <div>
             <p className="text-sm font-medium">Weekly Schedule</p>
-            <p className="text-2xl font-bold">{plan.trainingPreferences.weeklyRunningDays} days</p>
+            <p className="text-xl sm:text-2xl font-bold mt-1">{plan.trainingPreferences.weeklyRunningDays} days</p>
             <p className="text-sm text-muted-foreground">{plan.trainingPreferences.weeklyWorkouts} quality sessions</p>
           </div>
           <div>
             <p className="text-sm font-medium">Peak Mileage</p>
-            <p className="text-2xl font-bold">{plan.trainingPreferences.maxWeeklyMileage}</p>
+            <p className="text-xl sm:text-2xl font-bold mt-1">{plan.trainingPreferences.maxWeeklyMileage}</p>
             <p className="text-sm text-muted-foreground">miles per week</p>
           </div>
         </div>
         {plan.targetRace && (
           <>
             <Separator />
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <h3 className="text-lg font-semibold mb-4">Race Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium">Race Date</p>
-                  <p className="text-xl">{format(new Date(plan.targetRace.date), "PPP")}</p>
+                  <p className="text-lg sm:text-xl mt-1">{format(new Date(plan.targetRace.date), "PPP")}</p>
                 </div>
                 {plan.targetRace.previousBest && (
                   <div>
                     <p className="text-sm font-medium">Previous Best</p>
-                    <p className="text-xl">{plan.targetRace.previousBest}</p>
+                    <p className="text-lg sm:text-xl mt-1">{plan.targetRace.previousBest}</p>
                   </div>
                 )}
                 {plan.targetRace.goalTime && (
                   <div>
                     <p className="text-sm font-medium">Goal Time</p>
-                    <p className="text-xl">{plan.targetRace.goalTime}</p>
+                    <p className="text-lg sm:text-xl mt-1">{plan.targetRace.goalTime}</p>
                   </div>
                 )}
               </div>
@@ -157,34 +159,34 @@ export default function ProgramOverview({
             value={`week-${week.week}`}
             className="border rounded-lg overflow-hidden"
           >
-            <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50">
+            <AccordionTrigger className="px-3 sm:px-4 py-2 hover:no-underline hover:bg-muted/50">
               <div className="flex flex-1 items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                     <Calendar className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="font-semibold">Week {week.week}</span>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-sm sm:text-base">Week {week.week}</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       {week.totalMileage} miles planned
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mr-4">
-                  <div className="w-32">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="w-20 sm:w-32">
                     <Progress value={calculateWeeklyCompletion(week.workouts)} className="h-2" />
                   </div>
                 </div>
               </div>
             </AccordionTrigger>
             <AccordionContent>
-              <div className="px-4 py-2 space-y-2">
+              <div className="px-3 sm:px-4 py-2 space-y-2">
                 {week.workouts.map((workout, workoutIndex) => (
                   <div
                     key={workoutIndex}
-                    className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background rounded-lg border gap-2 sm:gap-4"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <div className="flex items-center justify-center h-8 w-8">
                         {workout.completed ? (
                           <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
@@ -194,21 +196,21 @@ export default function ProgramOverview({
                           <div className="h-6 w-6 rounded-full border-2 border-muted" />
                         )}
                       </div>
-                      <div>
-                        <Badge variant="outline" className={getWorkoutTypeColor(workout.type)}>
+                      <div className="min-w-0">
+                        <Badge variant="outline" className={`${getWorkoutTypeColor(workout.type)} text-xs sm:text-sm`}>
                           {workout.type}
                         </Badge>
                         <div className="mt-1">
-                          <div className="font-medium">
-                            {format(new Date(workout.day), "EEEE, MMM d")}
+                          <div className="font-medium text-sm sm:text-base">
+                            {format(new Date(workout.day), "EEE, MMM d")}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2 sm:line-clamp-1">
                             {workout.description}
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm font-medium">
+                    <div className="text-sm font-medium ml-12 sm:ml-0">
                       {workout.distance} miles
                     </div>
                   </div>
@@ -222,7 +224,7 @@ export default function ProgramOverview({
       {/* Action Buttons */}
       {showActions && (
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6">
             <div className="space-y-4">
               {showQuestionForm ? (
                 <div className="space-y-4">
@@ -285,10 +287,10 @@ export default function ProgramOverview({
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center">
                   <Button
                     variant="outline"
-                    className="w-40"
+                    className="w-full sm:w-40"
                     onClick={() => setShowQuestionForm(true)}
                   >
                     <MessageSquare className="mr-2 h-4 w-4" />
@@ -296,14 +298,14 @@ export default function ProgramOverview({
                   </Button>
                   <Button
                     variant="outline"
-                    className="w-40"
+                    className="w-full sm:w-40"
                     onClick={() => setShowChangesForm(true)}
                   >
                     <ChevronDown className="mr-2 h-4 w-4" />
                     Request Changes
                   </Button>
                   {onApprove && (
-                    <Button className="w-40" onClick={onApprove}>
+                    <Button className="w-full sm:w-40" onClick={onApprove}>
                       <ThumbsUp className="mr-2 h-4 w-4" />
                       Approve Plan
                     </Button>
