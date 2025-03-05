@@ -14,15 +14,14 @@ const customDistanceSchema = z.object({
   unit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]).default("miles"),
 });
 
+const dateStringSchema = z.string().refine((date) => {
+  const parsed = new Date(date);
+  return !isNaN(parsed.getTime());
+}, "Invalid date format");
+
 const targetRaceSchema = z.object({
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
-  date: z.string().transform((date) => {
-    const parsed = new Date(date);
-    if (isNaN(parsed.getTime())) {
-      throw new Error("Invalid date format");
-    }
-    return parsed.toISOString();
-  }),
+  date: dateStringSchema,
   customDistance: customDistanceSchema.optional(),
   previousBest: z.string().optional(),
   goalTime: z.string().optional(),
@@ -55,13 +54,7 @@ export const planGeneratorSchema = z.object({
   targetRace: targetRaceSchema.optional(),
   runningExperience: runningExperienceSchema,
   trainingPreferences: trainingPreferencesSchema,
-  startDate: z.string().transform((date) => {
-    const parsed = new Date(date);
-    if (isNaN(parsed.getTime())) {
-      throw new Error("Invalid date format");
-    }
-    return parsed.toISOString();
-  }),
+  startDate: dateStringSchema,
 }).superRefine((data, ctx) => {
   if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
     if (!data.targetRace) {
