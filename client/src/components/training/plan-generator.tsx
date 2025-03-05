@@ -48,9 +48,10 @@ import {
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
 
-// Define all possible steps
+// Only showing the modified section
 const STEPS = [
   { id: "goal", label: "Training Goal" },
+  { id: "goalDescription", label: "Goal Description" },
   { id: "raceDistance", label: "Race Distance", conditional: (data: PlanGeneratorFormData) =>
     data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST },
   { id: "raceDate", label: "Race Date", conditional: (data: PlanGeneratorFormData) =>
@@ -268,16 +269,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
 
-  // Helper function to get fields for each step
+  // Update the getFieldsForStep function
   const getFieldsForStep = (stepId: string): string[] => {
     switch (stepId) {
       case "goal":
         return ["goal"];
+      case "goalDescription":
+        return ["goalDescription"];
       case "raceDistance":
-        if (form.watch("targetRace.distance") === RaceDistances.OTHER) {
-          return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
-        }
-        return ["targetRace.distance"];
+        return ["targetRace.distance", "targetRace.customDistance.value", "targetRace.customDistance.unit"];
       case "raceDate":
         return ["targetRace.date"];
       case "raceTimes":
@@ -517,6 +517,20 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "goalDescription":
+        return (
+          <FormField
+            control={form.control}
+            name="goalDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Describe your goal in more detail:</FormLabel>
+                <Input placeholder="Enter goal description" {...field} />
                 <FormMessage />
               </FormItem>
             )}
@@ -870,7 +884,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   <p><strong>Weekly Schedule:</strong> {previewData.trainingPreferences.weeklyRunningDays} days/week</p>
                   <p><strong>Peak Mileage:</strong> {previewData.trainingPreferences.maxWeeklyMileage} miles</p>
                 </div>
-                <ProgramOverview plan={previewData} onApprove={handleSubmitPlan} />
+                <ProgramOverview plan={previewData} onApprove={handleApprovePlan} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64">
@@ -1157,7 +1171,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   <p><strong>Weekly Schedule:</strong> {previewData.trainingPreferences.weeklyRunningDays} days/week</p>
                   <p><strong>Peak Mileage:</strong> {previewData.trainingPreferences.maxWeeklyMileage} miles</p>
                 </div>
-                <ProgramOverview plan={previewData} onApprove={handleSubmitPlan} />
+                <ProgramOverview plan={previewData} onApprove={handleApprovePlan} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64">
@@ -1206,7 +1220,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmitPlan)} className="flex-1 flex flex-col">
+          <form onSubmit={form.handleSubmit(handleApprovePlan)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
               {renderQuestion()}
             </div>
