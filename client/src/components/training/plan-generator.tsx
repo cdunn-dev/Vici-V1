@@ -80,22 +80,23 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [previewData, setPreviewData] = useState<any>(null);
   const { toast } = useToast();
 
+  // Update the useForm initialization
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
-      goal: "", // Empty string as default
+      goal: "",
       goalDescription: "",
-      startDate: "", // Empty string as default
+      startDate: "",
       runningExperience: {
-        level: "", // Empty string as default
-        fitnessLevel: "", // Empty string as default
+        level: "",
+        fitnessLevel: "",
       },
       trainingPreferences: {
-        weeklyRunningDays: 0, // Explicit numeric default
-        maxWeeklyMileage: 0, // Explicit numeric default
-        weeklyWorkouts: 0, // Explicit numeric default
-        preferredLongRunDay: "", // Empty string as default
-        coachingStyle: "", // Empty string as default
+        weeklyRunningDays: 0,
+        maxWeeklyMileage: 0,
+        weeklyWorkouts: 0,
+        preferredLongRunDay: "",
+        coachingStyle: "",
       },
       targetRace: {
         date: "",
@@ -229,12 +230,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
 
-  // Weekly Mileage Component Update
+  // Separate rendering functions for sliders
   const renderWeeklyMileageField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
-      render={({ field: { value, onChange, ...fieldProps } }) => (
+      render={({ field }) => (
         <FormItem>
           <FormLabel>What's your target weekly mileage?</FormLabel>
           <FormDescription>
@@ -245,13 +246,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               min={0}
               max={150}
               step={5}
-              value={[value || 0]} // Ensure 0 as fallback
-              onValueChange={(vals) => onChange(vals[0])}
-              {...fieldProps}
+              value={[field.value || 0]}
+              onValueChange={(vals) => field.onChange(vals[0])}
             />
           </FormControl>
           <div className="text-sm text-muted-foreground text-center">
-            {value || 0} miles per week
+            {field.value || 0} miles per week
           </div>
           <FormMessage />
         </FormItem>
@@ -259,12 +259,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Quality Sessions Component Update
   const renderQualitySessionsField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
-      render={({ field: { value, onChange, ...fieldProps } }) => (
+      render={({ field }) => (
         <FormItem>
           <FormLabel>How many quality sessions per week?</FormLabel>
           <FormDescription>
@@ -275,13 +274,12 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               min={0}
               max={3}
               step={1}
-              value={[value || 0]} // Ensure 0 as fallback
-              onValueChange={(vals) => onChange(vals[0])}
-              {...fieldProps}
+              value={[field.value || 0]}
+              onValueChange={(vals) => field.onChange(vals[0])}
             />
           </FormControl>
           <div className="text-sm text-muted-foreground text-center">
-            {value || 0} quality sessions per week
+            {field.value || 0} quality sessions per week
           </div>
           <FormMessage />
         </FormItem>
