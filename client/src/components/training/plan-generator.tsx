@@ -290,6 +290,30 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  // These effects need to be at the component level, not in render functions
+  useEffect(() => {
+    // Initialize weekly running days with default if invalid
+    const weeklyRunningDays = form.getValues('trainingPreferences.weeklyRunningDays');
+    if (weeklyRunningDays === undefined || weeklyRunningDays === null || 
+        weeklyRunningDays < 1 || weeklyRunningDays > 7) {
+      form.setValue('trainingPreferences.weeklyRunningDays', 1);
+    }
+    
+    // Initialize weekly mileage with default if invalid
+    const maxWeeklyMileage = form.getValues('trainingPreferences.maxWeeklyMileage');
+    if (maxWeeklyMileage === undefined || maxWeeklyMileage === null || 
+        maxWeeklyMileage < 0 || maxWeeklyMileage > 150) {
+      form.setValue('trainingPreferences.maxWeeklyMileage', 0);
+    }
+    
+    // Initialize weekly workouts with default if invalid
+    const weeklyWorkouts = form.getValues('trainingPreferences.weeklyWorkouts');
+    if (weeklyWorkouts === undefined || weeklyWorkouts === null || 
+        weeklyWorkouts < 0 || weeklyWorkouts > 3) {
+      form.setValue('trainingPreferences.weeklyWorkouts', 0);
+    }
+  }, [form]); // Only run when form changes
+
   // Update Weekly Running Days field component with improved state handling
   const renderWeeklyRunningDaysField = () => (
     <FormField
@@ -300,14 +324,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         const value = typeof field.value === 'number' && field.value >= 1 && field.value <= 7 
           ? field.value 
           : 1;
-
-        // Declare useEffect outside of rendering logic
-        useEffect(() => {
-          // Only update if value is invalid
-          if (field.value === undefined || field.value === null || field.value < 1 || field.value > 7) {
-            field.onChange(1);
-          }
-        }, []); // Empty dependency array to run only once on mount
 
         return (
           <FormItem>
@@ -345,14 +361,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 150 
           ? field.value 
           : 0;
-
-        // Declare useEffect outside of rendering logic
-        useEffect(() => {
-          // Only update if value is invalid
-          if (field.value === undefined || field.value === null || field.value < 0 || field.value > 150) {
-            field.onChange(0);
-          }
-        }, []); // Empty dependency array to run only once on mount
 
         return (
           <FormItem>
@@ -393,14 +401,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 3 
           ? field.value 
           : 0;
-
-        // Declare useEffect outside of rendering logic
-        useEffect(() => {
-          // Only update if value is invalid
-          if (field.value === undefined || field.value === null || field.value < 0 || field.value > 3) {
-            field.onChange(0);
-          }
-        }, []); // Empty dependency array to run only once on mount
 
         return (
           <FormItem>
