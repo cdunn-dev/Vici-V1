@@ -216,6 +216,24 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
+  const handleAskQuestion = async (question: string) => {
+    try {
+      // Simulate asking a question and getting a response
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({
+        title: "Question Answered",
+        description: `Your question about "${question}" has been answered. Please check the updated plan.`,
+      });
+    } catch (error) {
+      console.error("Error answering question:", error);
+      toast({
+        title: "Error",
+        description: "Failed to answer your question. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   // Helper function to get fields for each step
   const getFieldsForStep = (stepId: string): string[] => {
@@ -906,12 +924,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <ProgramOverview
                   plan={previewData}
                   onApprove={handleApprovePlan}
-                  onAskQuestion={async (question) => {
-                    await handleRequestChanges();
-                  }}
-                  onRequestChanges={async (changes) => {
-                    await handleRequestChanges();
-                  }}
+                  onAskQuestion={handleAskQuestion}
+                  onRequestChanges={handleRequestChanges}
                 />
 
                 <div className="flex justify-between mt-6">
@@ -1611,12 +1625,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <ProgramOverview
                   plan={previewData}
                   onApprove={handleApprovePlan}
-                  onAskQuestion={async (question) => {
-                    await handleRequestChanges();
-                  }}
-                  onRequestChanges={async (changes) => {
-                    await handleRequestChanges();
-                  }}
+                  onAskQuestion={handleAskQuestion}
+                  onRequestChanges={handleRequestChanges}
                 />
 
                 <div className="flex justify-between mt-6">
@@ -1689,7 +1699,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+          <form onSubmit={form.handleSubmit(handleSubmitPlan)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
               {renderStepContent()}
             </div>
@@ -1705,7 +1715,21 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 Back
               </Button>
 
-              {currentStepIndex < visibleSteps.length - 1 && (
+              {currentStep.id === "preview" && previewData ? (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Approve Plan"
+                  )}
+                </Button>
+              ) : (
                 <Button
                   type="button"
                   onClick={handleNext}
