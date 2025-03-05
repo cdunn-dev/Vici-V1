@@ -190,10 +190,43 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     setCurrentStepIndex(Math.max(currentStepIndex - 1, 0));
   };
 
-  const handleApprovePlan = () => {
-    if (onPreview && previewData) {
-      onPreview(previewData);
+  const handleApprovePlan = async () => {
+    try {
+      // Validate all fields before proceeding
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please complete all required fields before proceeding.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const formData = form.getValues();
+      console.log("Submitting approved plan with data:", formData);
+
+      // If onPreview is provided, call it with the current data
+      if (onPreview && previewData) {
+        onPreview(previewData);
+      }
+
+      // Close the dialog and reset
       setOpen(false);
+      setCurrentStepIndex(0);
+      form.reset();
+
+      toast({
+        title: "Plan Approved",
+        description: "Your training plan has been created successfully!",
+      });
+    } catch (error) {
+      console.error("Error approving plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve plan. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1171,7 +1204,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 <FormDescription>
                   Choose the primary goal you'd like to achieve through your training plan
                 </FormDescription>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          // Force validation after selection
+                          form.trigger("goal");
+                        }} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-12">
                       <SelectValue placeholder="Select your goal" />
@@ -1637,7 +1674,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     Make Changes
                   </Button>
                   <Button 
+                    type="button" 
                     onClick={handleApprovePlan}
+                    className="ml-auto"
                   >
                     Approve Plan
                   </Button>
