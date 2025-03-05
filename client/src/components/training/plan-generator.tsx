@@ -86,15 +86,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     defaultValues: {
       goal: "",
       goalDescription: "",
-      startDate: "",
+      startDate: new Date().toISOString(), // Provide a sensible default for date
       runningExperience: {
         level: "",
         fitnessLevel: "",
       },
       trainingPreferences: {
-        weeklyRunningDays: 1, // Default to 1 day
-        maxWeeklyMileage: 0, // Default to 0 miles
-        weeklyWorkouts: 0, // Default to 0 sessions
+        weeklyRunningDays: 3, // Default to 3 days (more reasonable)
+        maxWeeklyMileage: 15, // Default to 15 miles
+        weeklyWorkouts: 1, // Default to 1 session
         preferredLongRunDay: "",
         coachingStyle: "",
       },
@@ -151,22 +151,94 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // Update handleNext to properly validate and maintain slider values
+  // Improved handleNext function with better validation and error handling
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
+    // Specially validate form when going to preview
     if (isLastStep) {
-      const isValid = await form.trigger();
+      // Ensure all required fields are filled out
+      // Force validation on all fields for the final step
+      let isValid = true;
+      
+      // First check critical form sections
+      isValid = await form.trigger();
+      
+      // Manually check key fields
+      const formData = form.getValues();
+      
+      // Check if user has a goal set
+      if (!formData.goal) {
+        form.setError('goal', { 
+          type: 'required', 
+          message: 'Please select a training goal' 
+        });
+        isValid = false;
+      }
+      
+      // Check that start date is selected
+      if (!formData.startDate) {
+        form.setError('startDate', { 
+          type: 'required', 
+          message: 'Please select a start date' 
+        });
+        isValid = false;
+      }
+      
+      // Verify training preferences are set
+      if (formData.trainingPreferences) {
+        if (!formData.trainingPreferences.preferredLongRunDay) {
+          form.setError('trainingPreferences.preferredLongRunDay', { 
+            type: 'required', 
+            message: 'Please select a preferred long run day' 
+          });
+          isValid = false;
+        }
+        
+        if (!formData.trainingPreferences.coachingStyle) {
+          form.setError('trainingPreferences.coachingStyle', { 
+            type: 'required', 
+            message: 'Please select a coaching style' 
+          });
+          isValid = false;
+        }
+      }
+      
+      // Verify experience fields
+      if (formData.runningExperience) {
+        if (!formData.runningExperience.level) {
+          form.setError('runningExperience.level', { 
+            type: 'required', 
+            message: 'Please select your experience level' 
+          });
+          isValid = false;
+        }
+        
+        if (!formData.runningExperience.fitnessLevel) {
+          form.setError('runningExperience.fitnessLevel', { 
+            type: 'required', 
+            message: 'Please select your fitness level' 
+          });
+          isValid = false;
+        }
+      }
+
       if (isValid) {
         setIsSubmitting(true);
         try {
           const data = form.getValues();
+          
+          // Ensure we have a valid start date - use today if not set
+          const startDate = data.startDate ? new Date(data.startDate) : new Date();
+          
+          // Calculate end date
           const endDate = data.targetRace?.date
             ? new Date(data.targetRace.date)
-            : addWeeks(new Date(data.startDate), 12);
+            : addWeeks(startDate, 12);
 
           const planData = {
             ...data,
+            startDate: startDate.toISOString(), // Ensure we have a valid string
             endDate,
           };
 
@@ -186,6 +258,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           setIsSubmitting(false);
         }
       } else {
+        // Show validation errors
+        const errors = form.formState.errors;
+        console.log("Form validation errors:", errors);
+        
         toast({
           title: "Please complete all required fields",
           description: "Some required information is missing or invalid.",
@@ -290,40 +366,54 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     }
   };
 
-  // These effects need to be at the component level, not in render functions
+  // Initialize form values when the component mounts
   useEffect(() => {
-    // Initialize weekly running days with default if invalid
-    const weeklyRunningDays = form.getValues('trainingPreferences.weeklyRunningDays');
-    if (weeklyRunningDays === undefined || weeklyRunningDays === null || 
-        weeklyRunningDays < 1 || weeklyRunningDays > 7) {
-      form.setValue('trainingPreferences.weeklyRunningDays', 1);
-    }
+    // Only initialize values if they haven't been set by the user yet
+    // This prevents overriding user selections when navigating back and forth
     
-    // Initialize weekly mileage with default if invalid
-    const maxWeeklyMileage = form.getValues('trainingPreferences.maxWeeklyMileage');
-    if (maxWeeklyMileage === undefined || maxWeeklyMileage === null || 
-        maxWeeklyMileage < 0 || maxWeeklyMileage > 150) {
-      form.setValue('trainingPreferences.maxWeeklyMileage', 0);
-    }
-    
-    // Initialize weekly workouts with default if invalid
-    const weeklyWorkouts = form.getValues('trainingPreferences.weeklyWorkouts');
-    if (weeklyWorkouts === undefined || weeklyWorkouts === null || 
-        weeklyWorkouts < 0 || weeklyWorkouts > 3) {
-      form.setValue('trainingPreferences.weeklyWorkouts', 0);
-    }
-  }, [form]); // Only run when form changes
+    // Check if defaults need to be set - only do this once on component mount
+    if (!form.formState.isDirty) {
+      const defaultsToCheck = [
+        {
+          path: 'trainingPreferences.weeklyRunningDays',
+          defaultValue: 3,
+          min: 1,
+          max: 7
+        },
+        {
+          path: 'trainingPreferences.maxWeeklyMileage',
+          defaultValue: 15,
+          min: 0,
+          max: 150
+        },
+        {
+          path: 'trainingPreferences.weeklyWorkouts',
+          defaultValue: 1,
+          min: 0,
+          max: 3
+        }
+      ];
 
-  // Update Weekly Running Days field component with improved state handling
+      defaultsToCheck.forEach(({ path, defaultValue, min, max }) => {
+        const currentValue = form.getValues(path);
+        if (currentValue === undefined || currentValue === null || 
+            currentValue < min || currentValue > max) {
+          form.setValue(path, defaultValue, { shouldDirty: true, shouldTouch: true });
+        }
+      });
+    }
+  }, []); // Empty dependency array ensures this only runs once on mount
+
+  // Weekly Running Days field component that properly preserves state
   const renderWeeklyRunningDaysField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyRunningDays"
       render={({ field }) => {
-        // Ensure we have a valid default and handle field value correctly
+        // Get the current value from the form, with fallback to default
         const value = typeof field.value === 'number' && field.value >= 1 && field.value <= 7 
           ? field.value 
-          : 1;
+          : 3; // Use 3 as default
 
         return (
           <FormItem>
@@ -335,9 +425,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Ensure we only get integers from 1-7
+                  // Set the value and mark the field as touched and dirty
                   const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
                   field.onChange(newValue);
+                  form.setValue('trainingPreferences.weeklyRunningDays', newValue, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true
+                  });
                 }}
               />
             </FormControl>
@@ -351,16 +446,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Update Weekly Mileage field component with improved state handling
+  // Weekly Mileage field component that properly preserves state
   const renderWeeklyMileageField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.maxWeeklyMileage"
       render={({ field }) => {
-        // Ensure we have a valid default and handle field value correctly
+        // Get the current value from the form, with fallback to default
         const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 150 
           ? field.value 
-          : 0;
+          : 15; // Use 15 as default
 
         return (
           <FormItem>
@@ -375,9 +470,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={5}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Always round to nearest 5
+                  // Always round to nearest 5 and ensure proper state update
                   const roundedValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
                   field.onChange(roundedValue);
+                  form.setValue('trainingPreferences.maxWeeklyMileage', roundedValue, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true
+                  });
                 }}
               />
             </FormControl>
@@ -391,16 +491,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
     />
   );
 
-  // Update Quality Sessions field component with improved state handling
+  // Quality Sessions field component that properly preserves state
   const renderQualitySessionsField = () => (
     <FormField
       control={form.control}
       name="trainingPreferences.weeklyWorkouts"
       render={({ field }) => {
-        // Ensure we have a valid default and handle field value correctly
+        // Get the current value from the form, with fallback to default
         const value = typeof field.value === 'number' && field.value >= 0 && field.value <= 3 
           ? field.value 
-          : 0;
+          : 1; // Use 1 as default
 
         return (
           <FormItem>
@@ -415,9 +515,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 step={1}
                 value={[value]}
                 onValueChange={(vals) => {
-                  // Ensure we only get integers from 0-3
+                  // Ensure we only get integers from 0-3 and proper state update
                   const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
                   field.onChange(newValue);
+                  form.setValue('trainingPreferences.weeklyWorkouts', newValue, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                    shouldValidate: true
+                  });
                 }}
               />
             </FormControl>
@@ -809,35 +914,69 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           <FormField
             control={form.control}
             name="startDate"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>When would you like to start?</FormLabel>
-                <div className="flex gap-4 mb-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => field.onChange(new Date().toISOString())}
-                  >
-                    Start Today
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => field.onChange(nextMonday(new Date()).toISOString())}
-                  >
-                    Start Next Week
-                  </Button>
-                </div>
-                <Calendar
-                  mode="single"
-                  selected={field.value ? new Date(field.value) : undefined}
-                  onSelect={(date) => field.onChange(date?.toISOString())}
-                  disabled={(date) => date < new Date()}
-                  className="rounded-md border mx-auto"
-                />
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              // Ensure we have a valid date value
+              const dateValue = field.value ? new Date(field.value) : new Date();
+              
+              return (
+                <FormItem className="flex flex-col">
+                  <FormLabel>When would you like to start?</FormLabel>
+                  <div className="flex gap-4 mb-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const today = new Date().toISOString();
+                        field.onChange(today);
+                        // Explicitly set value to ensure it's captured
+                        form.setValue('startDate', today, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true
+                        });
+                      }}
+                    >
+                      Start Today
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const nextMondayDate = nextMonday(new Date()).toISOString();
+                        field.onChange(nextMondayDate);
+                        // Explicitly set value to ensure it's captured
+                        form.setValue('startDate', nextMondayDate, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true
+                        });
+                      }}
+                    >
+                      Start Next Week
+                    </Button>
+                  </div>
+                  <Calendar
+                    mode="single"
+                    selected={dateValue}
+                    onSelect={(date) => {
+                      if (date) {
+                        const isoDate = date.toISOString();
+                        field.onChange(isoDate);
+                        // Explicitly set value to ensure it's captured
+                        form.setValue('startDate', isoDate, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true
+                        });
+                      }
+                    }}
+                    disabled={(date) => date < new Date()}
+                    className="rounded-md border mx-auto"
+                  />
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
         );
       case "preview":
