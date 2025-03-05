@@ -47,6 +47,7 @@ import {
   CoachingStyles,
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
+import { TimeInput } from "./time-input"; 
 
 // Update STEPS array to include a final confirmation step
 const STEPS = [
@@ -513,44 +514,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   <FormDescription>
                     Enter your time in HH:MM:SS format
                   </FormDescription>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="23"
-                      placeholder="HH"
-                      value={field.value?.split(":")[0] || ""}
-                      onChange={(e) => {
-                        const [_, mm, ss] = field.value?.split(":") || ["", "", ""];
-                        const newHH = e.target.value.padStart(2, "0");
-                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="MM"
-                      value={field.value?.split(":")[1] || ""}
-                      onChange={(e) => {
-                        const [hh, _, ss] = field.value?.split(":") || ["", "", ""];
-                        const newMM = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      placeholder="SS"
-                      value={field.value?.split(":")[2] || ""}
-                      onChange={(e) => {
-                        const [hh, mm, _] = field.value?.split(":") || ["", "", ""];
-                        const newSS = e.target.value.padStart(2, "0");
-                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
-                      }}
-                    />
-                  </div>
+                  <TimeInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    error={!!form.formState.errors.targetRace?.previousBest}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -565,44 +533,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     <FormDescription>
                       Enter your time in HH:MM:SS format
                     </FormDescription>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="23"
-                        placeholder="HH"
-                        value={field.value?.split(":")[0] || ""}
-                        onChange={(e) => {
-                          const [_, mm, ss] = field.value?.split(":") || ["", "", ""];
-                          const newHH = e.target.value.padStart(2, "0");
-                          field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        max="59"
-                        placeholder="MM"
-                        value={field.value?.split(":")[1] || ""}
-                        onChange={(e) => {
-                          const [hh, _, ss] = field.value?.split(":") || ["", "", ""];
-                          const newMM = e.target.value.padStart(2, "0");
-                          field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        max="59"
-                        placeholder="SS"
-                        value={field.value?.split(":")[2] || ""}
-                        onChange={(e) => {
-                          const [hh, mm, _] = field.value?.split(":") || ["", "", ""];
-                          const newSS = e.target.value.padStart(2, "0");
-                          field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
-                        }}
-                      />
-                    </div>
+                    <TimeInput
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={!!form.formState.errors.targetRace?.goalTime}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -929,7 +864,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             ) : previewData ? (
               <div className="space-y-6">
                 <div className="border rounded-lg p-6">
-                  <ProgramOverview 
+                  <ProgramOverview
                     plan={previewData}
                     showActions={false}
                   />
@@ -996,7 +931,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent><p className="max-w-xs">Help text for {currentStep.label}</p>
+              <TooltipContent>
+                <p className="max-w-xs">Help text for {currentStep.label}</p>
               </TooltipContent>
             </Tooltip>
           </DialogTitle>
