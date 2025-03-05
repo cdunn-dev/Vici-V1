@@ -95,7 +95,7 @@ export const planGeneratorSchema = z.object({
     invalid_type_error: "Invalid date format",
   }).transform((date) => date.toISOString()),
 }).superRefine((data, ctx) => {
-  // For race-related goals, validate required race fields
+  // Only validate race-related fields when a race goal is selected
   if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
     if (!data.targetRace) {
       ctx.addIssue({
@@ -130,7 +130,7 @@ export const planGeneratorSchema = z.object({
       });
     }
 
-    // For personal best goals, previous best time is required
+    // Only validate previous best time for personal best goals
     if (data.goal === TrainingGoals.PERSONAL_BEST && !data.targetRace.previousBest) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
