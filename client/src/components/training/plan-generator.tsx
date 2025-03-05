@@ -153,159 +153,30 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   // Improved handleNext function with better validation and error handling
   const handleNext = async () => {
-    const isLastStep = currentStepIndex === visibleSteps.length - 2;
+    const isLastStep = currentStepIndex === visibleSteps.length - 1;
 
-    // Specially validate form when going to preview
-    if (isLastStep) {
-      // Make sure we're using the most up-to-date slider values
-      if (weeklyRunningDays !== null) {
-        form.setValue('trainingPreferences.weeklyRunningDays', weeklyRunningDays, { 
-          shouldValidate: true 
-        });
-      }
+    // Ensure all required fields are filled out
+    let isValid = true;
 
-      if (weeklyMileage !== null) {
-        form.setValue('trainingPreferences.maxWeeklyMileage', weeklyMileage, { 
-          shouldValidate: true 
-        });
-      }
+    // First trigger validation on the entire form
+    isValid = await form.trigger();
 
-      if (weeklyWorkouts !== null) {
-        form.setValue('trainingPreferences.weeklyWorkouts', weeklyWorkouts, { 
-          shouldValidate: true 
-        });
-      }
-
-      // Ensure all required fields are filled out
-      let isValid = true;
-
-      // First trigger validation on the entire form
-      isValid = await form.trigger();
-
-      // Manually check key fields with extended validation
-      const formData = form.getValues();
-      console.log("Form data before validation:", formData);
-
-      // Check if user has a goal set
-      if (!formData.goal) {
-        form.setError('goal', { 
-          type: 'required', 
-          message: 'Please select a training goal' 
-        });
-        isValid = false;
-      }
-
-      // Check that start date is selected
-      if (!formData.startDate) {
-        form.setError('startDate', { 
-          type: 'required', 
-          message: 'Please select a start date' 
-        });
-        isValid = false;
-      }
-
-      // Verify training preferences are set
-      if (!formData.trainingPreferences?.preferredLongRunDay) {
-        form.setError('trainingPreferences.preferredLongRunDay', { 
-          type: 'required', 
-          message: 'Please select a preferred long run day' 
-        });
-        isValid = false;
-      }
-
-      if (!formData.trainingPreferences?.coachingStyle) {
-        form.setError('trainingPreferences.coachingStyle', { 
-          type: 'required', 
-          message: 'Please select a coaching style' 
-        });
-        isValid = false;
-      }
-
-      // Verify experience fields
-      if (!formData.runningExperience?.level) {
-        form.setError('runningExperience.level', { 
-          type: 'required', 
-          message: 'Please select your experience level' 
-        });
-        isValid = false;
-      }
-
-      if (!formData.runningExperience?.fitnessLevel) {
-        form.setError('runningExperience.fitnessLevel', { 
-          type: 'required', 
-          message: 'Please select your fitness level' 
-        });
-        isValid = false;
-      }
-
-      if (isValid) {
-        setIsSubmitting(true);
-        try {
-          const data = form.getValues();
-
-          // Ensure we have a valid start date - use today if not set
-          const startDate = data.startDate ? new Date(data.startDate) : new Date();
-
-          // Calculate end date
-          const endDate = data.targetRace?.date
-            ? new Date(data.targetRace.date)
-            : addWeeks(startDate, 12);
-
-          const planData = {
-            ...data,
-            startDate: startDate.toISOString(), // Ensure we have a valid string
-            endDate,
-          };
-
-          // Simulate AI processing time
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          setPreviewData(planData);
-          setCurrentStepIndex(prev => prev + 1);
-        } catch (error) {
-          console.error("Error generating preview:", error);
-          toast({
-            title: "Error",
-            description: "Failed to generate plan preview. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsSubmitting(false);
-        }
+    if (isValid) {
+      if (isLastStep) {
+          onSubmit(form.getValues());
       } else {
-        // Show validation errors
-        const errors = form.formState.errors;
-        console.log("Form validation errors:", errors);
-
-        toast({
-          title: "Please complete all required fields",
-          description: "Some required information is missing or invalid.",
-          variant: "destructive",
-        });
+          setCurrentStepIndex(currentStepIndex + 1);
       }
     } else {
-      // Get all fields for the current step
-      const currentStepFields = getFieldsForStep(currentStep.id);
+      // Show validation errors
+      const errors = form.formState.errors;
+      console.log("Form validation errors:", errors);
 
-      // Validate only the current step's fields
-      const isValid = await form.trigger(currentStepFields);
-
-      if (isValid) {
-        // Move to the next step without resetting slider values
-        setCurrentStepIndex(currentStepIndex + 1);
-      } else {
-        // Show specific validation errors
-        const errors = form.formState.errors;
-        const errorMessages = Object.values(errors)
-          .map(error => error.message)
-          .join(", ");
-
-        toast({
-          title: "Please complete this step",
-          description: errorMessages || "Please fill in all required fields correctly.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Please complete all required fields",
+        description: "Some required information is missing or invalid.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -941,64 +812,68 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "startDate":
-        return (
-            <div data-replit-metadata="client/src/components/training/plan-generator.tsx:1625:10" data-component-name="div" className="space-y-4">
-              <FormField
+          return (
+            <div className="space-y-4">
+                <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="text-base">When would you like to start?</FormLabel>
-                    <div className="flex flex-col space-y-4">
-                      <div className="flex space-x-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            const today = new Date();
-                            form.setValue("startDate", today.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }}
-                        >
-                          Start Today
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            const nextMondayDate = nextMonday(new Date());
-                            form.setValue("startDate", nextMondayDate.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }}
-                        >
-                          Start Next Week
-                        </Button>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <span>When would you like to start?</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Choose when you want to begin your training program
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
-                      <Calendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            form.setValue("startDate", date.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }
+                    </FormLabel>
+                    <div className="my-4 flex space-x-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          const today = new Date();
+                          field.onChange(today.toISOString());
+                          form.setValue('startDate', today.toISOString(), { shouldValidate: true });
                         }}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                        className="rounded-md border"
-                      />
+                      >
+                        Start Today
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          const nextMondayDate = nextMonday(new Date());
+                          field.onChange(nextMondayDate.toISOString());
+                          form.setValue('startDate', nextMondayDate.toISOString(), { shouldValidate: true });
+                        }}
+                      >
+                        Start Next Week
+                      </Button>
                     </div>
+                    <FormControl>
+                      <div className="border rounded-md p-2">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date.toISOString());
+                              form.setValue('startDate', date.toISOString(), { shouldValidate: true });
+                            }
+                          }}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1095,7 +970,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   // Separate effect for weekly mileage
   useEffect(() => {
-    // Make sure maxWeeklyMileage has a valid value on first render
+    //    // Make sure maxWeeklyMileage has a valid value on first render
     const maxWeeklyMileage = form.getValues('trainingPreferences.maxWeeklyMileage');
     if (!maxWeeklyMileage || maxWeeklyMileage < 10 || maxWeeklyMileage > 100) {
       form.setValue('trainingPreferences.maxWeeklyMileage', 15, { shouldValidate: true });
@@ -1642,64 +1517,68 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           />
         );
       case "startDate":
-        return (
-            <div data-replit-metadata="client/src/components/training/plan-generator.tsx:1625:10" data-component-name="div" className="space-y-4">
-              <FormField
+          return (
+            <div className="space-y-4">
+                <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="text-base">When would you like to start?</FormLabel>
-                    <div className="flex flex-col space-y-4">
-                      <div className="flex space-x-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            const today = new Date();
-                            form.setValue("startDate", today.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }}
-                        >
-                          Start Today
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            const nextMondayDate = nextMonday(new Date());
-                            form.setValue("startDate", nextMondayDate.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }}
-                        >
-                          Start Next Week
-                        </Button>
+                  <FormItem className="flex flex-col">
+                    <FormLabel>
+                      <div className="flex items-center space-x-2">
+                        <span>When would you like to start?</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Choose when you want to begin your training program
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
-                      <Calendar
-                        mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            form.setValue("startDate", date.toISOString(), { 
-                              shouldValidate: true,
-                              shouldDirty: true,
-                              shouldTouch: true 
-                            });
-                          }
+                    </FormLabel>
+                    <div className="my-4 flex space-x-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          const today = new Date();
+                          field.onChange(today.toISOString());
+                          form.setValue('startDate', today.toISOString(), { shouldValidate: true });
                         }}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                        className="rounded-md border"
-                      />
+                      >
+                        Start Today
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          const nextMondayDate = nextMonday(new Date());
+                          field.onChange(nextMondayDate.toISOString());
+                          form.setValue('startDate', nextMondayDate.toISOString(), { shouldValidate: true });
+                        }}
+                      >
+                        Start Next Week
+                      </Button>
                     </div>
+                    <FormControl>
+                      <div className="border rounded-md p-2">
+                        <Calendar
+                          mode="single"
+                          selected={field.value ? new Date(field.value) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              field.onChange(date.toISOString());
+                              form.setValue('startDate', date.toISOString(), { shouldValidate: true });
+                            }
+                          }}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                        />
+                      </div>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1812,7 +1691,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
             <div className="flex-1 px-6 py-4 overflow-y-auto">
-              {renderQuestion()}
+              {renderStepContent()}
             </div>
 
             <div className="border-t px-6 py-4 flex justify-between items-center">
