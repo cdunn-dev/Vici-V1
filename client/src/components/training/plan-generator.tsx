@@ -251,19 +251,12 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Ensure all preferences are set
-        formData.trainingPreferences = {
-          ...formData.trainingPreferences,
-          weeklyRunningDays: runningDaysValue,
-          maxWeeklyMileage: mileageValue,
-          weeklyWorkouts: workoutsValue,
-          coachingStyle: "Motivational",
-        };
-
         // Handle dates and race information
+        formData.startDate = new Date(formData.startDate).toISOString();
+
+        // Handle race-specific data
         if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
           if (formData.targetRace) {
-            // Ensure date is properly formatted
             formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
 
             // Handle custom distance
@@ -275,13 +268,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
             }
           }
         } else {
+          // For non-race goals, ensure targetRace is undefined
           delete formData.targetRace;
         }
 
-        // Format start date
-        formData.startDate = new Date(formData.startDate).toISOString();
-
-        console.log("Submitting form data:", formData); // Debug log
+        console.log("Generating training plan preview with data:", formData);
 
         const response = await fetch('/api/training-plans/preview', {
           method: 'POST',
@@ -292,18 +283,18 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to generate plan preview');
+          throw new Error(await response.text());
         }
 
         const previewData = await response.json();
+        console.log("Previewing plan:", previewData);
         setPreviewData(previewData);
         setCurrentStepIndex((prev) => prev + 1);
       } catch (error) {
         console.error("Error generating preview:", error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to generate plan preview. Please try again.",
+          description: error instanceof Error ? error.message : "Failed to generate plan preview",
           variant: "destructive",
         });
       } finally {
@@ -332,6 +323,18 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     try {
       setIsSubmitting(true);
 
+      const response = await fetch('/api/training-plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(previewData),
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
       if (onPreview) {
         onPreview(previewData);
       }
@@ -341,16 +344,17 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       form.reset();
 
       toast({
-        title: "Plan Created",
-        description: "Your training plan has been created successfully!",
+        title: "Success!",
+        description: "Your training plan has been created and saved.",
       });
 
+      // Redirect to training home
       window.location.href = "/training";
     } catch (error) {
-      console.error("Error approving plan:", error);
+      console.error("Error saving plan:", error);
       toast({
         title: "Error",
-        description: "Failed to create plan. Please try again.",
+        description: "Failed to save plan. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -916,76 +920,41 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         return (
           <div className="space-y-6">
             {isSubmitting ? (
-              <div className="flex flex-col items-center justify-center h-64">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-lg font-medium">Generating your personalized training plan...</p>
-                <p className="text-sm text-muted-foreground">
-                  We're creating a plan tailored to your goals and preferences
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {previewData ? "Saving your training plan..." : "Generating your personalized training plan..."}
                 </p>
               </div>
             ) : previewData ? (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Your Training Plan Preview</h2>
-                <div className="bg-muted p-4 rounded-md">
-                  <p><strong>Goal:</strong> {previewData.goal}</p>
-                  <p>
-                    <strong>Training Period:</strong>{" "}
-                    {format(new Date(previewData.startDate), "PPP")} -{" "}
-                    {format(new Date(previewData.endDate), "PPP")}
-                  </p>
-                  <p>
-                    <strong>Weekly Schedule:</strong>{" "}
-                    {previewData.trainingPreferences.weeklyRunningDays} days/week
-                  </p>
-                  <p>
-                    <strong>Peak Mileage:</strong>{" "}
-                    {previewData.trainingPreferences.maxWeeklyMileage} miles
-                  </p>
+                <div className="border rounded-lg p-6">
+                  <ProgramOverview 
+                    plan={previewData}
+                    showActions={false}
+                  />
                 </div>
-                <ProgramOverview
-                  plan={previewData}
-                  onApprove={handleApprovePlan}
-                  onAskQuestion={async (question) => {
-                    setIsSubmitting(true);
-                    try {
-                      await new Promise(resolve => setTimeout(resolve, 1500));
-                      toast({
-                        title: "Question Answered",
-                        description: "Your question has been answered. Please check the updated plan.",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to process your question. Please try again.",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
-                  onRequestChanges={async (changes) => {
-                    setIsSubmitting(true);
-                    try {
-                      await new Promise(resolve => setTimeout(resolve, 1500));
-                      toast({
-                        title: "Plan Updated",
-                        description: "Your training plan has been updated based on your feedback.",
-                      });
-                    } catch (error) {
-                      toast({
-                        title: "Error",
-                        description: "Failed to update plan. Please try again.",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }}
-                />
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={handleBack}>
+                    Make Changes
+                  </Button>
+                  <Button onClick={handleApprovePlan} disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving Plan...
+                      </>
+                    ) : (
+                      "Approve Plan"
+                    )}
+                  </Button>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-64">
-                <p className="text-lg font-medium">Please complete previous steps</p>
+              <div className="flex flex-col items-center justify-center h-32">
+                <p className="text-sm text-muted-foreground">
+                  Please complete previous steps to preview your plan
+                </p>
               </div>
             )}
           </div>
@@ -995,6 +964,19 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         return null;
     }
   };
+
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "goal") {
+        const goal = value.goal;
+        if (goal !== TrainingGoals.FIRST_RACE && goal !== TrainingGoals.PERSONAL_BEST) {
+          form.setValue("targetRace", undefined);
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -1014,8 +996,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">Help text for {currentStep.label}</p>
+              <TooltipContent><p className="max-w-xs">Help text for {currentStep.label}</p>
               </TooltipContent>
             </Tooltip>
           </DialogTitle>
@@ -1039,26 +1020,15 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleApprovePlan)} className="flex-1 flex flex-col">
-            <div className="flex-1 px-6 py-4 overflow-y-auto">
-              {renderQuestion()}
+            <div className="flex-1 px-6 py-4 overflow-y-auto">{renderQuestion()}
             </div>
 
             <div className="border-t px-6 py-4 flex justify-between items-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                disabled={currentStepIndex === 0}
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-
               {currentStep.id === "preview" ? (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating Plan...
                     </>
                   ) : (
@@ -1078,12 +1048,15 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                         Generating Preview...
                       </>
                     ) : (
-                      "Preview Plan"
+                      <>
+                        Preview Plan
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </>
                     )
                   ) : (
                     <>
                       Next
-                      <ChevronRight className="h-4 w-4 ml-2" />
+                      <ChevronRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
