@@ -2288,7 +2288,161 @@ const renderStepContent = () => {
   }
 };
 
-return (
+export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
+  const [open, setOpen] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Update the form initialization with proper defaults
+  const form = useForm<PlanGeneratorFormData>({
+    resolver: zodResolver(planGeneratorSchema),
+    defaultValues: {
+      goal: "",
+      goalDescription: "",
+      startDate: new Date().toISOString(), // Provide a sensible default for date
+      runningExperience: {
+        level: "",
+        fitnessLevel: "",
+      },
+      trainingPreferences: {
+        weeklyRunningDays: 3, // Default to 3 days (more reasonable)
+        maxWeeklyMileage: 15, // Default to 15 miles
+        weeklyWorkouts: 1, // Default to 1 session
+        preferredLongRunDay: "",
+        coachingStyle: "",
+      },
+      targetRace: {
+        date: "",
+        distance: "",
+        customDistance: {
+          value: 0,
+          unit: "",
+        },
+        goalTime: "",
+        previousBest: "",
+      },
+    },
+    mode: "onChange",
+  });
+
+  // Get current visible steps based on form data
+  const visibleSteps = STEPS.filter(step =>
+    !step.conditional || step.conditional(form.getValues())
+  );
+
+  const currentStep = visibleSteps[currentStepIndex];
+  const progress = ((currentStepIndex + 1) / visibleSteps.length) * 100;
+
+  const onSubmit = async (data: PlanGeneratorFormData) => {
+    try {
+      setIsSubmitting(true);
+      console.log("Generating preview with data:", data);
+
+      const endDate = data.targetRace?.date
+        ? new Date(data.targetRace.date)
+        : addWeeks(new Date(data.startDate), 12);
+
+      const planData = {
+        ...data,
+        endDate,
+      };
+
+      // Simulate AI processing time
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      setPreviewData(planData);
+      setCurrentStepIndex(visibleSteps.length - 1); // Move to preview step
+    } catch (error) {
+      console.error("Error generating preview:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate plan preview. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Improved handleNext function with better validation and error handling
+  const handleNext = async () => {
+    const isLastStep = currentStepIndex === visibleSteps.length - 1;
+
+    // Ensure all required fields are filled out
+    let isValid = true;
+
+    // First trigger validation on the entire form
+    isValid = await form.trigger();
+
+    if (isValid) {
+      if (isLastStep) {
+        await handleSubmitPlan(form.getValues());
+      } else {
+        setCurrentStepIndex(prev => prev + 1);
+      }
+    }
+  };
+
+  const handleSubmitPlan = async (data: PlanGeneratorFormData) => {
+    console.log("Submitting plan with data:", data);
+
+    // Validate all fields before proceeding
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please complete all required fields before proceeding.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Calculate end date based on goal and race date
+      const planStartDate = new Date(data.startDate);
+      let endDate: Date;
+
+      if (data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST) {
+        endDate = new Date(data.targetRace!.date);
+      } else {
+        // For general fitness, set end date to 12 weeks after start
+        endDate = addWeeks(planStartDate, 12);
+      }
+
+      // Prepare the plan data to preview
+      const planData = {
+        ...data,
+        endDate
+      };
+
+      // Send data to the parent component for preview
+      if (onPreview) {
+        onPreview(planData);
+      }
+
+      // Close the dialog
+      setOpen(false);
+
+      // Reset form and state
+      form.reset();
+      setCurrentStepIndex(0);
+    } catch (error) {
+      console.error("Error submitting plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
   <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger asChild>
       <Button size="lg" className="gap-2 bg-primary hover:bg-primary/90">
