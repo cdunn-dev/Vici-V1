@@ -163,29 +163,29 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           shouldValidate: true 
         });
       }
-      
+
       if (weeklyMileage !== null) {
         form.setValue('trainingPreferences.maxWeeklyMileage', weeklyMileage, { 
           shouldValidate: true 
         });
       }
-      
+
       if (weeklyWorkouts !== null) {
         form.setValue('trainingPreferences.weeklyWorkouts', weeklyWorkouts, { 
           shouldValidate: true 
         });
       }
-      
+
       // Ensure all required fields are filled out
       let isValid = true;
-      
+
       // First trigger validation on the entire form
       isValid = await form.trigger();
-      
+
       // Manually check key fields with extended validation
       const formData = form.getValues();
       console.log("Form data before validation:", formData);
-      
+
       // Check if user has a goal set
       if (!formData.goal) {
         form.setError('goal', { 
@@ -194,7 +194,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         });
         isValid = false;
       }
-      
+
       // Check that start date is selected
       if (!formData.startDate) {
         form.setError('startDate', { 
@@ -203,7 +203,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         });
         isValid = false;
       }
-      
+
       // Verify training preferences are set
       if (!formData.trainingPreferences?.preferredLongRunDay) {
         form.setError('trainingPreferences.preferredLongRunDay', { 
@@ -212,7 +212,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         });
         isValid = false;
       }
-      
+
       if (!formData.trainingPreferences?.coachingStyle) {
         form.setError('trainingPreferences.coachingStyle', { 
           type: 'required', 
@@ -220,7 +220,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         });
         isValid = false;
       }
-      
+
       // Verify experience fields
       if (!formData.runningExperience?.level) {
         form.setError('runningExperience.level', { 
@@ -229,7 +229,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         });
         isValid = false;
       }
-      
+
       if (!formData.runningExperience?.fitnessLevel) {
         form.setError('runningExperience.fitnessLevel', { 
           type: 'required', 
@@ -242,10 +242,10 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         setIsSubmitting(true);
         try {
           const data = form.getValues();
-          
+
           // Ensure we have a valid start date - use today if not set
           const startDate = data.startDate ? new Date(data.startDate) : new Date();
-          
+
           // Calculate end date
           const endDate = data.targetRace?.date
             ? new Date(data.targetRace.date)
@@ -276,7 +276,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         // Show validation errors
         const errors = form.formState.errors;
         console.log("Form validation errors:", errors);
-        
+
         toast({
           title: "Please complete all required fields",
           description: "Some required information is missing or invalid.",
@@ -383,7 +383,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   // Use state to track if initialization has happened
   const [initializedDefaults, setInitializedDefaults] = useState(false);
-  
+
   // Initialize form values when the component mounts
   useEffect(() => {
     // Only initialize values once and only if they haven't been properly set
@@ -410,7 +410,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       ];
 
       let valuesSet = false;
-      
+
       defaultsToCheck.forEach(({ path, defaultValue, min, max }) => {
         const currentValue = form.getValues(path);
         if (currentValue === undefined || currentValue === null || 
@@ -419,7 +419,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           valuesSet = true;
         }
       });
-      
+
       // Mark initialization as complete
       setInitializedDefaults(true);
     }
@@ -429,7 +429,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [weeklyRunningDays, setWeeklyRunningDays] = useState<number | null>(null);
   const [weeklyMileage, setWeeklyMileage] = useState<number | null>(null);
   const [weeklyWorkouts, setWeeklyWorkouts] = useState<number | null>(null);
-  
+
   // Weekly Running Days field component that properly preserves state
   const renderWeeklyRunningDaysField = () => (
     <FormField
@@ -631,7 +631,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   <FormLabel>Which race distance are you targeting?</FormLabel>
                   <Select onValueChange={(value) => {
                     field.onChange(value);
-                    
+
                     // If changing from "Other" to a standard distance, clear custom values
                     if (value !== RaceDistances.OTHER) {
                       form.setValue('targetRace.customDistance.value', 0);
@@ -968,7 +968,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             render={({ field }) => {
               // Ensure we have a valid date value
               const dateValue = field.value ? new Date(field.value) : new Date();
-              
+
               return (
                 <FormItem className="flex flex-col">
                   <FormLabel>When would you like to start?</FormLabel>
@@ -1029,6 +1029,644 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
               );
             }}
           />
+        );
+      case "preview":
+        return previewData && (
+          <div className="space-y-6">
+            <div className="p-6 bg-muted rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Training Plan Preview</h3>
+              <ProgramOverview
+                plan={previewData}
+                onApprove={handleApprovePlan}
+                onAskQuestion={async (question: string) => {
+                  // Handle AI coach interaction
+                  console.log("Question asked:", question);
+                  // TODO: Implement AI coach interaction
+                }}
+                onRequestChanges={async (changes: string) => {
+                  // Handle plan modification requests
+                  console.log("Changes requested:", changes);
+                  await handleRequestChanges();
+                }}
+              />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Function to properly update form values when slider changes
+  const onSliderChange = (fieldName: string, value: number[]) => {
+    const numValue = value[0];
+    form.setValue(fieldName, numValue, { 
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true
+    });
+  };
+
+  // Separate effects for each slider to prevent cross-influence
+  useEffect(() => {
+    // Make sure weeklyRunningDays has a valid value on first render
+    const weeklyRunningDays = form.getValues('trainingPreferences.weeklyRunningDays');
+    if (!weeklyRunningDays || weeklyRunningDays < 1 || weeklyRunningDays > 7) {
+      form.setValue('trainingPreferences.weeklyRunningDays', 3, { shouldValidate: true });
+    }
+  }, []);
+
+  // Separate effect for weekly mileage
+  useEffect(() => {
+    // Make sure maxWeeklyMileage has a valid value on first render
+    const maxWeeklyMileage = form.getValues('trainingPreferences.maxWeeklyMileage');
+    if (!maxWeeklyMileage || maxWeeklyMileage < 10 || maxWeeklyMileage > 100) {
+      form.setValue('trainingPreferences.maxWeeklyMileage', 15, { shouldValidate: true });
+    }
+  }, []);
+
+  // Separate effect for weekly workouts
+  useEffect(() => {
+    // Make sure weeklyWorkouts has a valid value on first render
+    const weeklyWorkouts = form.getValues('trainingPreferences.weeklyWorkouts');
+    if (!weeklyWorkouts || weeklyWorkouts < 0 || weeklyWorkouts > 5) {
+      form.setValue('trainingPreferences.weeklyWorkouts', 1, { shouldValidate: true });
+    }
+  }, []);
+
+  const renderStepContent = () => {
+    const step = visibleSteps[currentStepIndex];
+    switch (step.id) {
+      case "runningDays":
+        return (
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyRunningDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>How many days per week do you want to run?</FormLabel>
+                  <FormControl>
+                    <div className="space-y-6">
+                      <Slider
+                        value={[field.value]}
+                        min={1}
+                        max={7}
+                        step={1}
+                        onValueChange={(value) => {
+                          onSliderChange("trainingPreferences.weeklyRunningDays", value);
+                        }}
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs">1</span>
+                        <div className="text-center">
+                          <span className="font-bold text-lg">{field.value}</span>
+                          <p className="text-sm text-muted-foreground">days per week</p>
+                        </div>
+                        <span className="text-xs">7</span>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>Select the number of days you want to run each week.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+      case "mileage":
+        return (
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="trainingPreferences.maxWeeklyMileage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your target weekly mileage?</FormLabel>
+                  <FormControl>
+                    <div className="space-y-6">
+                      <Slider
+                        value={[field.value]}
+                        min={10}
+                        max={100}
+                        step={5}
+                        onValueChange={(value) => {
+                          onSliderChange("trainingPreferences.maxWeeklyMileage", value);
+                        }}
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs">10 miles</span>
+                        <div className="text-center">
+                          <span className="font-bold text-lg">{field.value}</span>
+                          <p className="text-sm text-muted-foreground">miles per week</p>
+                        </div>
+                        <span className="text-xs">100+ miles</span>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Set your target maximum weekly mileage. This helps calibrate your training intensity.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+      case "workouts":
+        return (
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyWorkouts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>How many quality sessions do you want per week?</FormLabel>
+                  <FormControl>
+                    <div className="space-y-6">
+                      <Slider
+                        value={[field.value]}
+                        min={0}
+                        max={5}
+                        step={1}
+                        onValueChange={(value) => {
+                          onSliderChange("trainingPreferences.weeklyWorkouts", value);
+                        }}
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs">0</span>
+                        <div className="text-center">
+                          <span className="font-bold text-lg">{field.value}</span>
+                          <p className="text-sm text-muted-foreground">quality sessions per week</p>
+                        </div>
+                        <span className="text-xs">5</span>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Quality sessions include interval training, tempo runs, and other structured workouts.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+      case "startDate":
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">When would you like to start?</h3>
+            <div className="flex space-x-2 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', new Date().toISOString(), { shouldValidate: true })}
+              >
+                Start Today
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', nextMonday(new Date()).toISOString(), { shouldValidate: true })}
+              >
+                Start Next Week
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        field.onChange(date.toISOString());
+                        form.trigger('startDate'); // Trigger validation
+                      }
+                    }}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+      case "goal":
+        return (
+          <FormField
+            control={form.control}
+            name="goal"
+            render={({ field }) => (
+              <FormItem className="space-y-4">
+                <FormLabel className="text-lg">What's your training goal?</FormLabel>
+                <FormDescription>
+                  Choose the primary goal you'd like to achieve through your training plan
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select your goal" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(TrainingGoals).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "raceDistance":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.distance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Which race distance are you targeting?</FormLabel>
+                  <Select onValueChange={(value) => {
+                    field.onChange(value);
+
+                    // If changing from "Other" to a standard distance, clear custom values
+                    if (value !== RaceDistances.OTHER) {
+                      form.setValue('targetRace.customDistance.value', 0);
+                      form.setValue('targetRace.customDistance.unit', '');
+                    }
+                  }} 
+                  defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select race distance" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(RaceDistances).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {form.watch("targetRace.distance") === RaceDistances.OTHER && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <FormField
+                  control={form.control}
+                  name="targetRace.customDistance.value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Distance</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          placeholder="Enter distance"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="targetRace.customDistance.unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(DistanceUnits).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+          </>
+        );
+      case "raceDate":
+        return (
+          <FormField
+            control={form.control}
+            name="targetRace.date"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When is your race?</FormLabel>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => field.onChange(date?.toISOString())}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "raceTimes":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.previousBest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your current personal best?</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={field.value.split(":")[0] || ""}
+                      onChange={(e) => {
+                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
+                        const newHH = e.target.value.padStart(2, "0");
+                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={field.value.split(":")[1] || ""}
+                      onChange={(e) => {
+                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
+                        const newMM = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={field.value.split(":")[2] || ""}
+                      onChange={(e) => {
+                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
+                        const newSS = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="targetRace.goalTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your goal time?</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <div className="grid grid-cols-3 gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="23"
+                      placeholder="HH"
+                      value={field.value.split(":")[0] || ""}
+                      onChange={(e) => {
+                        const [_, mm, ss] = field.value.split(":") || ["", "", ""];
+                        const newHH = e.target.value.padStart(2, "0");
+                        field.onChange(`${newHH}:${mm || "00"}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="MM"
+                      value={field.value.split(":")[1] || ""}
+                      onChange={(e) => {
+                        const [hh, _, ss] = field.value.split(":") || ["", "", ""];
+                        const newMM = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${newMM}:${ss || "00"}`);
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      placeholder="SS"
+                      value={field.value.split(":")[2] || ""}
+                      onChange={(e) => {
+                        const [hh, mm, _] = field.value.split(":") || ["", "", ""];
+                        const newSS = e.target.value.padStart(2, "0");
+                        field.onChange(`${hh || "00"}:${mm || "00"}:${newSS}`);
+                      }}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        );
+      case "experience":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What's your running experience level?</FormLabel>
+                <FormDescription>
+                  {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(ExperienceLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "fitness":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.fitnessLevel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>How would you describe your current fitness level?</FormLabel>
+                <FormDescription>
+                  {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your fitness level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(FitnessLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "runningDays":
+        return renderWeeklyRunningDaysField();
+      case "mileage":
+        return renderWeeklyMileageField();
+      case "workouts":
+        return renderQualitySessionsField();
+      case "longRunDay":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.preferredLongRunDay"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Which day would you prefer for your long run?</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select preferred day" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(DaysOfWeek).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "coachingStyle":
+        return (
+          <FormField
+            control={form.control}
+            name="trainingPreferences.coachingStyle"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What coaching style works best for you?</FormLabel>
+                <FormDescription>
+                  {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select coaching style" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(CoachingStyles).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+      case "startDate":
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">When would you like to start?</h3>
+            <div className="flex space-x-2 mb-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', new Date().toISOString(), { shouldValidate: true })}
+              >
+                Start Today
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.setValue('startDate', nextMonday(new Date()).toISOString(), { shouldValidate: true })}
+              >
+                Start Next Week
+              </Button>
+            </div>
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        field.onChange(date.toISOString());
+                        form.trigger('startDate'); // Trigger validation
+                      }
+                    }}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         );
       case "preview":
         return previewData && (
