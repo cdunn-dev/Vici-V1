@@ -1,22 +1,23 @@
-
 import React from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon } from "lucide-react";
+import { formatDate } from "@/lib/utils";
 
 interface PlanPreviewDialogProps {
   plan: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  onAdjust: () => void;
+  isSubmitting?: boolean;
 }
 
 export default function PlanPreviewDialog({
@@ -24,104 +25,132 @@ export default function PlanPreviewDialog({
   open,
   onOpenChange,
   onConfirm,
+  onAdjust,
+  isSubmitting = false,
 }: PlanPreviewDialogProps) {
   if (!plan) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-2">
+      <DialogContent className="max-w-5xl sm:max-h-[90vh] flex flex-col p-0 h-full">
+        <DialogHeader className="p-6 pb-2 sticky top-0 bg-background z-10">
           <DialogTitle>Training Plan Preview</DialogTitle>
           <DialogDescription>
             Review your generated training plan before confirming
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow overflow-y-auto py-4">
-          {/* Plan Overview */}
-          <div className="mb-6">
+        <div className="overflow-y-auto px-6 flex-1 pb-6">
+          {/* Plan overview */}
+          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
             <h3 className="text-lg font-semibold mb-2">Plan Overview</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="font-medium text-sm text-muted-foreground">Goal</div>
-                <div>{plan.goal}</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Goal:</span> {plan.goal}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Start Date:</span>{" "}
+                  {formatDate(plan.startDate)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">End Date:</span>{" "}
+                  {formatDate(plan.endDate)}
+                </p>
               </div>
-              {plan.targetRace && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="font-medium text-sm text-muted-foreground">Target Race</div>
-                  <div>{plan.targetRace.distance}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(plan.targetRace.date).toLocaleDateString()}
-                  </div>
-                </div>
-              )}
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="font-medium text-sm text-muted-foreground">Duration</div>
-                <div>
-                  {new Date(plan.startDate).toLocaleDateString()} - {new Date(plan.endDate).toLocaleDateString()}
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Runner Level:</span>{" "}
+                  {plan.runningExperience?.level}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Fitness Level:</span>{" "}
+                  {plan.runningExperience?.fitnessLevel}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Weekly Running Days:</span>{" "}
+                  {plan.trainingPreferences?.weeklyRunningDays}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Weekly Plans */}
-          <h3 className="text-lg font-semibold mb-4">Weekly Schedule</h3>
-          {plan.weeklyPlans && plan.weeklyPlans.length > 0 ? (
-            <div className="space-y-6">
-              {plan.weeklyPlans.map((week: any) => (
-                <div key={week.week} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="text-xl font-bold">Week {week.week}</h3>
-                    </div>
-                    <Badge
-                      className={`${
-                        week.phase.includes("Base")
-                          ? "bg-blue-100 text-blue-800"
-                          : week.phase.includes("Peak")
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-green-100 text-green-800"
-                      }`}
+          {/* Weekly plans */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Weekly Training</h3>
+
+            {plan.weeklyPlans?.map((week: any) => (
+              <div key={week.week} className="border rounded-lg p-4">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-primary"
                     >
-                      {week.phase}
-                    </Badge>
+                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                      <line x1="16" x2="16" y1="2" y2="6" />
+                      <line x1="8" x2="8" y1="2" y2="6" />
+                      <line x1="3" x2="21" y1="10" y2="10" />
+                    </svg>
                   </div>
-                  
-                  <p className="text-muted-foreground mb-4">
-                    {week.totalMileage} miles planned
-                  </p>
-                  
-                  {/* Workouts for the week - flattened layout */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {week.workouts && week.workouts.map((workout: any, idx: number) => (
-                      <div key={idx} className="p-3 border rounded-md bg-card">
-                        <div className="font-medium">
-                          {new Date(workout.day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{workout.type}</span>
-                          <span className="text-sm">{workout.distance} mi</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {workout.description}
-                        </p>
-                      </div>
-                    ))}
+                  <div>
+                    <h4 className="text-base font-medium">Week {week.week}</h4>
+                    <div className="text-sm text-muted-foreground">
+                      {week.totalMileage} miles planned
+                    </div>
                   </div>
+                  <Badge className="ml-auto" variant="outline">
+                    {week.phase}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p>No weekly plans available in the preview.</p>
-          )}
+
+                {/* Daily workouts */}
+                <div className="space-y-2 mt-3">
+                  {week.workouts?.slice(0, 3).map((workout: any, index: number) => (
+                    <div key={index} className="text-sm p-2 bg-background border rounded-md">
+                      <div className="font-medium">{workout.type} - {workout.distance} miles</div>
+                      <div className="text-muted-foreground text-xs">
+                        {formatDate(workout.day)}
+                      </div>
+                    </div>
+                  ))}
+                  {week.workouts?.length > 3 && (
+                    <div className="text-xs text-center text-muted-foreground">
+                      +{week.workouts.length - 3} more workouts this week
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onConfirm}>Approve Plan</Button>
+        <DialogFooter className="p-6 pt-2 border-t bg-background sticky bottom-0">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <Button
+              variant="outline"
+              onClick={onAdjust}
+              className="sm:flex-1"
+              disabled={isSubmitting}
+            >
+              Request Adjustments
+            </Button>
+            <Button
+              onClick={onConfirm}
+              className="sm:flex-1"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Saving..." : "Confirm Plan"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
