@@ -1,14 +1,14 @@
+
 import React from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 
 interface PlanPreviewDialogProps {
@@ -32,108 +32,95 @@ export default function PlanPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl sm:max-h-[90vh] flex flex-col p-0 h-full">
-        <DialogHeader className="p-6 pb-2 sticky top-0 bg-background z-10">
+      <DialogContent className="flex flex-col w-full max-w-5xl h-[95vh] p-0 sm:h-auto overflow-hidden">
+        {/* Fixed Header */}
+        <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
           <DialogTitle>Training Plan Preview</DialogTitle>
           <DialogDescription>
             Review your generated training plan before confirming
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-y-auto px-6 flex-1 pb-6">
-          {/* Plan overview */}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Plan Overview */}
           <div className="mb-6 p-4 bg-muted/50 rounded-lg">
             <h3 className="text-lg font-semibold mb-2">Plan Overview</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
+                <p className="text-sm font-medium">Goal:</p>
+                <p className="text-sm text-muted-foreground">{plan.goal}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Timeline:</p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Goal:</span> {plan.goal}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Start Date:</span>{" "}
-                  {formatDate(plan.startDate)}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">End Date:</span>{" "}
-                  {formatDate(plan.endDate)}
+                  {formatDate(plan.startDate)} - {formatDate(plan.endDate)}
                 </p>
               </div>
               <div>
+                <p className="text-sm font-medium">Experience:</p>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Runner Level:</span>{" "}
-                  {plan.runningExperience?.level}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Fitness Level:</span>{" "}
-                  {plan.runningExperience?.fitnessLevel}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Weekly Running Days:</span>{" "}
-                  {plan.trainingPreferences?.weeklyRunningDays}
+                  {plan.runningExperience.level} Runner, {plan.runningExperience.fitnessLevel} fitness
                 </p>
               </div>
+              <div>
+                <p className="text-sm font-medium">Weekly Schedule:</p>
+                <p className="text-sm text-muted-foreground">
+                  {plan.trainingPreferences.weeklyRunningDays} runs per week,
+                  up to {plan.trainingPreferences.maxWeeklyMileage} miles
+                </p>
+              </div>
+              {plan.targetRace && (
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-medium">Target Race:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {plan.targetRace.distance} on {formatDate(plan.targetRace.date)}
+                    {plan.targetRace.goalTime && ` (Goal: ${plan.targetRace.goalTime})`}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Weekly plans */}
+          {/* Weekly Plans */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Weekly Training</h3>
-
+            <h3 className="text-lg font-semibold">Weekly Plans</h3>
             {plan.weeklyPlans?.map((week: any) => (
               <div key={week.week} className="border rounded-lg p-4">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <div className="bg-primary/10 p-2 rounded-full">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-primary"
-                    >
-                      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                      <line x1="16" x2="16" y1="2" y2="6" />
-                      <line x1="8" x2="8" y1="2" y2="6" />
-                      <line x1="3" x2="21" y1="10" y2="10" />
-                    </svg>
-                  </div>
+                <div className="flex items-center justify-between mb-2">
                   <div>
-                    <h4 className="text-base font-medium">Week {week.week}</h4>
-                    <div className="text-sm text-muted-foreground">
-                      {week.totalMileage} miles planned
-                    </div>
+                    <h4 className="font-semibold">Week {week.week}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {week.totalMileage} miles total
+                    </p>
                   </div>
-                  <Badge className="ml-auto" variant="outline">
+                  <div className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full">
                     {week.phase}
-                  </Badge>
+                  </div>
                 </div>
 
-                {/* Daily workouts */}
-                <div className="space-y-2 mt-3">
-                  {week.workouts?.slice(0, 3).map((workout: any, index: number) => (
-                    <div key={index} className="text-sm p-2 bg-background border rounded-md">
-                      <div className="font-medium">{workout.type} - {workout.distance} miles</div>
-                      <div className="text-muted-foreground text-xs">
-                        {formatDate(workout.day)}
+                <div className="mt-4 space-y-3">
+                  {week.workouts?.map((workout: any, idx: number) => (
+                    <div key={idx} className="bg-muted/30 p-3 rounded-md">
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-sm">
+                          {formatDate(workout.day)} - {workout.type}
+                        </p>
+                        <span className="text-sm">{workout.distance} miles</span>
                       </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {workout.description}
+                      </p>
                     </div>
                   ))}
-                  {week.workouts?.length > 3 && (
-                    <div className="text-xs text-center text-muted-foreground">
-                      +{week.workouts.length - 3} more workouts this week
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <DialogFooter className="p-6 pt-2 border-t bg-background sticky bottom-0">
+        {/* Fixed Footer */}
+        <DialogFooter className="px-6 py-4 border-t sticky bottom-0 bg-background z-10">
           <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Button
               variant="outline"

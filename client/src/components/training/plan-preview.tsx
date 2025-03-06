@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,8 +103,8 @@ export default function PlanPreview({
       ) : (
         <div className="flex flex-col h-full">
           {/* Fixed Header */}
-          <div className="flex justify-center p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex gap-4">
+          <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -215,7 +216,7 @@ export default function PlanPreview({
 
               {/* Weekly Plans Overview */}
               {planDetails.weeklyPlans && (
-                <div className="min-h-0 flex-1">
+                <div className="w-full">
                   <ProgramOverview
                     plan={planDetails}
                     onSelectWeek={(weekNumber) => {
@@ -233,25 +234,27 @@ export default function PlanPreview({
           </div>
 
           {/* Fixed Footer */}
-          <div className="flex justify-center p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <Button
-              onClick={onConfirm}
-              size="lg"
-              disabled={isSubmitting}
-              className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Creating Plan...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="h-5 w-5" />
-                  Approve Training Plan
-                </>
-              )}
-            </Button>
+          <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex justify-center">
+              <Button
+                onClick={onConfirm}
+                size="lg"
+                disabled={isSubmitting}
+                className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Creating Plan...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-5 w-5" />
+                    Approve Training Plan
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
