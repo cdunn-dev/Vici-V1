@@ -19,6 +19,52 @@ export async function registerRoutes(app: Express) {
     res.json(req.user);
   });
 
+  // Strava OAuth callback
+  app.get("/api/auth/strava/callback", async (req, res) => {
+    try {
+      const code = req.query.code;
+      if (!code) {
+        return res.status(400).json({ error: "No code provided" });
+      }
+
+      // Exchange code for tokens
+      const tokenResponse = await fetch("https://www.strava.com/oauth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env.STRAVA_CLIENT_ID,
+          client_secret: process.env.STRAVA_CLIENT_SECRET,
+          code,
+          grant_type: "authorization_code",
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error("Failed to exchange token");
+      }
+
+      const tokens = await tokenResponse.json();
+
+      // If user is already authenticated, update their Strava tokens
+      if (req.isAuthenticated() && req.user) {
+        await storage.updateUser(req.user.id, {
+          stravaTokens: {
+            accessToken: tokens.access_token,
+            refreshToken: tokens.refresh_token,
+            expiresAt: tokens.expires_at,
+          },
+          connectedApps: [...(req.user.connectedApps || []), "strava"],
+        });
+      }
+
+      // Redirect back to the app
+      res.redirect("/training");
+    } catch (error) {
+      console.error("Error in Strava OAuth callback:", error);
+      res.redirect("/auth?error=strava-auth-failed");
+    }
+  });
+
   // Training plan routes
   app.get("/api/training-plans", async (req, res) => {
     try {
