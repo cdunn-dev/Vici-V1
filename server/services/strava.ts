@@ -9,7 +9,8 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
-const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
+// Use VITE_ prefix for client ID to match frontend
+const STRAVA_CLIENT_ID = process.env.VITE_STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
 // Get the correct domain based on environment
@@ -22,25 +23,19 @@ function getAppDomain() {
 
 const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
 
-// Log the callback URL at startup
+// Log configuration details for debugging
 console.log("\nStrava Configuration:");
 console.log("====================");
-console.log("Website URL to use in Strava API settings:");
-console.log(`https://${getAppDomain()}`);
-console.log("\nCallback Domain to use in Strava API settings:");
-console.log(getAppDomain());
+console.log("Website URL:", `https://${getAppDomain()}`);
+console.log("Callback URL:", REDIRECT_URI);
 console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
 console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
-console.log("Running on Replit:", process.env.REPL_ID ? "Yes" : "No");
-if (process.env.REPL_ID) {
-  console.log("Replit Domain:", getAppDomain());
-}
 console.log("====================\n");
 
 export interface StravaTokens {
-  access_token: string;
-  refresh_token: string;
-  expires_at: number;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
 }
 
 export function getStravaAuthUrl(userId: string): string {
@@ -56,28 +51,34 @@ export function getStravaAuthUrl(userId: string): string {
     state: userId,
   });
 
-  return `${STRAVA_AUTH_URL}?${params.toString()}`;
+  const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
+  console.log("Generated Strava Auth URL:", authUrl);
+  return authUrl;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
     console.log("Exchanging Strava code for tokens...");
+    console.log("Using Client ID:", STRAVA_CLIENT_ID);
+    console.log("Using Redirect URI:", REDIRECT_URI);
 
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
       code,
-      grant_type: "authorization_code"
+      grant_type: "authorization_code",
+      redirect_uri: REDIRECT_URI
     });
 
-    console.log("Successfully obtained Strava tokens");
+    console.log("Successfully received Strava tokens");
     return {
-      access_token: response.data.access_token,
-      refresh_token: response.data.refresh_token,
-      expires_at: response.data.expires_at,
+      accessToken: response.data.access_token,
+      refreshToken: response.data.refresh_token,
+      expiresAt: response.data.expires_at,
     };
   } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
+    console.error("Full error details:", JSON.stringify(error.response?.data, null, 2));
     throw error;
   }
 }
@@ -92,9 +93,9 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     });
 
     return {
-      access_token: response.data.access_token,
-      refresh_token: response.data.refresh_token,
-      expires_at: response.data.expires_at,
+      accessToken: response.data.access_token,
+      refreshToken: response.data.refresh_token,
+      expiresAt: response.data.expires_at,
     };
   } catch (error: any) {
     console.error("Error refreshing Strava token:", error.response?.data || error.message);

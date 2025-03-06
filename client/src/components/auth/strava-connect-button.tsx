@@ -17,7 +17,10 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
         throw new Error("Strava Client ID not configured");
       }
 
-      const redirectUri = `${window.location.origin}/api/auth/strava/callback`;
+      // Get the current domain
+      const protocol = window.location.protocol;
+      const domain = window.location.host;
+      const redirectUri = `${protocol}//${domain}/api/auth/strava/callback`;
       const scope = 'read,activity:read_all';
 
       const authUrl = new URL('https://www.strava.com/oauth/authorize');
@@ -26,11 +29,16 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
       authUrl.searchParams.append('response_type', 'code');
       authUrl.searchParams.append('scope', scope);
 
+      // Log the auth URL for debugging
       console.log('Initiating Strava OAuth with URL:', authUrl.toString());
-      console.log('Client ID:', clientId);
-      console.log('Redirect URI:', redirectUri);
+      console.log('Using Client ID:', clientId);
+      console.log('Using Redirect URI:', redirectUri);
 
       window.location.href = authUrl.toString();
+
+      if (onConnect) {
+        onConnect();
+      }
     } catch (error) {
       console.error('Error initiating Strava connection:', error);
       toast({

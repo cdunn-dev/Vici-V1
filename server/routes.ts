@@ -41,15 +41,20 @@ export async function registerRoutes(app: Express) {
 
       // If user is already authenticated, update their Strava tokens
       if (req.isAuthenticated() && req.user) {
-        console.log("Updating user Strava tokens for user:", req.user.id);
+        console.log("Updating Strava tokens for user:", req.user.id);
         await storage.updateUser(req.user.id, {
           stravaTokens: tokens,
           connectedApps: [...(req.user.connectedApps || []), "strava"],
         });
 
         // Sync activities after successful connection
-        await syncStravaActivities(req.user.id, tokens.access_token);
-        console.log("Successfully synced Strava activities");
+        try {
+          await syncStravaActivities(req.user.id, tokens.accessToken);
+          console.log("Successfully synced Strava activities");
+        } catch (syncError) {
+          console.error("Error syncing activities:", syncError);
+          // Continue with redirect even if sync fails
+        }
       }
 
       // Redirect back to the app
