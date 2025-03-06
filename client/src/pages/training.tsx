@@ -85,12 +85,14 @@ export default function Training() {
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
     queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
-      const response = await fetch(`/api/training-plans?userId=${user?.id}`);
+      const response = await fetch(`/api/training-plans?userId=${user?.id}&active=true`);
       if (!response.ok) {
         throw new Error("Failed to fetch training plan");
       }
       const plans = await response.json();
-      return plans.length > 0 ? plans[plans.length - 1] : null;
+      // Return the active plan, or the most recent plan if no active plan exists
+      return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) || 
+             (plans.length > 0 ? plans[plans.length - 1] : null);
     },
     enabled: !!user?.id,
   });
@@ -157,7 +159,6 @@ export default function Training() {
       }
 
       setIsSubmittingPlan(true);
-      console.log("Attempting to create plan with data:", previewPlan);
 
       const response = await fetch(`/api/training-plans/generate`, {
         method: 'POST',
@@ -176,12 +177,10 @@ export default function Training() {
         throw new Error(data.error || "Failed to generate plan");
       }
 
-      console.log("Plan created successfully:", data);
-
       // Invalidate and refetch the training plans query
       await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
 
-      // Wait for the query to complete before transitioning views
+      // Force refetch to get the new active plan
       await queryClient.refetchQueries({ 
         queryKey: ["/api/training-plans"],
         type: 'active'
