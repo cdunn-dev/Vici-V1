@@ -65,7 +65,7 @@ export function PlanPreviewDialog({
                 {plan.targetRace && (
                   <div>
                     <p className="text-sm text-muted-foreground">Target Race</p>
-                    <p className="font-medium">{plan.targetRace.name}</p>
+                    <p className="font-medium">{plan.targetRace.distance}</p>
                   </div>
                 )}
               </div>
@@ -87,7 +87,7 @@ export function PlanPreviewDialog({
                           {week.phase.replace(/([A-Z])/g, ' $1').trim()}
                         </Badge>
                       </div>
-                      <Badge>{week.totalMileage} miles</Badge>
+                      <Badge>{week.totalMileage} miles planned</Badge>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
