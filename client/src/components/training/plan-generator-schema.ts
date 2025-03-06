@@ -86,6 +86,10 @@ export const planGeneratorSchema = z.discriminatedUnion("goal", [
     goal: z.literal("To Be Healthy"),
     targetRace: z.undefined(),
   }),
+  baseFormSchema.extend({
+    goal: z.literal("To Get Fit"),
+    targetRace: z.undefined(),
+  }),
 ]);
 
 export type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
