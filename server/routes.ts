@@ -84,9 +84,6 @@ export async function registerRoutes(app: Express) {
       console.log("Generating training plan for user:", userId);
       console.log("Request body:", req.body);
 
-      // Archive any existing active plans
-      await storage.archiveActivePlans(userId);
-
       const trainingPlan = {
         userId,
         name: `Training Plan - ${req.body.goal}`,
@@ -101,7 +98,6 @@ export async function registerRoutes(app: Express) {
         targetRace: req.body.targetRace || null,
         runningExperience: req.body.runningExperience,
         trainingPreferences: req.body.trainingPreferences,
-        status: "active",
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
@@ -110,55 +106,6 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error generating training plan:", error);
       res.status(500).json({ error: "Failed to generate training plan", details: error.message });
-    }
-  });
-
-  // Endpoint for handling plan modifications
-  app.post("/api/training-plans/modify", async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const { planId, changes } = req.body;
-      const plan = await storage.getTrainingPlan(planId);
-
-      if (!plan || plan.userId !== req.user?.id) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
-      // Generate modified plan based on changes
-      const modifiedPlan = generateTrainingPlan({
-        ...plan,
-        modifications: changes,
-      });
-
-      res.json(modifiedPlan);
-    } catch (error) {
-      console.error("Error modifying training plan:", error);
-      res.status(500).json({ error: "Failed to modify training plan" });
-    }
-  });
-
-  // Endpoint for AI coach questions
-  app.post("/api/training-plans/ask", async (req, res) => {
-    try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      const { planId, question } = req.body;
-      const plan = await storage.getTrainingPlan(planId);
-
-      if (!plan || plan.userId !== req.user?.id) {
-        return res.status(403).json({ error: "Not authorized" });
-      }
-
-      // TODO: Implement AI coach response generation
-      res.json({ message: "Question received, AI coach response coming soon" });
-    } catch (error) {
-      console.error("Error processing AI coach question:", error);
-      res.status(500).json({ error: "Failed to process question" });
     }
   });
 
