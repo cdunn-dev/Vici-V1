@@ -11,6 +11,7 @@ import {
 import { format } from "date-fns";
 import ProgramOverview from "./program-overview";
 import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -56,7 +57,7 @@ export default function PlanPreview({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className="flex flex-col h-full max-h-screen overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-background">
       {isAdjusting ? (
         <div className="flex flex-col h-full p-4">
           <Card className="shadow-md border-primary/20">
@@ -99,7 +100,7 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full">
           {/* Fixed Header */}
           <div className="flex justify-center p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex gap-4">
@@ -119,8 +120,8 @@ export default function PlanPreview({
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="container mx-auto p-4 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="container mx-auto py-6 px-4 space-y-6">
               {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">
                 <CardContent className="pt-6 pb-6">
@@ -214,17 +215,19 @@ export default function PlanPreview({
 
               {/* Weekly Plans Overview */}
               {planDetails.weeklyPlans && (
-                <ProgramOverview
-                  plan={planDetails}
-                  onSelectWeek={(weekNumber) => {
-                    const week = planDetails.weeklyPlans?.find(w => w.week === weekNumber);
-                    if (week) {
-                      setSelectedDate(new Date(week.workouts[0].day));
-                    }
-                  }}
-                  onSelectDay={(date) => date && setSelectedDate(date)}
-                  selectedDate={selectedDate}
-                />
+                <div className="min-h-0 flex-1">
+                  <ProgramOverview
+                    plan={planDetails}
+                    onSelectWeek={(weekNumber) => {
+                      const week = planDetails.weeklyPlans?.find(w => w.week === weekNumber);
+                      if (week) {
+                        setSelectedDate(new Date(week.workouts[0].day));
+                      }
+                    }}
+                    onSelectDay={(date) => date && setSelectedDate(date)}
+                    selectedDate={selectedDate}
+                  />
+                </div>
               )}
             </div>
           </div>
