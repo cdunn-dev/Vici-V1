@@ -1,4 +1,9 @@
 import axios from "axios";
+import { storage } from "../storage";
+import { db } from "../db";
+import { eq, desc, and } from "drizzle-orm";
+import { stravaActivities, workouts, trainingPlans } from "@shared/schema";
+import type { StravaActivity, InsertStravaActivity } from "@shared/schema";
 
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
@@ -10,13 +15,12 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 // Get the correct domain based on environment
 function getAppDomain() {
   if (process.env.REPL_ID && process.env.REPL_OWNER) {
-    // We're on Replit - construct the URL using Replit's domain format
     return `${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co`;
   }
-  return "localhost:5000"; // Local development fallback
+  return "localhost:5000";
 }
 
-const REDIRECT_URI = `https://${getAppDomain()}/api/strava/callback`;
+const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
 
 // Log the callback URL at startup
 console.log("\nStrava Configuration:");
@@ -44,17 +48,12 @@ export function getStravaAuthUrl(userId: string): string {
     throw new Error("STRAVA_CLIENT_ID is not configured");
   }
 
-  if (!userId) {
-    throw new Error("User ID is required for Strava authentication");
-  }
-
   const params = new URLSearchParams({
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "read,activity:read_all,profile:read_all",
+    scope: "read,activity:read_all",
     state: userId,
-    approval_prompt: "auto"
   });
 
   return `${STRAVA_AUTH_URL}?${params.toString()}`;
@@ -62,7 +61,7 @@ export function getStravaAuthUrl(userId: string): string {
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
-    console.log("Attempting to exchange Strava code for tokens...");
+    console.log("Exchanging Strava code for tokens...");
 
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
@@ -79,16 +78,6 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
-    console.error("Full error response:", JSON.stringify(error.response?.data, null, 2));
-
-    if (error.response?.status === 429) {
-      throw new Error("Too many requests. Please wait a moment and try again.");
-    }
-
-    if (error.response?.data?.errors) {
-      throw new Error(`Strava Auth Error: ${error.response.data.errors[0]?.field}: ${error.response.data.errors[0]?.code}`);
-    }
-
     throw error;
   }
 }
@@ -110,6 +99,100 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
   } catch (error: any) {
     console.error("Error refreshing Strava token:", error.response?.data || error.message);
     throw error;
+  }
+}
+
+export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
+  try {
+    // Get the latest activity in our database
+    const [latestActivity] = await db
+      .select()
+      .from(stravaActivities)
+      .where(eq(stravaActivities.userId, userId))
+      .orderBy(desc(stravaActivities.startDate))
+      .limit(1);
+
+    // If we have activities, only fetch newer ones
+    const params = new URLSearchParams();
+    if (latestActivity) {
+      const after = Math.floor(new Date(latestActivity.startDate).getTime() / 1000);
+      params.append("after", after.toString());
+    }
+
+    const response = await axios.get(
+      `${STRAVA_API_BASE}/athlete/activities?${params.toString()}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    // Process and save new activities
+    for (const activity of response.data) {
+      const newActivity: InsertStravaActivity = {
+        userId,
+        stravaId: activity.id.toString(),
+        name: activity.name,
+        type: activity.type,
+        startDate: new Date(activity.start_date).toISOString(),
+        distance: Math.round(activity.distance),
+        movingTime: activity.moving_time,
+        elapsedTime: activity.elapsed_time,
+        totalElevationGain: Math.round(activity.total_elevation_gain),
+        averageSpeed: Math.round(activity.average_speed * 1000), // Convert to mm/s
+        maxSpeed: Math.round(activity.max_speed * 1000), // Convert to mm/s
+        averageHeartrate: activity.average_heartrate,
+        maxHeartrate: activity.max_heartrate,
+        startLatitude: activity.start_latitude?.toString(),
+        startLongitude: activity.start_longitude?.toString(),
+        map: activity.map,
+      };
+
+      // Try to match with a workout from the training plan
+      await matchActivityWithWorkout(newActivity);
+
+      // Insert the activity
+      await db.insert(stravaActivities).values(newActivity);
+    }
+
+    console.log(`Synced ${response.data.length} activities for user ${userId}`);
+  } catch (error: any) {
+    console.error("Error syncing Strava activities:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+async function matchActivityWithWorkout(activity: InsertStravaActivity): Promise<void> {
+  // Get active training plan workouts for this user on the activity date
+  const [workout] = await db
+    .select()
+    .from(workouts)
+    .innerJoin(trainingPlans, eq(workouts.trainingPlanId, trainingPlans.id))
+    .where(
+      and(
+        eq(trainingPlans.userId, activity.userId),
+        eq(trainingPlans.isActive, true),
+        eq(workouts.day, new Date(activity.startDate).toISOString().split('T')[0])
+      )
+    );
+
+  if (workout) {
+    // Match based on distance (within 10% tolerance)
+    const distanceDiff = Math.abs(workout.distance - activity.distance);
+    const distanceMatch = distanceDiff <= workout.distance * 0.1;
+
+    if (distanceMatch) {
+      // Update the workout with the activity ID and mark as completed
+      await db
+        .update(workouts)
+        .set({
+          stravaActivityId: activity.stravaId, // Use stravaId here
+          completed: true
+        })
+        .where(eq(workouts.id, workout.id));
+
+      // Update the activity with the workout ID
+      activity.workoutId = workout.id;
+    }
   }
 }
 
