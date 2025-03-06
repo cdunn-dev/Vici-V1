@@ -116,15 +116,20 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
           break;
       }
 
-      onChange(`${formatTimeValue(type === "hours" ? newValue : hours)}:${formatTimeValue(type === "minutes" ? newValue : minutes)}:${formatTimeValue(type === "seconds" ? newValue : seconds)}`);
+      // Only format and update if all fields have values
+      if (hours !== "" && minutes !== "" && seconds !== "") {
+        onChange(`${formatTimeValue(type === "hours" ? newValue : hours)}:${formatTimeValue(type === "minutes" ? newValue : minutes)}:${formatTimeValue(type === "seconds" ? newValue : seconds)}`);
+      } else {
+        onChange("");
+      }
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-6 items-center">
+      <div className="grid grid-cols-7 gap-2 items-center">
         {/* Hours */}
-        <div className="relative">
+        <div className="relative col-span-2">
           <FormControl>
             <Input
               type="text"
@@ -172,8 +177,10 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
           </div>
         </div>
 
+        <div className="text-2xl text-center">:</div>
+
         {/* Minutes */}
-        <div className="relative">
+        <div className="relative col-span-2">
           <FormControl>
             <Input
               type="text"
@@ -221,8 +228,10 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
           </div>
         </div>
 
+        <div className="text-2xl text-center">:</div>
+
         {/* Seconds */}
-        <div className="relative">
+        <div className="relative col-span-2">
           <FormControl>
             <Input
               type="text"

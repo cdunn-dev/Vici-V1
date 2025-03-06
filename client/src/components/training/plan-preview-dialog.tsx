@@ -28,8 +28,8 @@ export function PlanPreviewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl p-0 gap-0 h-[85vh]">
-        {/* Header section - fixed at top */}
+      <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0">
+        {/* Fixed header */}
         <div className="p-6 border-b">
           <DialogHeader>
             <DialogTitle>Training Plan Preview</DialogTitle>
@@ -39,9 +39,9 @@ export function PlanPreviewDialog({
           </DialogHeader>
         </div>
 
-        {/* Scrollable content area */}
-        <ScrollArea className="flex-1 p-6">
-          <div className="space-y-8">
+        {/* Scrollable content */}
+        <ScrollArea className="h-[calc(85vh-8rem)] px-6">
+          <div className="py-6 space-y-8">
             {/* Plan Overview */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Plan Overview</h3>
@@ -74,19 +74,28 @@ export function PlanPreviewDialog({
             {/* Weekly Plans */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold">Weekly Training Schedule</h3>
-              <div className="space-y-8">
+              <div className="grid grid-cols-1 gap-4">
                 {plan.weeklyPlans?.map((week, index) => (
-                  <div key={index} className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Week {week.week}</h4>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">{week.phase}</Badge>
-                        <Badge>{week.totalMileage} miles</Badge>
+                  <div 
+                    key={index} 
+                    className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-lg font-medium">Week {week.week}</h4>
+                        <Badge variant="outline" className="capitalize">
+                          {week.phase.replace(/([A-Z])/g, ' $1').trim()}
+                        </Badge>
                       </div>
+                      <Badge>{week.totalMileage} miles</Badge>
                     </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {week.workouts?.map((workout, wIndex) => (
-                        <div key={wIndex} className="p-4 border rounded-lg">
+                        <div 
+                          key={wIndex} 
+                          className="p-4 rounded-lg border bg-background"
+                        >
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <p className="font-medium">{workout.type}</p>
@@ -96,7 +105,7 @@ export function PlanPreviewDialog({
                             </div>
                             <Badge variant="outline">{workout.distance} mi</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground line-clamp-3">
                             {workout.description}
                           </p>
                         </div>
@@ -109,8 +118,8 @@ export function PlanPreviewDialog({
           </div>
         </ScrollArea>
 
-        {/* Footer section - fixed at bottom */}
-        <div className="p-6 border-t">
+        {/* Fixed footer */}
+        <div className="p-6 border-t mt-auto">
           <div className="flex justify-end gap-4">
             <Button variant="outline" onClick={onClose}>
               Cancel
