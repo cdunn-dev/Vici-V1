@@ -69,7 +69,7 @@ export function PlanPreviewDialog({
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t">
+        <DialogFooter className="px-6 py-4 border-t mt-auto">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
