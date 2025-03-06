@@ -8,6 +8,7 @@ import { syncStravaActivities, exchangeStravaCode } from "./services/strava";
 import { db } from "./db";
 import { desc, eq } from "drizzle-orm";
 import { stravaActivities, workouts } from "@shared/schema";
+import { hashPassword } from "./services/auth";
 
 function addWeeks(date: Date, weeks: number): Date {
   const newDate = new Date(date);
@@ -242,6 +243,37 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error syncing activities:", error);
       res.status(500).json({ error: "Failed to sync activities" });
+    }
+  });
+
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      const existingUser = await storage.getUserByEmail(req.body.email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.format()._errors.join(", ") });
+      }
+
+      const user = await storage.createUser({
+        ...req.body,
+        password: await hashPassword(req.body.password),
+        emailVerified: false,
+        verificationToken: null,
+        connectedApps: [],
+        stravaTokens: null,
+      });
+
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Failed to register user" });
     }
   });
 
