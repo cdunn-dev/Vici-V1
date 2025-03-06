@@ -1,5 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,65 +6,67 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { TrainingPlan } from "@/shared/schema";
-import { PlanWeekCard } from "./plan-week-card";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface PlanPreviewDialogProps {
+  plan: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  plan: TrainingPlan | null;
-  loading?: boolean;
-  onApprove?: () => void;
+  onConfirm: () => void;
 }
 
-export function PlanPreviewDialog({
+export default function PlanPreviewDialog({
+  plan,
   open,
   onOpenChange,
-  plan,
-  loading = false,
-  onApprove,
+  onConfirm,
 }: PlanPreviewDialogProps) {
-  const handleApprove = async () => {
-    try {
-      if (onApprove) {
-        onApprove();
-      } else {
-        // Default behavior when no onApprove is provided
-        await api.post("/training-plans", plan);
-        toast.success("Plan created successfully!");
-        onOpenChange(false);
-      }
-    } catch (error) {
-      console.error("Error creating plan:", error);
-      toast.error("Failed to create plan. Please try again.");
-    }
-  };
-
-  if (!plan && !loading) return null;
+  if (!plan) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] p-0 flex flex-col">
-        <DialogHeader className="px-6 py-4 border-b">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
           <DialogTitle>Training Plan Preview</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="py-4 flex-1 overflow-y-auto">
+          {plan.weeklyPlans && plan.weeklyPlans.length > 0 ? (
+            <div className="space-y-4">
+              {plan.weeklyPlans.map((week: any) => (
+                <div
+                  key={week.week}
+                  className="border rounded-lg p-4 bg-background"
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center space-x-2">
+                      <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="text-xl font-bold">
+                        Week {week.week}
+                      </h3>
+                    </div>
+                    <Badge
+                      className={`${
+                        week.phase.includes("Base")
+                          ? "bg-blue-100 text-blue-800"
+                          : week.phase.includes("Peak")
+                          ? "bg-purple-100 text-purple-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {week.phase}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mt-2 mb-4">
+                    {week.totalMileage} miles planned
+                  </p>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="grid gap-4">
-                {plan?.weeklyPlans.map((week) => (
-                  <PlanWeekCard key={week.week} week={week} />
-                ))}
-              </div>
-            </div>
+            <p>No weekly plans available in the preview.</p>
           )}
         </div>
 
@@ -73,16 +74,7 @@ export function PlanPreviewDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleApprove} disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing
-              </>
-            ) : (
-              "Approve Plan"
-            )}
-          </Button>
+          <Button onClick={onConfirm}>Confirm</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1025,30 +1025,43 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   )}
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={isSubmitting}
-                >
-                  {currentStep.id === "confirmation" ? (
-                    isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Preview...
-                      </>
+                <>
+                  <Button
+                    type="button"
+                    onClick={handleBack}
+                    disabled={currentStepIndex === 0}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting}
+                    className="gap-2"
+                  >
+                    {currentStep.id === "confirmation" ? (
+                      isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+Generating Preview...
+                        </>
+                      ) : (
+                        <>
+                          Preview Plan
+                          <ChevronRight className="ml-2 h-4 w-4" />
+                        </>
+                      )
                     ) : (
                       <>
-                        Preview Plan
+                        Next
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </>
-                    )
-                  ) : (
-                    <>
-                      Next
-                      <ChevronRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
           </form>
