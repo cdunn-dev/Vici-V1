@@ -28,9 +28,9 @@ export function PlanPreviewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0">
+      <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 flex flex-col">
         {/* Fixed header */}
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex-shrink-0">
           <DialogHeader>
             <DialogTitle>Training Plan Preview</DialogTitle>
             <DialogDescription>
@@ -40,7 +40,7 @@ export function PlanPreviewDialog({
         </div>
 
         {/* Scrollable content */}
-        <ScrollArea className="h-[calc(85vh-8rem)] px-6">
+        <ScrollArea className="h-[calc(85vh-8rem)] px-6 flex-grow">
           <div className="py-6 space-y-8">
             {/* Plan Overview */}
             <div className="space-y-4">
