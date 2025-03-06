@@ -2,19 +2,55 @@ import { pgTable, text, serial, json, boolean, timestamp, integer, date } from "
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema with optional email verification
+// User schema with profile fields
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   emailVerified: boolean("email_verified").default(true),
   verificationToken: text("verification_token"),
+  profilePicture: text("profile_picture"),
+  gender: text("gender"),
+  birthday: date("birthday"),
+  preferredDistanceUnit: text("preferred_distance_unit").default("miles"),
   connectedApps: json("connected_apps").$type<string[]>().default([]),
   stravaTokens: json("strava_tokens").$type<{
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
   } | null>(),
+  personalBests: json("personal_bests").$type<{
+    distance: string;
+    time: string;
+    date: string;
+  }[]>().default([]),
+});
+
+// Personal best record schema
+export const personalBestSchema = z.object({
+  distance: z.string(),
+  time: z.string(),
+  date: z.string(),
+});
+
+// Gender options enum
+export const GenderEnum = z.enum([
+  "male",
+  "female",
+  "non-binary",
+  "other",
+  "prefer-not-to-say",
+]);
+
+// Distance unit options
+export const DistanceUnitEnum = z.enum(["miles", "kilometers"]);
+
+// User profile update schema
+export const userProfileUpdateSchema = z.object({
+  gender: GenderEnum.optional(),
+  birthday: z.string().optional(),
+  preferredDistanceUnit: DistanceUnitEnum.optional(),
+  personalBests: z.array(personalBestSchema).optional(),
 });
 
 // Training plans table
@@ -181,3 +217,4 @@ export type StravaActivity = typeof stravaActivities.$inferSelect;
 export type InsertStravaActivity = z.infer<typeof insertStravaActivitySchema>;
 export type Workout = typeof workouts.$inferSelect;
 export type InsertWorkout = z.infer<typeof insertWorkoutSchema>;
+export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>;

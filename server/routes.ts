@@ -3,18 +3,34 @@ import { createServer } from "http";
 import fetch from "node-fetch";
 import { storage } from "./storage";
 import { generateTrainingPlan } from "./services/training-plan-generator";
-import { insertUserSchema } from "@shared/schema";
+import { userProfileUpdateSchema } from "@shared/schema";
 import { syncStravaActivities, exchangeStravaCode } from "./services/strava";
 import { db } from "./db";
 import { desc, eq } from "drizzle-orm";
 import { stravaActivities, workouts } from "@shared/schema";
-import { hashPassword } from "./services/auth";
+import multer from "multer";
+import path from "path";
 
-function addWeeks(date: Date, weeks: number): Date {
-  const newDate = new Date(date);
-  newDate.setDate(newDate.getDate() + weeks * 7);
-  return newDate;
-}
+// Configure multer for profile picture uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: 'uploads/profile-pictures',
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express) {
   // Get current user
@@ -277,6 +293,57 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Registration error:", error);
       res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const userId = parseInt(req.params.id);
+      if (userId !== req.user?.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const result = userProfileUpdateSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.format()._errors.join(", ") });
+      }
+
+      const updatedUser = await storage.updateUser(userId, result.data);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Profile update error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // Upload profile picture
+  app.post("/api/users/:id/profile-picture", upload.single('profilePicture'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const userId = parseInt(req.params.id);
+      if (userId !== req.user?.id) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const filePath = `/uploads/profile-pictures/${req.file.filename}`;
+      await storage.updateUser(userId, { profilePicture: filePath });
+
+      res.json({ profilePicture: filePath });
+    } catch (error) {
+      console.error("Profile picture upload error:", error);
+      res.status(500).json({ error: "Failed to upload profile picture" });
     }
   });
 
