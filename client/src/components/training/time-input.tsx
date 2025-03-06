@@ -135,7 +135,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="HH"
               value={hours}
               onChange={(e) => handleInputChange(e, "hours")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              aria-label="Hours"
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -149,6 +150,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("hours", 1)}
               onTouchEnd={stopIncrement}
+              aria-label="Increment hours"
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -162,6 +164,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("hours", -1)}
               onTouchEnd={stopIncrement}
+              aria-label="Decrement hours"
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -177,7 +180,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="MM"
               value={minutes}
               onChange={(e) => handleInputChange(e, "minutes")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              aria-label="Minutes"
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -191,6 +195,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("minutes", 1)}
               onTouchEnd={stopIncrement}
+              aria-label="Increment minutes"
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -204,6 +209,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("minutes", -1)}
               onTouchEnd={stopIncrement}
+              aria-label="Decrement minutes"
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -219,7 +225,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="SS"
               value={seconds}
               onChange={(e) => handleInputChange(e, "seconds")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${error ? "border-destructive" : ""}`}
+              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              aria-label="Seconds"
             />
           </FormControl>
           <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -233,6 +240,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("seconds", 1)}
               onTouchEnd={stopIncrement}
+              aria-label="Increment seconds"
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -246,6 +254,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("seconds", -1)}
               onTouchEnd={stopIncrement}
+              aria-label="Decrement seconds"
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
