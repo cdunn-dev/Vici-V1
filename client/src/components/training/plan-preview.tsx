@@ -49,16 +49,16 @@ export default function PlanPreview({
   onConfirm,
   onAdjust,
   onBack,
-  isSubmitting = false, //Added default value
+  isSubmitting = false,
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date(planDetails.startDate));
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className="space-y-6">
+    <div className="relative flex flex-col h-[calc(100vh-12rem)] overflow-hidden">
       {isAdjusting ? (
-        <div className="space-y-4 max-w-2xl mx-auto">
+        <div className="space-y-4 p-4 overflow-y-auto">
           <Card className="shadow-md border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl">Request Training Plan Adjustments</CardTitle>
@@ -99,130 +99,133 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <>
-          <div className="flex justify-center mt-8 space-x-4">
-            <Button variant="outline" onClick={onBack} className="gap-2">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setIsAdjusting(true)}
-              className="gap-2"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Request Adjustments
-            </Button>
+        <div className="flex flex-col h-full">
+          <div className="flex justify-center p-4 border-b">
+            <div className="flex gap-4">
+              <Button variant="outline" onClick={onBack} className="gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsAdjusting(true)}
+                className="gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Request Adjustments
+              </Button>
+            </div>
           </div>
 
-          <Card className="shadow-md border-primary/20 bg-primary/5">
-            <CardContent className="pt-6 pb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Goal and Race Information */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Target className="h-5 w-5" />
-                    <div className="font-medium">
-                      Training Goal
-                      <div className="text-sm text-muted-foreground">
-                        {planDetails.goal}
-                        <div className="text-xs mt-1">{planDetails.goalDescription}</div>
+          <div className="flex-1 overflow-y-auto px-4">
+            <div className="space-y-6 py-6">
+              <Card className="shadow-md border-primary/20 bg-primary/5">
+                <CardContent className="pt-6 pb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Goal and Race Information */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Target className="h-5 w-5" />
+                        <div className="font-medium">
+                          Training Goal
+                          <div className="text-sm text-muted-foreground">
+                            {planDetails.goal}
+                            <div className="text-xs mt-1">{planDetails.goalDescription}</div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {planDetails.targetRace && (
-                    <div className="flex items-center gap-2 text-primary">
-                      <Medal className="h-5 w-5" />
-                      <div className="font-medium">
-                        Target Race
-                        <div className="text-sm text-muted-foreground">
-                          {planDetails.targetRace.customDistance || planDetails.targetRace.distance}
-                          <div className="text-xs mt-1">
-                            Date: {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
-                            {planDetails.targetRace.goalTime && (
-                              <div>Goal Time: {planDetails.targetRace.goalTime}</div>
-                            )}
+                      {planDetails.targetRace && (
+                        <div className="flex items-center gap-2 text-primary">
+                          <Medal className="h-5 w-5" />
+                          <div className="font-medium">
+                            Target Race
+                            <div className="text-sm text-muted-foreground">
+                              {planDetails.targetRace.customDistance || planDetails.targetRace.distance}
+                              <div className="text-xs mt-1">
+                                Date: {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
+                                {planDetails.targetRace.goalTime && (
+                                  <div>Goal Time: {planDetails.targetRace.goalTime}</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 text-primary">
+                        <CalendarClock className="h-5 w-5" />
+                        <div className="font-medium">
+                          Program Timeline
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(new Date(planDetails.endDate), "MMMM d, yyyy")}
                           </div>
                         </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex items-center gap-2 text-primary">
-                    <CalendarClock className="h-5 w-5" />
-                    <div className="font-medium">
-                      Program Timeline
-                      <div className="text-sm text-muted-foreground">
-                        {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(planDetails.endDate, "MMMM d, yyyy")}
+                    {/* Training Preferences and Experience */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Users className="h-5 w-5" />
+                        <div className="font-medium">
+                          Experience Level
+                          <div className="text-sm text-muted-foreground">
+                            {planDetails.runningExperience.level} Runner
+                            <div className="text-xs mt-1">
+                              Fitness Level: {planDetails.runningExperience.fitnessLevel}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Training Preferences and Experience */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Users className="h-5 w-5" />
-                    <div className="font-medium">
-                      Experience Level
-                      <div className="text-sm text-muted-foreground">
-                        {planDetails.runningExperience.level} Runner
-                        <div className="text-xs mt-1">
-                          Fitness Level: {planDetails.runningExperience.fitnessLevel}
+                      <div className="flex items-center gap-2 text-primary">
+                        <Calendar className="h-5 w-5" />
+                        <div className="font-medium">
+                          Weekly Schedule
+                          <div className="text-sm text-muted-foreground">
+                            {planDetails.trainingPreferences.weeklyRunningDays} running days per week
+                            <div className="text-xs mt-1">
+                              Long runs on {planDetails.trainingPreferences.preferredLongRunDay}s
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-primary">
+                        <Activity className="h-5 w-5" />
+                        <div className="font-medium">
+                          Training Volume
+                          <div className="text-sm text-muted-foreground">
+                            Up to {planDetails.trainingPreferences.maxWeeklyMileage} miles per week
+                            <div className="text-xs mt-1">
+                              {planDetails.trainingPreferences.weeklyWorkouts} quality workouts per week
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div className="flex items-center gap-2 text-primary">
-                    <Calendar className="h-5 w-5" />
-                    <div className="font-medium">
-                      Weekly Schedule
-                      <div className="text-sm text-muted-foreground">
-                        {planDetails.trainingPreferences.weeklyRunningDays} running days per week
-                        <div className="text-xs mt-1">
-                          Long runs on {planDetails.trainingPreferences.preferredLongRunDay}s
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              {planDetails.weeklyPlans && (
+                <ProgramOverview
+                  plan={planDetails}
+                  onSelectWeek={(weekNumber) => {
+                    const week = planDetails.weeklyPlans?.find(w => w.week === weekNumber);
+                    if (week) {
+                      setSelectedDate(new Date(week.workouts[0].day));
+                    }
+                  }}
+                  onSelectDay={(date) => date && setSelectedDate(date)}
+                  selectedDate={selectedDate}
+                />
+              )}
+            </div>
+          </div>
 
-                  <div className="flex items-center gap-2 text-primary">
-                    <Activity className="h-5 w-5" />
-                    <div className="font-medium">
-                      Training Volume
-                      <div className="text-sm text-muted-foreground">
-                        Up to {planDetails.trainingPreferences.maxWeeklyMileage} miles per week
-                        <div className="text-xs mt-1">
-                          {planDetails.trainingPreferences.weeklyWorkouts} quality workouts per week
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {planDetails.weeklyPlans && (
-            <ProgramOverview
-              weeklyPlans={planDetails.weeklyPlans}
-              onSelectWeek={(weekNumber) => {
-                const week = planDetails.weeklyPlans?.find(w => w.week === weekNumber);
-                if (week) {
-                  setSelectedDate(new Date(week.workouts[0].day));
-                }
-              }}
-              onSelectDay={(date) => date && setSelectedDate(date)}
-              selectedDate={selectedDate}
-              goal={planDetails.goal}
-              endDate={planDetails.endDate}
-              targetRace={planDetails.targetRace}
-            />
-          )}
-
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <Button
               onClick={onConfirm}
               size="lg"
@@ -242,7 +245,7 @@ export default function PlanPreview({
               )}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
