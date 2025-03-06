@@ -70,6 +70,37 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Handle plan modifications
+  app.post("/api/training-plans/modify", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const { planId, changes } = req.body;
+      if (!planId || !changes) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get the existing plan
+      const existingPlan = await storage.getTrainingPlan(planId);
+      if (!existingPlan) {
+        return res.status(404).json({ error: "Plan not found" });
+      }
+
+      // Update the plan based on changes
+      const updatedPlan = generateTrainingPlan({
+        ...existingPlan,
+        changes,
+      });
+
+      res.json(updatedPlan);
+    } catch (error) {
+      console.error("Error modifying plan:", error);
+      res.status(500).json({ error: "Failed to modify plan" });
+    }
+  });
+
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -82,7 +113,9 @@ export async function registerRoutes(app: Express) {
       }
 
       console.log("Generating training plan for user:", userId);
-      console.log("Request body:", req.body);
+
+      // Archive any existing active plans for this user
+      await storage.archiveActiveTrainingPlans(userId);
 
       const trainingPlan = {
         userId,
@@ -98,6 +131,7 @@ export async function registerRoutes(app: Express) {
         targetRace: req.body.targetRace || null,
         runningExperience: req.body.runningExperience,
         trainingPreferences: req.body.trainingPreferences,
+        isActive: true,
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
