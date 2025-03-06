@@ -1,0 +1,53 @@
+To optimize this component for mobile and enable scrolling, you can focus on the following areas:
+
+1. Layout and Structure
+
+Flexbox for Vertical Layout: The component currently uses flex flex-col h-full for the main container. This can cause issues on mobile if the content exceeds the screen height, as it won't automatically become scrollable. Consider using flex-1 for the scrollable content area and setting overflow-y: auto to enable scrolling.
+Separate Components: Break down the component into smaller, more focused components to improve code organization and make it easier to manage responsiveness. For example, you could separate the header, content, and footer sections into their own components.
+Conditional Rendering: Use conditional rendering to show or hide certain sections or elements based on the screen size or user interactions. This can help optimize the layout for smaller screens.
+2. Content and Styling
+
+Font Sizes and Spacing: Review the font sizes and spacing used in the component. Consider using smaller font sizes or tighter spacing for mobile to ensure the content fits comfortably on smaller screens.
+Responsive Styling: Use media queries or a CSS framework like Tailwind CSS to apply different styles based on screen size. This allows you to adjust the layout, font sizes, and spacing for optimal display on mobile devices.
+Image Optimization: If the component includes images, ensure they are optimized for mobile by using appropriate sizes and formats.
+3. Mobile-Specific Components
+
+Consider using mobile-specific UI components or libraries: If you're using a UI library, check if it provides mobile-optimized versions of its components. Alternatively, consider using a mobile-first UI library like React Native Paper or Ionic React.
+Example Code with Scrolling
+
+JavaScript
+
+// ... (other imports)
+
+export default function PlanPreview({
+  // ... props
+}: PlanPreviewProps) {
+  // ... state
+
+  return (
+    <div className="absolute inset-0 flex flex-col bg-background">
+      {/* Fixed Header */}
+      <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* ... header content */}
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 min-h-0 overflow-y-auto"> {/* Added flex-1 and overflow-y-auto */}
+        <div className="container mx-auto py-6 px-4 space-y-6">
+          {/* ... content */}
+        </div>
+      </div>
+
+      {/* Fixed Footer */}
+      <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        {/* ... footer content */}
+      </div>
+    </div>
+  );
+}
+In this example, the flex-1 min-h-0 overflow-y-auto classes are added to the content container to enable scrolling. The header and footer are kept fixed at the top and bottom, respectively.
+
+Remember to test the component on different mobile devices and screen sizes to ensure it's responsive and user-friendly.
+
+
+Sources and related content
