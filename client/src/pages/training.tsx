@@ -135,13 +135,11 @@ export default function Training() {
   }, [currentWeek]);
 
   const handlePreviewPlan = (plan: any) => {
-    console.log("Previewing plan:", plan);
     if (!plan) {
       console.error("No plan data received");
       return;
     }
 
-    // Force set showPreview to true and update previewPlan state
     setPreviewPlan(plan);
     setShowPreview(true);
     setActiveTab("overall");
@@ -180,8 +178,14 @@ export default function Training() {
 
       console.log("Plan created successfully:", data);
 
+      // Invalidate and refetch the training plans query
       await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/training-plans"] });
+
+      // Wait for the query to complete before transitioning views
+      await queryClient.refetchQueries({ 
+        queryKey: ["/api/training-plans"],
+        type: 'active'
+      });
 
       toast({
         title: "Success",
