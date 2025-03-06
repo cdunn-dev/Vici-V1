@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   Dialog,
@@ -7,8 +8,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CalendarIcon } from "lucide-react";
 
 interface PlanPreviewDialogProps {
   plan: any;
@@ -28,11 +29,11 @@ export default function PlanPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>Training Plan Preview</DialogTitle>
         </DialogHeader>
 
-        <div className="py-4 flex-1 overflow-y-auto">
+        <div className="px-6 py-2 flex-grow overflow-y-auto">
           {plan.weeklyPlans && plan.weeklyPlans.length > 0 ? (
             <div className="space-y-4">
               {plan.weeklyPlans.map((week: any) => (
@@ -70,11 +71,11 @@ export default function PlanPreviewDialog({
           )}
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t mt-auto">
+        <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onConfirm}>Confirm</Button>
+          <Button onClick={onConfirm}>Approve Plan</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
