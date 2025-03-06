@@ -24,7 +24,6 @@ import {
   SiStrava, 
   SiGarmin, 
   SiNike,
-  SiPolar,
   SiFitbit,
 } from "react-icons/si";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -489,10 +488,6 @@ export default function Profile() {
                   <span className="text-sm">Coros</span>
                 </Button>
                 <Button variant="outline" className="h-16 justify-start gap-2" disabled>
-                  <SiPolar className="h-5 w-5 text-[#D31334]" />
-                  <span className="text-sm">Polar</span>
-                </Button>
-                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
                   <SiFitbit className="h-5 w-5" />
                   <span className="text-sm">Fitbit</span>
                 </Button>
@@ -502,7 +497,7 @@ export default function Profile() {
                 </Button>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="h-16">
+                    <Button variant="outline" className="h-16 justify-start">
                       <Plus className="h-5 w-5" />
                       <span className="text-sm ml-2">More</span>
                     </Button>
@@ -511,7 +506,19 @@ export default function Profile() {
                     <DialogHeader>
                       <DialogTitle>Additional Integrations</DialogTitle>
                     </DialogHeader>
-                    {/* TODO: Implement additional integrations list */}
+                    <div className="pt-4 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Support for additional fitness platforms coming soon:
+                      </p>
+                      <ul className="text-sm space-y-2">
+                        <li>• Polar</li>
+                        <li>• Suunto</li>
+                        <li>• Apple Health</li>
+                        <li>• Google Fit</li>
+                        <li>• Whoop</li>
+                        <li>• Oura Ring</li>
+                      </ul>
+                    </div>
                   </DialogContent>
                 </Dialog>
               </div>
