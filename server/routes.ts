@@ -27,6 +27,8 @@ export async function registerRoutes(app: Express) {
       }
 
       const userId = parseInt(req.query.userId as string);
+      const active = req.query.active === 'true';
+
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
@@ -36,7 +38,7 @@ export async function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      const plans = await storage.getTrainingPlans(userId);
+      const plans = await storage.getTrainingPlans(userId, active);
       res.json(plans);
     } catch (error) {
       console.error("Error fetching training plans:", error);
@@ -50,8 +52,6 @@ export async function registerRoutes(app: Express) {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Not authenticated" });
       }
-
-      console.log("Generating training plan preview with data:", req.body);
 
       // Generate a preview plan without saving
       const previewPlan = generateTrainingPlan({
@@ -88,13 +88,20 @@ export async function registerRoutes(app: Express) {
         return res.status(404).json({ error: "Plan not found" });
       }
 
+      // Only allow users to modify their own plans
+      if (req.user?.id !== existingPlan.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
       // Update the plan based on changes
       const updatedPlan = generateTrainingPlan({
         ...existingPlan,
         changes,
       });
 
-      res.json(updatedPlan);
+      // Save the updated plan
+      const savedPlan = await storage.updateTrainingPlan(planId, updatedPlan);
+      res.json(savedPlan);
     } catch (error) {
       console.error("Error modifying plan:", error);
       res.status(500).json({ error: "Failed to modify plan" });
@@ -112,8 +119,6 @@ export async function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      console.log("Generating training plan for user:", userId);
-
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
@@ -125,7 +130,7 @@ export async function registerRoutes(app: Express) {
         startDate: new Date(req.body.startDate),
         endDate: req.body.targetRace?.date
           ? new Date(req.body.targetRace.date)
-          : new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000), // 12 weeks default
+          : addWeeks(new Date(req.body.startDate), 12),
         weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
         weeklyPlans: req.body.weeklyPlans || [],
         targetRace: req.body.targetRace || null,
@@ -135,7 +140,6 @@ export async function registerRoutes(app: Express) {
       };
 
       const plan = await storage.createTrainingPlan(trainingPlan);
-      console.log("Training plan created successfully:", plan.id);
       res.json(plan);
     } catch (error) {
       console.error("Error generating training plan:", error);

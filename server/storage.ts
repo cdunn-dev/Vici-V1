@@ -20,6 +20,7 @@ interface TrainingPlan {
   targetRace: any;
   runningExperience: any;
   trainingPreferences: any;
+  isActive: boolean;
 }
 
 export interface IStorage {
@@ -30,8 +31,11 @@ export interface IStorage {
   updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
 
   // Training plan operations
-  getTrainingPlans(userId: number): Promise<TrainingPlan[]>;
+  getTrainingPlans(userId: number, active?: boolean): Promise<TrainingPlan[]>;
+  getTrainingPlan(id: number): Promise<TrainingPlan | undefined>;
   createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan>;
+  updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<TrainingPlan>;
+  archiveActiveTrainingPlans(userId: number): Promise<void>;
 
   // Session store
   sessionStore: session.Store;
@@ -90,17 +94,44 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
-  async getTrainingPlans(userId: number): Promise<TrainingPlan[]> {
-    return Array.from(this.trainingPlans.values())
-      .filter(plan => plan.userId === userId)
-      .sort((a, b) => b.id - a.id); // Most recent first
+  async getTrainingPlans(userId: number, active?: boolean): Promise<TrainingPlan[]> {
+    const plans = Array.from(this.trainingPlans.values())
+      .filter(plan => plan.userId === userId);
+
+    if (active !== undefined) {
+      return plans.filter(plan => plan.isActive === active);
+    }
+
+    return plans.sort((a, b) => b.id - a.id); // Most recent first
+  }
+
+  async getTrainingPlan(id: number): Promise<TrainingPlan | undefined> {
+    return this.trainingPlans.get(id);
   }
 
   async createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan> {
     const id = this.currentIds.trainingPlans++;
-    const newPlan = { ...plan, id };
+    const newPlan = { ...plan, id, isActive: true };
     this.trainingPlans.set(id, newPlan);
     return newPlan;
+  }
+
+  async updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<TrainingPlan> {
+    const existingPlan = await this.getTrainingPlan(id);
+    if (!existingPlan) {
+      throw new Error("Training plan not found");
+    }
+
+    const updatedPlan = { ...existingPlan, ...updates };
+    this.trainingPlans.set(id, updatedPlan);
+    return updatedPlan;
+  }
+
+  async archiveActiveTrainingPlans(userId: number): Promise<void> {
+    const activePlans = await this.getTrainingPlans(userId, true);
+    for (const plan of activePlans) {
+      await this.updateTrainingPlan(plan.id, { isActive: false });
+    }
   }
 }
 
