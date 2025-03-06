@@ -13,9 +13,21 @@ interface TimeInputProps {
 
 export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: TimeInputProps) {
   // Safely parse initial values
-  const [hours, minutes, seconds] = (value || "").split(":").map(v => v ? parseInt(v) : "");
+  const [hours, setHours] = useState("");
+  const [minutes, setMinutes] = useState("");
+  const [seconds, setSeconds] = useState("");
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressCount, setPressCount] = useState(0);
+
+  // Initialize values from prop
+  useEffect(() => {
+    if (value) {
+      const [h, m, s] = value.split(":").map(v => v || "");
+      setHours(h);
+      setMinutes(m);
+      setSeconds(s);
+    }
+  }, [value]);
 
   useEffect(() => {
     return () => {
@@ -54,52 +66,60 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
     setPressCount(0);
   };
 
+  const formatTimeValue = (value: string | number): string => {
+    if (value === "") return "00";
+    const numValue = typeof value === "string" ? parseInt(value) : value;
+    return isNaN(numValue) ? "00" : numValue.toString().padStart(2, "0");
+  };
+
   const updateTime = (type: "hours" | "minutes" | "seconds", delta: number) => {
-    let newHours = hours === "" ? 0 : Number(hours);
-    let newMinutes = minutes === "" ? 0 : Number(minutes);
-    let newSeconds = seconds === "" ? 0 : Number(seconds);
+    let newHours = parseInt(hours) || 0;
+    let newMinutes = parseInt(minutes) || 0;
+    let newSeconds = parseInt(seconds) || 0;
 
     switch (type) {
       case "hours":
-        newHours = Math.max(0, Math.min(23, (newHours + delta)));
+        newHours = Math.max(0, Math.min(23, newHours + delta));
+        setHours(newHours.toString());
         break;
       case "minutes":
-        newMinutes = Math.max(0, Math.min(59, (newMinutes + delta)));
+        newMinutes = Math.max(0, Math.min(59, newMinutes + delta));
+        setMinutes(newMinutes.toString());
         break;
       case "seconds":
-        newSeconds = Math.max(0, Math.min(59, (newSeconds + delta)));
+        newSeconds = Math.max(0, Math.min(59, newSeconds + delta));
+        setSeconds(newSeconds.toString());
         break;
     }
 
-    onChange(`${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}:${newSeconds.toString().padStart(2, "0")}`);
+    onChange(`${formatTimeValue(newHours)}:${formatTimeValue(newMinutes)}:${formatTimeValue(newSeconds)}`);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: "hours" | "minutes" | "seconds") => {
-    const val = e.target.value === "" ? "" : parseInt(e.target.value);
+    const val = e.target.value;
 
-    if (val === "" || !isNaN(val)) {
-      let newHours = type === "hours" ? val : hours;
-      let newMinutes = type === "minutes" ? val : minutes;
-      let newSeconds = type === "seconds" ? val : seconds;
+    // Allow empty input or valid numbers
+    if (val === "" || /^\d{0,2}$/.test(val)) {
+      let newHours = hours;
+      let newMinutes = minutes;
+      let newSeconds = seconds;
 
-      if (typeof val === "number") {
-        switch (type) {
-          case "hours":
-            newHours = Math.max(0, Math.min(23, val));
-            break;
-          case "minutes":
-          case "seconds":
-            if (type === "minutes") newMinutes = Math.max(0, Math.min(59, val));
-            if (type === "seconds") newSeconds = Math.max(0, Math.min(59, val));
-            break;
-        }
+      switch (type) {
+        case "hours":
+          newHours = val === "" ? "" : Math.min(23, parseInt(val) || 0).toString();
+          setHours(newHours);
+          break;
+        case "minutes":
+          newMinutes = val === "" ? "" : Math.min(59, parseInt(val) || 0).toString();
+          setMinutes(newMinutes);
+          break;
+        case "seconds":
+          newSeconds = val === "" ? "" : Math.min(59, parseInt(val) || 0).toString();
+          setSeconds(newSeconds);
+          break;
       }
 
-      if (newHours !== "" && newMinutes !== "" && newSeconds !== "") {
-        onChange(`${newHours.toString().padStart(2, "0")}:${newMinutes.toString().padStart(2, "0")}:${newSeconds.toString().padStart(2, "0")}`);
-      } else {
-        onChange(`${newHours || "00"}:${newMinutes || "00"}:${newSeconds || "00"}`);
-      }
+      onChange(`${formatTimeValue(newHours)}:${formatTimeValue(newMinutes)}:${formatTimeValue(newSeconds)}`);
     }
   };
 
