@@ -12,14 +12,13 @@ interface TimeInputProps {
 }
 
 export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: TimeInputProps) {
-  // Safely parse initial values
   const [hours, setHours] = useState("");
   const [minutes, setMinutes] = useState("");
   const [seconds, setSeconds] = useState("");
   const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [pressCount, setPressCount] = useState(0);
+  const [activeField, setActiveField] = useState<"hours" | "minutes" | "seconds" | null>(null);
 
-  // Initialize values from prop
   useEffect(() => {
     if (value) {
       const [h, m, s] = value.split(":").map(v => v || "");
@@ -45,6 +44,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
 
   const startIncrement = (type: "hours" | "minutes" | "seconds", delta: number) => {
     setPressCount(0);
+    setActiveField(type);
     updateTime(type, delta);
 
     const timer = setInterval(() => {
@@ -64,6 +64,7 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
       setPressTimer(null);
     }
     setPressCount(0);
+    setActiveField(null);
   };
 
   const formatTimeValue = (value: string | number): string => {
@@ -97,35 +98,31 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, type: "hours" | "minutes" | "seconds") => {
     const val = e.target.value;
+    const numVal = parseInt(val);
 
-    // Allow empty input or valid numbers
     if (val === "" || /^\d{0,2}$/.test(val)) {
-      let newHours = hours;
-      let newMinutes = minutes;
-      let newSeconds = seconds;
+      const maxValue = type === "hours" ? 23 : 59;
+      const newValue = val === "" ? "" : Math.min(maxValue, isNaN(numVal) ? 0 : numVal).toString();
 
       switch (type) {
         case "hours":
-          newHours = val === "" ? "" : Math.min(23, parseInt(val) || 0).toString();
-          setHours(newHours);
+          setHours(newValue);
           break;
         case "minutes":
-          newMinutes = val === "" ? "" : Math.min(59, parseInt(val) || 0).toString();
-          setMinutes(newMinutes);
+          setMinutes(newValue);
           break;
         case "seconds":
-          newSeconds = val === "" ? "" : Math.min(59, parseInt(val) || 0).toString();
-          setSeconds(newSeconds);
+          setSeconds(newValue);
           break;
       }
 
-      onChange(`${formatTimeValue(newHours)}:${formatTimeValue(newMinutes)}:${formatTimeValue(newSeconds)}`);
+      onChange(`${formatTimeValue(type === "hours" ? newValue : hours)}:${formatTimeValue(type === "minutes" ? newValue : minutes)}:${formatTimeValue(type === "seconds" ? newValue : seconds)}`);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-3 gap-2">
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-6 items-center">
         {/* Hours */}
         <div className="relative">
           <FormControl>
@@ -135,38 +132,42 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="HH"
               value={hours}
               onChange={(e) => handleInputChange(e, "hours")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              onFocus={() => setActiveField("hours")}
+              onBlur={() => setActiveField(null)}
+              className={`
+                text-center text-2xl h-14 pr-12
+                ${error ? "border-destructive" : ""}
+                ${activeField === "hours" ? "border-primary ring-2 ring-primary/20" : ""}
+              `}
               aria-label="Hours"
             />
           </FormControl>
-          <div className="absolute right-1 top-1 bottom-1 flex flex-col">
+          <div className="absolute right-1 inset-y-1 flex flex-col">
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "hours" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "hours" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("hours", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("hours", 1)}
               onTouchEnd={stopIncrement}
-              aria-label="Increment hours"
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-4 w-4" />
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "hours" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "hours" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("hours", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("hours", -1)}
               onTouchEnd={stopIncrement}
-              aria-label="Decrement hours"
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -180,38 +181,42 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="MM"
               value={minutes}
               onChange={(e) => handleInputChange(e, "minutes")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              onFocus={() => setActiveField("minutes")}
+              onBlur={() => setActiveField(null)}
+              className={`
+                text-center text-2xl h-14 pr-12
+                ${error ? "border-destructive" : ""}
+                ${activeField === "minutes" ? "border-primary ring-2 ring-primary/20" : ""}
+              `}
               aria-label="Minutes"
             />
           </FormControl>
-          <div className="absolute right-1 top-1 bottom-1 flex flex-col">
+          <div className="absolute right-1 inset-y-1 flex flex-col">
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "minutes" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "minutes" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("minutes", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("minutes", 1)}
               onTouchEnd={stopIncrement}
-              aria-label="Increment minutes"
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-4 w-4" />
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "minutes" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "minutes" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("minutes", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("minutes", -1)}
               onTouchEnd={stopIncrement}
-              aria-label="Decrement minutes"
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -225,43 +230,47 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               placeholder="SS"
               value={seconds}
               onChange={(e) => handleInputChange(e, "seconds")}
-              className={`pr-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none touch-manipulation ${error ? "border-destructive" : ""}`}
+              onFocus={() => setActiveField("seconds")}
+              onBlur={() => setActiveField(null)}
+              className={`
+                text-center text-2xl h-14 pr-12
+                ${error ? "border-destructive" : ""}
+                ${activeField === "seconds" ? "border-primary ring-2 ring-primary/20" : ""}
+              `}
               aria-label="Seconds"
             />
           </FormControl>
-          <div className="absolute right-1 top-1 bottom-1 flex flex-col">
+          <div className="absolute right-1 inset-y-1 flex flex-col">
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "seconds" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "seconds" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("seconds", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("seconds", 1)}
               onTouchEnd={stopIncrement}
-              aria-label="Increment seconds"
             >
-              <ChevronUp className="h-3 w-3" />
+              <ChevronUp className="h-4 w-4" />
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant={activeField === "seconds" ? "default" : "ghost"}
               size="icon"
-              className="h-1/2 w-6 p-0"
+              className={`h-1/2 w-10 ${activeField === "seconds" ? "bg-primary text-primary-foreground" : ""}`}
               onMouseDown={() => startIncrement("seconds", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
               onTouchStart={() => startIncrement("seconds", -1)}
               onTouchEnd={stopIncrement}
-              aria-label="Decrement seconds"
             >
-              <ChevronDown className="h-3 w-3" />
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
-      <div className="text-xs text-muted-foreground text-center">
+      <div className="text-sm text-muted-foreground text-center">
         {placeholder}
       </div>
     </div>
