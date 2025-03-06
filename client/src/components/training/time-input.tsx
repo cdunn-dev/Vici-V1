@@ -147,6 +147,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("hours", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("hours", 1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -158,6 +160,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("hours", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("hours", -1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -185,6 +189,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("minutes", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("minutes", 1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -196,6 +202,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("minutes", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("minutes", -1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
@@ -223,6 +231,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("seconds", 1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("seconds", 1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -234,6 +244,8 @@ export function TimeInput({ value, onChange, placeholder = "HH:MM:SS", error }: 
               onMouseDown={() => startIncrement("seconds", -1)}
               onMouseUp={stopIncrement}
               onMouseLeave={stopIncrement}
+              onTouchStart={() => startIncrement("seconds", -1)}
+              onTouchEnd={stopIncrement}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
