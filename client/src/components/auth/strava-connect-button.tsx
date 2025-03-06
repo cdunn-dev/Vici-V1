@@ -17,7 +17,7 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
         throw new Error("Strava Client ID not configured");
       }
 
-      // Get the current domain
+      // Get the current domain - handle both Replit and local development
       const protocol = window.location.protocol;
       const domain = window.location.host;
       const redirectUri = `${protocol}//${domain}/api/auth/strava/callback`;

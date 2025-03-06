@@ -15,8 +15,9 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
 // Get the correct domain based on environment
 function getAppDomain() {
-  if (process.env.REPL_ID && process.env.REPL_OWNER) {
-    return `${process.env.REPL_ID}.${process.env.REPL_OWNER}.repl.co`;
+  // Check for both Replit domains
+  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+    return `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
   return "localhost:5000";
 }
@@ -53,11 +54,17 @@ export function getStravaAuthUrl(userId: string): string {
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
   console.log("Generated Strava Auth URL:", authUrl);
+  console.log("Using Client ID:", STRAVA_CLIENT_ID);
+  console.log("Using Redirect URI:", REDIRECT_URI);
   return authUrl;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
+    if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+      throw new Error("Strava credentials not properly configured");
+    }
+
     console.log("Exchanging Strava code for tokens...");
     console.log("Using Client ID:", STRAVA_CLIENT_ID);
     console.log("Using Redirect URI:", REDIRECT_URI);
@@ -71,6 +78,8 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     });
 
     console.log("Successfully received Strava tokens");
+
+    // Map the response to our internal token structure
     return {
       accessToken: response.data.access_token,
       refreshToken: response.data.refresh_token,
@@ -79,7 +88,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   } catch (error: any) {
     console.error("Error exchanging Strava code:", error.response?.data || error.message);
     console.error("Full error details:", JSON.stringify(error.response?.data, null, 2));
-    throw error;
+    throw new Error(error.response?.data?.message || "Failed to exchange Strava code");
   }
 }
 
