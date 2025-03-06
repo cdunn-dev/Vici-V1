@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Dialog,
@@ -32,7 +31,7 @@ export default function PlanPreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col w-full max-w-5xl h-[95vh] p-0 sm:h-auto overflow-hidden">
+      <DialogContent className="flex flex-col w-full max-w-5xl h-[95vh] p-0 sm:h-auto overflow-hidden max-h-[90vh]"> {/* Added max-h and removed conflicting class */}
         {/* Fixed Header */}
         <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
           <DialogTitle>Training Plan Preview</DialogTitle>

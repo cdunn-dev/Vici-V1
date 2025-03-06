@@ -131,6 +131,7 @@ export default function ProgramOverview({
                 key={week.week}
                 value={`week-${week.week}`}
                 className="border rounded-lg overflow-hidden"
+                style={{ touchAction: 'pan-y' }}
               >
                 <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50" onClick={() => onSelectWeek?.(week.week)}>
                   <div className="flex flex-1 items-center justify-between">

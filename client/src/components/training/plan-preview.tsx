@@ -101,9 +101,9 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full max-h-[90vh] md:max-h-full">
           {/* Fixed Header */}
-          <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
             <div className="flex gap-4 justify-center">
               <Button variant="outline" onClick={onBack} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
@@ -121,7 +121,7 @@ export default function PlanPreview({
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling: touch;">
             <div className="container mx-auto py-6 px-4 space-y-6">
               {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">
@@ -234,7 +234,7 @@ export default function PlanPreview({
           </div>
 
           {/* Fixed Footer */}
-          <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
             <div className="flex justify-center">
               <Button
                 onClick={onConfirm}
