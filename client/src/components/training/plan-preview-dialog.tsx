@@ -1,148 +1,88 @@
-
+import React from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import type { TrainingPlan } from "@shared/schema";
+import { TrainingPlan } from "@/shared/schema";
+import { PlanWeekCard } from "./plan-week-card";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 interface PlanPreviewDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   plan: TrainingPlan | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
+  loading?: boolean;
+  onApprove?: () => void;
 }
 
 export function PlanPreviewDialog({
+  open,
+  onOpenChange,
   plan,
-  isOpen,
-  onClose,
-  onConfirm,
+  loading = false,
+  onApprove,
 }: PlanPreviewDialogProps) {
-  if (!plan) return null;
+  const handleApprove = async () => {
+    try {
+      if (onApprove) {
+        onApprove();
+      } else {
+        // Default behavior when no onApprove is provided
+        await api.post("/training-plans", plan);
+        toast.success("Plan created successfully!");
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error("Error creating plan:", error);
+      toast.error("Failed to create plan. Please try again.");
+    }
+  };
+
+  if (!plan && !loading) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex flex-col">
-        {/* Fixed header */}
-        <div className="p-6 border-b flex-shrink-0">
-          <DialogHeader>
-            <DialogTitle>Training Plan Preview</DialogTitle>
-            <DialogDescription>
-              Review your personalized training plan before confirming.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle>Training Plan Preview</DialogTitle>
+        </DialogHeader>
 
-        {/* Scrollable content */}
-        <div className="flex-grow overflow-auto px-6 py-6">
-          <div className="space-y-8">
-            {/* Plan Overview */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Plan Overview</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Goal</p>
-                  <p className="font-medium">{plan.goal}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">
-                    {format(new Date(plan.startDate), "MMM d, yyyy")}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">
-                    {format(new Date(plan.endDate), "MMM d, yyyy")}
-                  </p>
-                </div>
-                {plan.targetRace && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Target Race</p>
-                    <p className="font-medium">{plan.targetRace.distance}</p>
-                  </div>
-                )}
-              </div>
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-
-            {/* Weekly Plans */}
+          ) : (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Weekly Plans</h3>
-              <div className="space-y-4">
-                {plan.weeklyPlans?.map((weekPlan) => (
-                  <div
-                    key={weekPlan.week}
-                    className="border rounded-lg p-4 bg-card shadow-sm"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-full">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-primary"
-                          >
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 className="text-base font-medium">Week {weekPlan.week}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {weekPlan.totalMileage} miles planned
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
-                        {weekPlan.phase}
-                      </Badge>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {weekPlan.workouts?.map((workout, idx) => (
-                        <div key={idx} className="p-3 rounded-md bg-background border">
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="font-medium">
-                              {format(new Date(workout.day), "EEE, MMM d")}
-                            </div>
-                            <Badge variant="outline">{workout.type}</Badge>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <span>{workout.description}</span>
-                            <span className="font-medium">{workout.distance} miles</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <div className="grid gap-4">
+                {plan?.weeklyPlans.map((week) => (
+                  <PlanWeekCard key={week.week} week={week} />
                 ))}
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Fixed footer */}
-        <DialogFooter className="px-6 py-4 border-t flex-shrink-0">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="px-6 py-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onConfirm}>Confirm Plan</Button>
+          <Button onClick={handleApprove} disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing
+              </>
+            ) : (
+              "Approve Plan"
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
