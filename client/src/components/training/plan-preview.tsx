@@ -56,7 +56,7 @@ export default function PlanPreview({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col h-full max-h-screen overflow-hidden">
       {isAdjusting ? (
         <div className="flex flex-col h-full p-4">
           <Card className="shadow-md border-primary/20">
@@ -100,6 +100,7 @@ export default function PlanPreview({
         </div>
       ) : (
         <div className="flex flex-col h-full overflow-hidden">
+          {/* Fixed Header */}
           <div className="flex justify-center p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex gap-4">
               <Button variant="outline" onClick={onBack} className="gap-2">
@@ -117,12 +118,14 @@ export default function PlanPreview({
             </div>
           </div>
 
+          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
-            <div className="space-y-6 p-4">
+            <div className="container mx-auto p-4 space-y-6">
+              {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">
                 <CardContent className="pt-6 pb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Goal and Race Information */}
+                    {/* Goal and Timeline Information */}
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-primary">
                         <Target className="h-5 w-5" />
@@ -209,6 +212,7 @@ export default function PlanPreview({
                 </CardContent>
               </Card>
 
+              {/* Weekly Plans Overview */}
               {planDetails.weeklyPlans && (
                 <ProgramOverview
                   plan={planDetails}
@@ -225,6 +229,7 @@ export default function PlanPreview({
             </div>
           </div>
 
+          {/* Fixed Footer */}
           <div className="flex justify-center p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <Button
               onClick={onConfirm}
