@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer } from "http";
+import fetch from "node-fetch";
 import { storage } from "./storage";
 import { generateTrainingPlan } from "./services/training-plan-generator";
 import { insertUserSchema } from "@shared/schema";
@@ -24,8 +25,12 @@ export async function registerRoutes(app: Express) {
     try {
       const code = req.query.code;
       if (!code) {
+        console.error("No code provided in Strava callback");
         return res.status(400).json({ error: "No code provided" });
       }
+
+      console.log("Received Strava callback with code:", code);
+      console.log("Exchanging code for tokens with Strava...");
 
       // Exchange code for tokens
       const tokenResponse = await fetch("https://www.strava.com/oauth/token", {
@@ -40,13 +45,17 @@ export async function registerRoutes(app: Express) {
       });
 
       if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.text();
+        console.error("Failed to exchange Strava token:", errorData);
         throw new Error("Failed to exchange token");
       }
 
       const tokens = await tokenResponse.json();
+      console.log("Successfully received Strava tokens");
 
       // If user is already authenticated, update their Strava tokens
       if (req.isAuthenticated() && req.user) {
+        console.log("Updating user Strava tokens for user:", req.user.id);
         await storage.updateUser(req.user.id, {
           stravaTokens: {
             accessToken: tokens.access_token,
@@ -55,6 +64,9 @@ export async function registerRoutes(app: Express) {
           },
           connectedApps: [...(req.user.connectedApps || []), "strava"],
         });
+        console.log("Successfully updated user Strava tokens");
+      } else {
+        console.log("No authenticated user found for Strava token update");
       }
 
       // Redirect back to the app

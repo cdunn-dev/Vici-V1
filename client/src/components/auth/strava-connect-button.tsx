@@ -26,6 +26,10 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
       authUrl.searchParams.append('response_type', 'code');
       authUrl.searchParams.append('scope', scope);
 
+      console.log('Initiating Strava OAuth with URL:', authUrl.toString());
+      console.log('Client ID:', clientId);
+      console.log('Redirect URI:', redirectUri);
+
       window.location.href = authUrl.toString();
     } catch (error) {
       console.error('Error initiating Strava connection:', error);
