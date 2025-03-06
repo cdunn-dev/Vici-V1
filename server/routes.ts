@@ -4,6 +4,10 @@ import fetch from "node-fetch";
 import { storage } from "./storage";
 import { generateTrainingPlan } from "./services/training-plan-generator";
 import { insertUserSchema } from "@shared/schema";
+import { syncStravaActivities, exchangeStravaCode } from "./services/strava";
+import { db } from "./db";
+import { desc, eq } from "drizzle-orm";
+import { stravaActivities, workouts } from "@shared/schema";
 
 function addWeeks(date: Date, weeks: number): Date {
   const newDate = new Date(date);
@@ -30,43 +34,22 @@ export async function registerRoutes(app: Express) {
       }
 
       console.log("Received Strava callback with code:", code);
-      console.log("Exchanging code for tokens with Strava...");
 
       // Exchange code for tokens
-      const tokenResponse = await fetch("https://www.strava.com/oauth/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: process.env.STRAVA_CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET,
-          code,
-          grant_type: "authorization_code",
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.text();
-        console.error("Failed to exchange Strava token:", errorData);
-        throw new Error("Failed to exchange token");
-      }
-
-      const tokens = await tokenResponse.json();
+      const tokens = await exchangeStravaCode(code.toString());
       console.log("Successfully received Strava tokens");
 
       // If user is already authenticated, update their Strava tokens
       if (req.isAuthenticated() && req.user) {
         console.log("Updating user Strava tokens for user:", req.user.id);
         await storage.updateUser(req.user.id, {
-          stravaTokens: {
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            expiresAt: tokens.expires_at,
-          },
+          stravaTokens: tokens,
           connectedApps: [...(req.user.connectedApps || []), "strava"],
         });
-        console.log("Successfully updated user Strava tokens");
-      } else {
-        console.log("No authenticated user found for Strava token update");
+
+        // Sync activities after successful connection
+        await syncStravaActivities(req.user.id, tokens.access_token);
+        console.log("Successfully synced Strava activities");
       }
 
       // Redirect back to the app
@@ -202,6 +185,58 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Error generating training plan:", error);
       res.status(500).json({ error: "Failed to generate training plan", details: error.message });
+    }
+  });
+
+  // Activity log routes
+  app.get("/api/activities", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const userId = req.user.id;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = 20;
+      const offset = (page - 1) * limit;
+
+      // Get activities with their matched workouts
+      const activities = await db
+        .select({
+          activity: stravaActivities,
+          workout: workouts,
+        })
+        .from(stravaActivities)
+        .leftJoin(workouts, eq(stravaActivities.workoutId, workouts.id))
+        .where(eq(stravaActivities.userId, userId))
+        .orderBy(desc(stravaActivities.startDate))
+        .limit(limit)
+        .offset(offset);
+
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching activities:", error);
+      res.status(500).json({ error: "Failed to fetch activities" });
+    }
+  });
+
+  // Manual sync endpoint
+  app.post("/api/activities/sync", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = req.user;
+      if (!user.stravaTokens) {
+        return res.status(400).json({ error: "Strava not connected" });
+      }
+
+      await syncStravaActivities(user.id, user.stravaTokens.accessToken);
+      res.json({ message: "Activities synced successfully" });
+    } catch (error) {
+      console.error("Error syncing activities:", error);
+      res.status(500).json({ error: "Failed to sync activities" });
     }
   });
 

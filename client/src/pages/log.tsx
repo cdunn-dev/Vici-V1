@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,31 +19,63 @@ import {
   Route,
   CheckCircle2,
   BarChart3,
+  RefreshCw,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-type ActivityTileProps = {
-  workout: {
-    date: string;
+type ActivityWithWorkout = {
+  activity: {
+    id: number;
+    name: string;
     type: string;
+    startDate: string;
     distance: number;
-    duration: number;
-    perceivedEffort?: number;
-    notes?: string;
+    movingTime: number;
+    elapsedTime: number;
+    averageSpeed: number;
+    maxSpeed: number;
+    averageHeartrate?: number;
+    maxHeartrate?: number;
+    totalElevationGain: number;
+  };
+  workout?: {
+    id: number;
+    type: string;
+    description: string;
+    distance: number;
+    completed: boolean;
   };
 };
 
-function ActivityTile({ workout }: ActivityTileProps) {
+function ActivityTile({ data }: { data: ActivityWithWorkout }) {
   const [showNotes, setShowNotes] = useState(false);
-  const pace = workout.duration / 60 / (workout.distance / 1000);
+  const { activity, workout } = data;
+
+  // Convert distance from meters to kilometers and pace to min/km
+  const distanceKm = activity.distance / 1000;
+  const paceMinPerKm = (activity.movingTime / 60) / distanceKm;
+  const paceMinutes = Math.floor(paceMinPerKm);
+  const paceSeconds = Math.round((paceMinPerKm - paceMinutes) * 60);
 
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
-          <CardTitle className="text-lg font-medium">
-            {format(new Date(workout.date), "MMMM d, yyyy")}
-          </CardTitle>
-          <CheckCircle2 className="h-5 w-5 text-green-500" />
+          <div>
+            <CardTitle className="text-lg font-medium">
+              {activity.name}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(activity.startDate), "MMMM d, yyyy h:mm a")}
+            </p>
+          </div>
+          {workout && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Planned Workout</span>
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -52,45 +84,75 @@ function ActivityTile({ workout }: ActivityTileProps) {
             <Route className="h-4 w-4 text-muted-foreground" />
             <div>
               <div className="text-sm font-medium">Distance</div>
-              <div className="text-xl">{(workout.distance / 1000).toFixed(2)} km</div>
+              <div className="text-xl">{distanceKm.toFixed(2)} km</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Timer className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="text-sm font-medium">Time</div>
+              <div className="text-sm font-medium">Pace</div>
               <div className="text-xl">
-                {Math.floor(workout.duration / 60)}:{(workout.duration % 60).toString().padStart(2, "0")}
+                {paceMinutes}:{paceSeconds.toString().padStart(2, "0")} /km
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="text-sm font-medium">Pace</div>
-              <div className="text-xl">{pace.toFixed(2)} min/km</div>
+              <div className="text-sm font-medium">Time</div>
+              <div className="text-xl">
+                {Math.floor(activity.movingTime / 60)}:{(activity.movingTime % 60).toString().padStart(2, "0")}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Heart className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <div className="text-sm font-medium">Effort</div>
-              <div className="text-xl">{workout.perceivedEffort}/10</div>
+          {activity.averageHeartrate && (
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-sm font-medium">Avg HR</div>
+                <div className="text-xl">{Math.round(activity.averageHeartrate)} bpm</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
+
+        {workout && (
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <h4 className="font-medium mb-2">Planned Workout</h4>
+            <p className="text-sm text-muted-foreground">{workout.description}</p>
+          </div>
+        )}
 
         <Button
           variant="ghost"
-          className="w-full justify-start"
+          className="w-full justify-start mt-4"
           onClick={() => setShowNotes(!showNotes)}
         >
-          {showNotes ? "Hide" : "Show"} Notes
+          {showNotes ? "Hide" : "Show"} Details
         </Button>
 
-        {showNotes && workout.notes && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">{workout.notes}</p>
+        {showNotes && (
+          <div className="mt-4 space-y-2">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Elevation Gain:</span>{" "}
+                {activity.totalElevationGain}m
+              </div>
+              {activity.maxHeartrate && (
+                <div>
+                  <span className="font-medium">Max HR:</span>{" "}
+                  {activity.maxHeartrate} bpm
+                </div>
+              )}
+              <div>
+                <span className="font-medium">Moving Time:</span>{" "}
+                {Math.floor(activity.movingTime / 60)}:{(activity.movingTime % 60).toString().padStart(2, "0")}
+              </div>
+              <div>
+                <span className="font-medium">Total Time:</span>{" "}
+                {Math.floor(activity.elapsedTime / 60)}:{(activity.elapsedTime % 60).toString().padStart(2, "0")}
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
@@ -99,107 +161,85 @@ function ActivityTile({ workout }: ActivityTileProps) {
 }
 
 export default function Log() {
-  const [perceivedEffort, setPerceivedEffort] = useState([5]);
-  const { data: workouts } = useQuery({
-    queryKey: ["/api/workouts", 1], // Assuming user ID 1 for now
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const { data: activities, isLoading } = useQuery<ActivityWithWorkout[]>({
+    queryKey: ["/api/activities"],
   });
 
-  // Mock data for demonstration
-  const mockWorkouts = [
-    {
-      date: "2024-01-10",
-      type: "Easy Run",
-      distance: 8000, // 8km in meters
-      duration: 2400, // 40 minutes in seconds
-      perceivedEffort: 6,
-      notes: "Felt strong today, maintained consistent pace throughout the run.",
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/activities/sync");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to sync activities");
+      }
+      return res.json();
     },
-    {
-      date: "2024-01-09",
-      type: "Tempo Run",
-      distance: 10000,
-      duration: 3000,
-      perceivedEffort: 8,
-      notes: "Tough workout but hit all the target paces.",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({
+        title: "Activities Synced",
+        description: "Your Strava activities have been synced successfully.",
+      });
     },
-  ];
+    onError: (error: Error) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filter activities based on search query
+  const filteredActivities = activities?.filter(
+    (item) =>
+      item.activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.activity.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="log" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="log">Training Log</TabsTrigger>
-          <TabsTrigger value="new">Log Activity</TabsTrigger>
-        </TabsList>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Training Log</h2>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Search activities..."
+            className="w-[200px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+            Sync Strava
+          </Button>
+          <Button variant="outline">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </Button>
+        </div>
+      </div>
 
-        <TabsContent value="log" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Training Log</h2>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search activities..."
-                className="w-[200px]"
-              />
-              <Button variant="outline">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Analytics
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {mockWorkouts.map((workout, index) => (
-              <ActivityTile key={index} workout={workout} />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="new">
-          <Card>
-            <CardHeader>
-              <CardTitle>Log New Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Distance (km)</label>
-                    <Input type="number" step="0.01" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Duration</label>
-                    <Input type="time" step="1" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Perceived Effort (1-10)</label>
-                  <Slider
-                    value={perceivedEffort}
-                    onValueChange={setPerceivedEffort}
-                    max={10}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="text-sm text-muted-foreground text-center">
-                    {perceivedEffort}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Notes</label>
-                  <Textarea
-                    placeholder="How did your run feel? Any notable achievements or challenges?"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <Button className="w-full">Save Activity</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {isLoading ? (
+        <div className="text-center py-8">Loading activities...</div>
+      ) : filteredActivities?.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No activities found. Connect with Strava to import your activities.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredActivities?.map((activity) => (
+            <ActivityTile key={activity.activity.id} data={activity} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
