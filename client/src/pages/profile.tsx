@@ -20,25 +20,47 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { userProfileUpdateSchema, GenderEnum, DistanceUnitEnum } from "@shared/schema";
-import { SiStrava, SiGarmin, SiNike } from "react-icons/si";
+import { 
+  SiStrava, 
+  SiGarmin, 
+  SiNike,
+  SiPolar,
+  SiFitbit,
+} from "react-icons/si";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { Camera, CalendarIcon, Plus, X, Upload } from "lucide-react";
 import { apiRequest, invalidateQueries } from "@/lib/api";
+import { AddPersonalBestForm } from "@/components/training/add-personal-best-form";
+
+interface PersonalBest {
+  distance: string;
+  time: string;
+  date: string;
+}
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [addingPersonalBest, setAddingPersonalBest] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery({
@@ -67,6 +89,13 @@ export default function Profile() {
     }
   }, [user, form]);
 
+  // Reset preview when profile picture changes
+  useEffect(() => {
+    if (user?.profilePicture) {
+      setPreviewUrl(user.profilePicture);
+    }
+  }, [user?.profilePicture]);
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
       const response = await apiRequest("PATCH", `/api/users/${user?.id}`, data);
@@ -94,6 +123,14 @@ export default function Profile() {
     if (!e.target.files?.[0]) return;
 
     const file = e.target.files[0];
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
     const formData = new FormData();
     formData.append("profilePicture", file);
 
@@ -111,6 +148,7 @@ export default function Profile() {
         description: "Profile picture updated successfully",
       });
     } catch (error) {
+      setPreviewUrl(user?.profilePicture || null);
       toast({
         title: "Error",
         description: "Failed to upload profile picture",
@@ -173,28 +211,51 @@ export default function Profile() {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Profile Picture</CardTitle>
+              <CardDescription>
+                Upload a profile picture to personalize your account
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="relative h-24 w-24 rounded-full overflow-hidden bg-muted">
-                  {user.profilePicture ? (
-                    <img
-                      src={user.profilePicture}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                      No Image
-                    </div>
-                  )}
+              <div className="flex items-center gap-8">
+                <div className="relative h-32 w-32">
+                  <div className="h-full w-full rounded-full overflow-hidden bg-muted">
+                    {previewUrl ? (
+                      <img
+                        src={previewUrl}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center">
+                        <Camera className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePictureUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="absolute bottom-0 right-0 rounded-full"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfilePictureUpload}
-                  className="max-w-xs"
-                />
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-sm font-medium">Upload Requirements</h4>
+                  <ul className="text-sm text-muted-foreground">
+                    <li>Square image recommended</li>
+                    <li>Maximum file size: 5MB</li>
+                    <li>Supported formats: JPG, PNG</li>
+                  </ul>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -203,6 +264,9 @@ export default function Profile() {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
+              <CardDescription>
+                Your personal information helps us personalize your training experience
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -300,7 +364,7 @@ export default function Profile() {
                       <SelectContent>
                         {Object.values(DistanceUnitEnum.Values).map((unit) => (
                           <SelectItem key={unit} value={unit}>
-                            {unit}
+                            {unit.charAt(0).toUpperCase() + unit.slice(1)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -325,24 +389,44 @@ export default function Profile() {
           {/* Personal Bests */}
           <Card className="mb-8">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Personal Bests</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setAddingPersonalBest(true)}
-                disabled={!isEditing}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Record
-              </Button>
+              <div>
+                <CardTitle>Personal Bests</CardTitle>
+                <CardDescription>
+                  Track your best performances across different distances
+                </CardDescription>
+              </div>
+              <Dialog open={addingPersonalBest} onOpenChange={setAddingPersonalBest}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!isEditing}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Record
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Personal Best</DialogTitle>
+                  </DialogHeader>
+                  <AddPersonalBestForm 
+                    onSubmit={(data) => {
+                      const personalBests = form.getValues("personalBests");
+                      form.setValue("personalBests", [...personalBests, data]);
+                      setAddingPersonalBest(false);
+                    }}
+                    onCancel={() => setAddingPersonalBest(false)}
+                  />
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {form.watch("personalBests")?.map((pb, index) => (
+                {form.watch("personalBests")?.map((pb: PersonalBest, index: number) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-accent/5 transition-colors"
                   >
                     <div>
                       <p className="font-medium">{pb.distance}</p>
@@ -354,7 +438,7 @@ export default function Profile() {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => {
                           const personalBests = form.getValues("personalBests");
                           personalBests.splice(index, 1);
@@ -374,52 +458,79 @@ export default function Profile() {
           <Card>
             <CardHeader>
               <CardTitle>Connected Apps</CardTitle>
+              <CardDescription>
+                Connect your fitness tracking apps for better training insights
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 <Button
                   variant="outline"
-                  className="h-20"
+                  className="h-16 justify-start gap-2"
                   onClick={handleStravaConnect}
                   disabled={user?.connectedApps?.includes("strava") || isConnecting}
                 >
-                  <SiStrava className="h-8 w-8 mr-2" />
-                  {isConnecting
-                    ? "Connecting..."
-                    : user?.connectedApps?.includes("strava")
-                      ? "Connected to Strava"
-                      : "Connect Strava"
-                  }
+                  <SiStrava className="h-5 w-5 text-[#FC4C02]" />
+                  <span className="text-sm">
+                    {isConnecting
+                      ? "Connecting..."
+                      : user?.connectedApps?.includes("strava")
+                        ? "Connected"
+                        : "Strava"
+                    }
+                  </span>
                 </Button>
-                <Button variant="outline" className="h-20" disabled>
-                  <SiGarmin className="h-8 w-8 mr-2" />
-                  Connect Garmin
+                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
+                  <SiGarmin className="h-5 w-5 text-[#000000]" />
+                  <span className="text-sm">Garmin</span>
                 </Button>
-                <Button variant="outline" className="h-20" disabled>
-                  <SiNike className="h-8 w-8 mr-2" />
-                  Connect Nike
+                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
+                  <img src="/coros-logo.svg" alt="Coros" className="h-5 w-5" />
+                  <span className="text-sm">Coros</span>
                 </Button>
+                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
+                  <SiPolar className="h-5 w-5 text-[#D31334]" />
+                  <span className="text-sm">Polar</span>
+                </Button>
+                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
+                  <SiFitbit className="h-5 w-5" />
+                  <span className="text-sm">Fitbit</span>
+                </Button>
+                <Button variant="outline" className="h-16 justify-start gap-2" disabled>
+                  <SiNike className="h-5 w-5" />
+                  <span className="text-sm">Nike Run</span>
+                </Button>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="h-16">
+                      <Plus className="h-5 w-5" />
+                      <span className="text-sm ml-2">More</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Additional Integrations</DialogTitle>
+                    </DialogHeader>
+                    {/* TODO: Implement additional integrations list */}
+                  </DialogContent>
+                </Dialog>
               </div>
+
               {user?.connectedApps?.includes("strava") && (
                 <Button
                   variant="secondary"
-                  className="w-full"
+                  className="w-full mt-4"
                   onClick={async () => {
                     try {
-                      const res = await fetch("/api/strava/sync", {
+                      const res = await fetch("/api/activities/sync", {
                         method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ userId: user.id }),
                       });
 
                       if (!res.ok) throw new Error("Failed to sync");
 
-                      const data = await res.json();
                       toast({
                         title: "Success",
-                        description: `Synced ${data.count} activities from Strava`,
+                        description: "Successfully synced Strava activities",
                       });
                     } catch (error) {
                       toast({
@@ -430,7 +541,7 @@ export default function Profile() {
                     }
                   }}
                 >
-                  Sync Strava Activities
+                  Sync Activities
                 </Button>
               )}
             </CardContent>
