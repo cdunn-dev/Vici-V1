@@ -17,6 +17,32 @@ export const users = pgTable("users", {
   } | null>(),
 });
 
+// Training plans table
+export const trainingPlans = pgTable("training_plans", {
+  id: serial("id").primaryKey(),
+  userId: serial("user_id").references(() => users.id),
+  name: text("name").notNull(),
+  goal: text("goal").notNull(),
+  goalDescription: text("goal_description").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  weeklyMileage: serial("weekly_mileage").notNull(),
+  weeklyPlans: json("weekly_plans").$type<any[]>().default([]),
+  targetRace: json("target_race").$type<any>(),
+  runningExperience: json("running_experience").$type<{
+    level: string;
+    fitnessLevel: string;
+  }>(),
+  trainingPreferences: json("training_preferences").$type<{
+    weeklyRunningDays: number;
+    maxWeeklyMileage: number;
+    weeklyWorkouts: number;
+    preferredLongRunDay: string;
+    coachingStyle: string;
+  }>(),
+  isActive: boolean("is_active").default(true),
+});
+
 // Registration schema with password confirmation
 export const registerUserSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -30,7 +56,7 @@ export const registerUserSchema = z.object({
 // Training Plan Types
 export const weeklyPlanSchema = z.object({
   week: z.number(),
-  phase: z.string(),  // Added phase field
+  phase: z.string(),
   totalMileage: z.number(),
   workouts: z.array(z.object({
     day: z.string(),

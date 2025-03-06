@@ -1,34 +1,24 @@
 import {
+  users,
+  trainingPlans,
   type User,
   type InsertUser,
+  type TrainingPlan,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
-
-interface TrainingPlan {
-  id: number;
-  userId: number;
-  name: string;
-  goal: string;
-  goalDescription: string;
-  startDate: Date;
-  endDate: Date;
-  weeklyMileage: number;
-  weeklyPlans: any[];
-  targetRace: any;
-  runningExperience: any;
-  trainingPreferences: any;
-  isActive: boolean;
-}
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  updateUser(id: number, user: Partial<InsertUser>): Promise<User>;
+  updateUser(id: number, user: Partial<User>): Promise<User>;
 
   // Training plan operations
   getTrainingPlans(userId: number, active?: boolean): Promise<TrainingPlan[]>;
@@ -41,98 +31,108 @@ export interface IStorage {
   sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private trainingPlans: Map<number, TrainingPlan>;
-  private currentIds: { [key: string]: number };
+export class DatabaseStorage implements IStorage {
   public sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
-
-    this.users = new Map();
-    this.trainingPlans = new Map();
-    this.currentIds = { users: 1, trainingPlans: 1 };
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.email === email);
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentIds.users++;
-    const user: User = { 
-      id,
-      ...insertUser,
-      emailVerified: true,
-      verificationToken: null,
-      connectedApps: [],
-      stravaTokens: null
-    };
-    this.users.set(id, user);
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email));
     return user;
   }
 
-  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User> {
-    const user = await this.getUser(id);
-    if (!user) throw new Error("User not found");
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
+  }
 
-    const updatedUser = {
-      ...user,
-      ...userData,
-      connectedApps: user.connectedApps,
-      stravaTokens: user.stravaTokens
-    };
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
 
-    this.users.set(id, updatedUser);
-    return updatedUser;
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    return user;
   }
 
   async getTrainingPlans(userId: number, active?: boolean): Promise<TrainingPlan[]> {
-    const plans = Array.from(this.trainingPlans.values())
-      .filter(plan => plan.userId === userId);
+    let query = db
+      .select()
+      .from(trainingPlans)
+      .where(eq(trainingPlans.userId, userId));
 
     if (active !== undefined) {
-      return plans.filter(plan => plan.isActive === active);
+      query = query.where(eq(trainingPlans.isActive, active));
     }
 
-    return plans.sort((a, b) => b.id - a.id); // Most recent first
+    return await query.orderBy(desc(trainingPlans.id));
   }
 
   async getTrainingPlan(id: number): Promise<TrainingPlan | undefined> {
-    return this.trainingPlans.get(id);
+    const [plan] = await db
+      .select()
+      .from(trainingPlans)
+      .where(eq(trainingPlans.id, id));
+    return plan;
   }
 
   async createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan> {
-    const id = this.currentIds.trainingPlans++;
-    const newPlan = { ...plan, id, isActive: true };
-    this.trainingPlans.set(id, newPlan);
+    const [newPlan] = await db
+      .insert(trainingPlans)
+      .values(plan)
+      .returning();
     return newPlan;
   }
 
   async updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<TrainingPlan> {
-    const existingPlan = await this.getTrainingPlan(id);
-    if (!existingPlan) {
+    const [plan] = await db
+      .update(trainingPlans)
+      .set(updates)
+      .where(eq(trainingPlans.id, id))
+      .returning();
+
+    if (!plan) {
       throw new Error("Training plan not found");
     }
 
-    const updatedPlan = { ...existingPlan, ...updates };
-    this.trainingPlans.set(id, updatedPlan);
-    return updatedPlan;
+    return plan;
   }
 
   async archiveActiveTrainingPlans(userId: number): Promise<void> {
-    const activePlans = await this.getTrainingPlans(userId, true);
-    for (const plan of activePlans) {
-      await this.updateTrainingPlan(plan.id, { isActive: false });
-    }
+    await db
+      .update(trainingPlans)
+      .set({ isActive: false })
+      .where(
+        and(
+          eq(trainingPlans.userId, userId),
+          eq(trainingPlans.isActive, true)
+        )
+      );
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
