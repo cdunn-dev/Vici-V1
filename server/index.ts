@@ -12,32 +12,42 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 console.log("[Startup] Body parsing middleware configured");
 
-// Request logging middleware
+// Request logging middleware with enhanced error tracking
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
+  // Capture JSON responses
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
+  // Add error event handler
+  res.on('error', (error) => {
+    console.error(`[Error] Response error for ${req.method} ${path}:`, error);
+  });
+
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      log(logLine);
+    const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+    if (res.statusCode >= 400) {
+      console.error(`[Error] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
+    } else if (path.startsWith("/api")) {
+      log(`[API] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
     }
   });
 
   next();
 });
 console.log("[Startup] Request logging middleware configured");
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 async function ensureDefaultUser() {
   try {
@@ -71,9 +81,9 @@ async function ensureDefaultUser() {
     console.log("[Startup] Registering routes");
     const server = await registerRoutes(app);
 
-    // Error handling middleware
+    // Enhanced error handling middleware
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error("[Error]", err);
+      console.error("[Error] Unhandled error:", err);
       const status = err.status || err.statusCode || 500;
       const message = err.message || "Internal Server Error";
       res.status(status).json({ error: message });
@@ -95,7 +105,17 @@ async function ensureDefaultUser() {
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
-      log(`[Startup] Server listening on port ${port}`);
+      console.log(`[Startup] Server listening on port ${port}`);
+      console.log(`[Startup] Server URL: http://0.0.0.0:${port}`);
+      console.log("[Startup] Environment:", app.get("env"));
+    });
+
+    // Handle server errors
+    server.on('error', (error: any) => {
+      console.error('[Server Error]', error);
+      if (error.code === 'EADDRINUSE') {
+        console.error(`[Server Error] Port ${port} is already in use`);
+      }
     });
   } catch (error) {
     console.error("[Startup] Fatal error during initialization:", error);
