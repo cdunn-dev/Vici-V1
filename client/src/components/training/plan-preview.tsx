@@ -56,9 +56,9 @@ export default function PlanPreview({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-12rem)] overflow-hidden">
+    <div className="h-full flex flex-col">
       {isAdjusting ? (
-        <div className="space-y-4 p-4 overflow-y-auto">
+        <div className="flex flex-col h-full p-4">
           <Card className="shadow-md border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl">Request Training Plan Adjustments</CardTitle>
@@ -76,7 +76,7 @@ export default function PlanPreview({
             </CardContent>
           </Card>
 
-          <div className="flex justify-between">
+          <div className="flex justify-between mt-4">
             <Button
               variant="outline"
               onClick={() => setIsAdjusting(false)}
@@ -99,8 +99,8 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full">
-          <div className="flex justify-center p-4 border-b">
+        <div className="flex flex-col h-full overflow-hidden">
+          <div className="flex justify-center p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex gap-4">
               <Button variant="outline" onClick={onBack} className="gap-2">
                 <ChevronLeft className="h-4 w-4" />
@@ -117,8 +117,8 @@ export default function PlanPreview({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4">
-            <div className="space-y-6 py-6">
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6 p-4">
               <Card className="shadow-md border-primary/20 bg-primary/5">
                 <CardContent className="pt-6 pb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
