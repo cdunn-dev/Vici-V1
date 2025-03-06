@@ -44,6 +44,7 @@ interface PlanPreviewProps {
   onAdjust: (feedback: string) => void;
   onBack: () => void;
   isSubmitting?: boolean;
+  isDialog?: boolean;
 }
 
 export default function PlanPreview({
@@ -58,9 +59,9 @@ export default function PlanPreview({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className="absolute inset-0 flex flex-col bg-background">
+    <div className={isDialog ? "" : "absolute inset-0 flex flex-col bg-background"}>
       {isAdjusting ? (
-        <div className="flex flex-col h-full p-4">
+        <div className="flex flex-col p-4">
           <Card className="shadow-md border-primary/20">
             <CardHeader>
               <CardTitle className="text-xl">Request Training Plan Adjustments</CardTitle>
@@ -101,28 +102,30 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col h-full max-h-[90vh] md:max-h-full">
-          {/* Fixed Header */}
-          <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
-            <div className="flex gap-4 justify-center">
-              <Button variant="outline" onClick={onBack} className="gap-2">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsAdjusting(true)}
-                className="gap-2"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Request Adjustments
-              </Button>
+        <div className={`flex flex-col ${isDialog ? "" : "h-full"}`}>
+          {/* Only show header/footer when not in dialog mode */}
+          {!isDialog && (
+            <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+              <div className="flex gap-4 justify-center">
+                <Button variant="outline" onClick={onBack} className="gap-2">
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAdjusting(true)}
+                  className="gap-2"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  Request Adjustments
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto -webkit-overflow-scrolling: touch;">
-            <div className="container mx-auto py-6 px-4 space-y-6">
+          {/* Content */}
+          <div className={`${isDialog ? "" : "flex-1 min-h-0 overflow-y-auto"}`}>
+            <div className="container mx-auto py-4 px-4 space-y-6">
               {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">
                 <CardContent className="pt-6 pb-6">
@@ -233,29 +236,31 @@ export default function PlanPreview({
             </div>
           </div>
 
-          {/* Fixed Footer */}
-          <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
-            <div className="flex justify-center">
-              <Button
-                onClick={onConfirm}
-                size="lg"
-                disabled={isSubmitting}
-                className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Creating Plan...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-5 w-5" />
-                    Approve Training Plan
-                  </>
-                )}
-              </Button>
+          {/* Only show footer when not in dialog mode */}
+          {!isDialog && (
+            <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+              <div className="flex justify-center">
+                <Button
+                  onClick={onConfirm}
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Creating Plan...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-5 w-5" />
+                      Approve Training Plan
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
