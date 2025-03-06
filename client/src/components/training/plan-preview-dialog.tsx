@@ -27,24 +27,20 @@ export function PlanPreviewDialog({
 }: PlanPreviewDialogProps) {
   if (!plan) return null;
 
-  const dialogId = "plan-preview-dialog";
-  const descriptionId = "plan-preview-description";
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="w-full max-w-4xl h-[80vh] flex flex-col"
-        aria-labelledby={dialogId}
-        aria-describedby={descriptionId}
+        className="w-full max-w-4xl max-h-[90vh] min-h-[50vh] flex flex-col gap-4 p-6"
+        style={{ height: 'calc(90vh - 2rem)' }}
       >
-        <DialogHeader>
-          <DialogTitle id={dialogId}>Training Plan Preview</DialogTitle>
-          <DialogDescription id={descriptionId}>
+        <DialogHeader className="flex-none">
+          <DialogTitle>Training Plan Preview</DialogTitle>
+          <DialogDescription>
             Review your personalized training plan before confirming.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 -mr-6 pr-6">
           <div className="space-y-6">
             {/* Plan Overview */}
             <div className="space-y-2">
@@ -115,7 +111,7 @@ export function PlanPreviewDialog({
           </div>
         </ScrollArea>
 
-        <div className="flex justify-end gap-4 mt-6 pt-4 border-t">
+        <div className="flex-none flex justify-end gap-4 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>

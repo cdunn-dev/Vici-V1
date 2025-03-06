@@ -1,13 +1,13 @@
 import OpenAI from "openai";
 import { BaseAIService } from "./base";
-import { 
+import {
   AIServiceConfig,
   TrainingPreferences,
   WorkoutData,
   TrainingPlanResponse,
   WorkoutAnalysis,
   PlanAdjustments,
-  AIServiceError
+  AIServiceError,
 } from "./types";
 
 export class OpenAIService extends BaseAIService {
@@ -24,7 +24,7 @@ export class OpenAIService extends BaseAIService {
   protected async makeRequest<T>(
     prompt: string,
     operation: string,
-    responseFormat: 'json' | 'text' = 'json'
+    responseFormat: "json" | "text" = "json",
   ): Promise<T> {
     try {
       const response = await this.client.chat.completions.create({
@@ -32,14 +32,16 @@ export class OpenAIService extends BaseAIService {
         messages: [
           {
             role: "system",
-            content: "You are an expert running coach who creates personalized training plans.",
+            content:
+              "You are an expert running coach who creates personalized training plans.",
           },
           {
             role: "user",
             content: prompt,
           },
         ],
-        response_format: responseFormat === 'json' ? { type: "json_object" } : undefined,
+        response_format:
+          responseFormat === "json" ? { type: "json_object" } : undefined,
       });
 
       const content = response.choices[0].message.content;
@@ -47,50 +49,42 @@ export class OpenAIService extends BaseAIService {
         throw new Error("Empty response from OpenAI");
       }
 
-      return responseFormat === 'json' ? JSON.parse(content) : content as T;
+      return responseFormat === "json" ? JSON.parse(content) : (content as T);
     } catch (error) {
       throw new AIServiceError(
         `OpenAI request failed: ${(error as Error).message}`,
         this.name,
         operation,
-        error as Error
+        error as Error,
       );
     }
   }
 
-  async generateTrainingPlan(preferences: TrainingPreferences): Promise<TrainingPlanResponse> {
-    return this.withRetry(
-      async () => {
-        const prompt = this.getTrainingPlanPrompt(preferences);
-        return await this.makeRequest<TrainingPlanResponse>(
-          prompt,
-          'generateTrainingPlan'
-        );
-      },
-      'generate training plan'
-    );
+  async generateTrainingPlan(
+    preferences: TrainingPreferences,
+  ): Promise<TrainingPlanResponse> {
+    return this.withRetry(async () => {
+      const prompt = this.getTrainingPlanPrompt(preferences);
+      return await this.makeRequest<TrainingPlanResponse>(
+        prompt,
+        "generateTrainingPlan",
+      );
+    }, "generate training plan");
   }
 
   async analyzeWorkout(workout: WorkoutData): Promise<WorkoutAnalysis> {
-    return this.withRetry(
-      async () => {
-        const prompt = this.getWorkoutAnalysisPrompt(workout);
-        return await this.makeRequest<WorkoutAnalysis>(
-          prompt,
-          'analyzeWorkout'
-        );
-      },
-      'analyze workout'
-    );
+    return this.withRetry(async () => {
+      const prompt = this.getWorkoutAnalysisPrompt(workout);
+      return await this.makeRequest<WorkoutAnalysis>(prompt, "analyzeWorkout");
+    }, "analyze workout");
   }
 
   async generateAdjustments(
     feedback: string,
-    currentPlan: any
+    currentPlan: any,
   ): Promise<PlanAdjustments> {
-    return this.withRetry(
-      async () => {
-        const prompt = `
+    return this.withRetry(async () => {
+      const prompt = `
         As an AI running coach, consider this feedback and current training plan:
 
         User Feedback:
@@ -107,12 +101,10 @@ export class OpenAIService extends BaseAIService {
         }
         `;
 
-        return await this.makeRequest<PlanAdjustments>(
-          prompt,
-          'generateAdjustments'
-        );
-      },
-      'generate adjustments'
-    );
+      return await this.makeRequest<PlanAdjustments>(
+        prompt,
+        "generateAdjustments",
+      );
+    }, "generate adjustments");
   }
 }
