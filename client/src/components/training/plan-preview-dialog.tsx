@@ -27,17 +27,24 @@ export function PlanPreviewDialog({
 }: PlanPreviewDialogProps) {
   if (!plan) return null;
 
+  const dialogId = "plan-preview-dialog";
+  const descriptionId = "plan-preview-description";
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col" aria-describedby="plan-preview-description">
+      <DialogContent 
+        className="w-full max-w-4xl h-[80vh] flex flex-col"
+        aria-labelledby={dialogId}
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle>Training Plan Preview</DialogTitle>
-          <DialogDescription id="plan-preview-description">
+          <DialogTitle id={dialogId}>Training Plan Preview</DialogTitle>
+          <DialogDescription id={descriptionId}>
             Review your personalized training plan before confirming.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow pr-4">
+        <ScrollArea className="flex-1 pr-4">
           <div className="space-y-6">
             {/* Plan Overview */}
             <div className="space-y-2">
@@ -49,11 +56,15 @@ export function PlanPreviewDialog({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{format(new Date(plan.startDate), "MMM d, yyyy")}</p>
+                  <p className="font-medium">
+                    {format(new Date(plan.startDate), "MMM d, yyyy")}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">End Date</p>
-                  <p className="font-medium">{format(new Date(plan.endDate), "MMM d, yyyy")}</p>
+                  <p className="font-medium">
+                    {format(new Date(plan.endDate), "MMM d, yyyy")}
+                  </p>
                 </div>
                 {plan.targetRace && (
                   <div>
@@ -70,7 +81,7 @@ export function PlanPreviewDialog({
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Weekly Training Schedule</h3>
               <div className="space-y-6">
-                {plan.weeklyPlans.map((week, index) => (
+                {plan.weeklyPlans?.map((week, index) => (
                   <div key={index} className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium">Week {week.week}</h4>
@@ -80,7 +91,7 @@ export function PlanPreviewDialog({
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {week.workouts.map((workout, wIndex) => (
+                      {week.workouts?.map((workout, wIndex) => (
                         <div key={wIndex} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div>
@@ -91,7 +102,9 @@ export function PlanPreviewDialog({
                             </div>
                             <Badge variant="outline">{workout.distance} mi</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{workout.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {workout.description}
+                          </p>
                         </div>
                       ))}
                     </div>
