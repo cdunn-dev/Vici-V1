@@ -9,7 +9,7 @@ async function throwIfResNotOk(res: Response) {
     } catch (e) {
       // If JSON parsing fails, use text content
       const text = await res.text();
-      throw new Error(text || res.statusText || `Request failed with status ${res.status}`);
+      throw new Error(`${res.status}: ${text || res.statusText}`);
     }
   }
 }
@@ -27,7 +27,9 @@ export async function apiRequest(
       credentials: "include",
     });
 
-    await throwIfResNotOk(res);
+    // Clone the response before checking it, so we can still use it later
+    const resClone = res.clone();
+    await throwIfResNotOk(resClone);
     return res;
   } catch (error) {
     // Ensure we always throw an Error object with a message
@@ -52,7 +54,9 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
+    // Clone the response before checking it
+    const resClone = res.clone();
+    await throwIfResNotOk(resClone);
     return await res.json();
   };
 
