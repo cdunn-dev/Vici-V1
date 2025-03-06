@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   Dialog,
@@ -9,136 +8,139 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { TrainingPlan } from "@shared/schema";
 
 interface PlanPreviewDialogProps {
-  plan: any;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  plan: TrainingPlan;
+  isOpen: boolean;
+  onClose: () => void;
   onConfirm: () => void;
-  onAdjust: () => void;
-  isSubmitting?: boolean;
 }
 
 export default function PlanPreviewDialog({
   plan,
-  open,
-  onOpenChange,
+  isOpen,
+  onClose,
   onConfirm,
-  onAdjust,
-  isSubmitting = false,
 }: PlanPreviewDialogProps) {
   if (!plan) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col w-full max-w-5xl h-[95vh] p-0 sm:h-auto overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent 
+        className="grid grid-rows-[auto_1fr_auto] w-full max-w-4xl h-[90vh] overflow-hidden p-0"
+      >
         {/* Fixed Header */}
-        <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
-          <DialogTitle>Training Plan Preview</DialogTitle>
-          <DialogDescription>
-            Review your generated training plan before confirming
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Plan Overview */}
-          <div className="mb-6 p-4 bg-muted/50 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Plan Overview</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm font-medium">Goal:</p>
-                <p className="text-sm text-muted-foreground">{plan.goal}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Timeline:</p>
-                <p className="text-sm text-muted-foreground">
-                  {formatDate(plan.startDate)} - {formatDate(plan.endDate)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Experience:</p>
-                <p className="text-sm text-muted-foreground">
-                  {plan.runningExperience.level} Runner, {plan.runningExperience.fitnessLevel} fitness
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium">Weekly Schedule:</p>
-                <p className="text-sm text-muted-foreground">
-                  {plan.trainingPreferences.weeklyRunningDays} runs per week,
-                  up to {plan.trainingPreferences.maxWeeklyMileage} miles
-                </p>
-              </div>
-              {plan.targetRace && (
-                <div className="sm:col-span-2">
-                  <p className="text-sm font-medium">Target Race:</p>
-                  <p className="text-sm text-muted-foreground">
-                    {plan.targetRace.distance} on {formatDate(plan.targetRace.date)}
-                    {plan.targetRace.goalTime && ` (Goal: ${plan.targetRace.goalTime})`}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Weekly Plans */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Weekly Plans</h3>
-            {plan.weeklyPlans?.map((week: any) => (
-              <div key={week.week} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <h4 className="font-semibold">Week {week.week}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {week.totalMileage} miles total
-                    </p>
-                  </div>
-                  <div className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full">
-                    {week.phase}
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {week.workouts?.map((workout: any, idx: number) => (
-                    <div key={idx} className="bg-muted/30 p-3 rounded-md">
-                      <div className="flex items-center justify-between">
-                        <p className="font-medium text-sm">
-                          {formatDate(workout.day)} - {workout.type}
-                        </p>
-                        <span className="text-sm">{workout.distance} miles</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {workout.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="px-6 py-4 border-b bg-background">
+          <DialogHeader>
+            <DialogTitle>Training Plan Preview</DialogTitle>
+            <DialogDescription>
+              Review your personalized training plan before confirming.
+            </DialogDescription>
+          </DialogHeader>
         </div>
 
-        {/* Fixed Footer */}
-        <DialogFooter className="px-6 py-4 border-t sticky bottom-0 bg-background z-10">
-          <div className="flex flex-col sm:flex-row gap-2 w-full">
-            <Button
-              variant="outline"
-              onClick={onAdjust}
-              className="sm:flex-1"
-              disabled={isSubmitting}
-            >
-              Request Adjustments
-            </Button>
-            <Button
-              onClick={onConfirm}
-              className="sm:flex-1"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Confirm Plan"}
-            </Button>
+        {/* Scrollable Content Area */}
+        <ScrollArea className="relative">
+          <div className="px-6 py-4 space-y-8">
+            {/* Plan Overview */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Plan Overview</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">Goal</p>
+                  <p className="font-medium">{plan.goal}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Start Date</p>
+                  <p className="font-medium">
+                    {format(new Date(plan.startDate), "MMM d, yyyy")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">End Date</p>
+                  <p className="font-medium">
+                    {format(new Date(plan.endDate), "MMM d, yyyy")}
+                  </p>
+                </div>
+                {plan.targetRace && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Target Race</p>
+                    <p className="font-medium">{plan.targetRace.distance}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Weekly Plans */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Weekly Training Schedule</h3>
+              <div className="grid gap-6">
+                {plan.weeklyPlans?.map((week, index) => (
+                  <div 
+                    key={index} 
+                    className="rounded-lg border bg-card p-6 hover:bg-accent/5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-lg font-medium">Week {week.week}</h4>
+                        <Badge variant="outline" className="capitalize">
+                          {week.phase.toLowerCase()}
+                        </Badge>
+                      </div>
+                      <Badge className="bg-primary/10 text-primary hover:bg-primary/20">
+                        {week.totalMileage} miles planned
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {week.workouts?.map((workout, wIndex) => (
+                        <div 
+                          key={wIndex} 
+                          className="p-4 rounded-lg border bg-background hover:bg-accent/5 transition-colors"
+                        >
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-medium text-primary">
+                                {workout.type}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(workout.day), "EEEE, MMM d")}
+                              </p>
+                            </div>
+                            <Badge variant="outline">
+                              {workout.distance} mi
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-3">
+                            {workout.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </DialogFooter>
+        </ScrollArea>
+
+        {/* Fixed Footer */}
+        <div className="px-6 py-4 border-t bg-background">
+          <DialogFooter>
+            <div className="flex justify-end gap-4 w-full">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button onClick={onConfirm}>
+                Confirm Plan
+              </Button>
+            </div>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
