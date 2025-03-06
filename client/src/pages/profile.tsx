@@ -1,6 +1,7 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -31,12 +32,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CalendarIcon, Pencil, Plus, X } from "lucide-react";
+import { CalendarIcon, Plus, X } from "lucide-react";
 import { apiRequest, invalidateQueries } from "@/lib/api";
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [addingPersonalBest, setAddingPersonalBest] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery({
@@ -52,6 +54,18 @@ export default function Profile() {
       personalBests: user?.personalBests || [],
     },
   });
+
+  // Update form values when user data changes
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        gender: user.gender || undefined,
+        birthday: user.birthday || undefined,
+        preferredDistanceUnit: user.preferredDistanceUnit || "miles",
+        personalBests: user.personalBests || [],
+      });
+    }
+  }, [user, form]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
@@ -102,6 +116,36 @@ export default function Profile() {
         description: "Failed to upload profile picture",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleStravaConnect = async () => {
+    if (isConnecting) return;
+
+    try {
+      setIsConnecting(true);
+
+      if (!user?.id) {
+        throw new Error("User ID is required to connect Strava");
+      }
+
+      const res = await fetch(`/api/strava/auth?userId=${user.id}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get auth URL');
+      }
+
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (error) {
+      console.error("Strava connection error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to connect to Strava",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -396,33 +440,3 @@ export default function Profile() {
     </div>
   );
 }
-
-const handleStravaConnect = async () => {
-    if (isConnecting) return;
-
-    try {
-      setIsConnecting(true);
-
-      if (!user?.id) {
-        throw new Error("User ID is required to connect Strava");
-      }
-
-      const res = await fetch(`/api/strava/auth?userId=${user.id}`);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to get auth URL');
-      }
-
-      const { url } = await res.json();
-      window.location.href = url;
-    } catch (error) {
-      console.error("Strava connection error:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to connect to Strava",
-        variant: "destructive",
-      });
-    } finally {
-      setIsConnecting(false);
-    }
-  };
