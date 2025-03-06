@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TrainingPlan } from "@shared/schema";
 
 interface PlanPreviewDialogProps {
@@ -30,11 +29,9 @@ export default function PlanPreviewDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="grid grid-rows-[auto_1fr_auto] w-full max-w-4xl h-[90vh] overflow-hidden p-0"
-      >
+      <DialogContent className="max-w-4xl p-0 h-[90vh] max-h-[90vh] overflow-hidden">
         {/* Fixed Header */}
-        <div className="px-6 py-4 border-b bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
           <DialogHeader>
             <DialogTitle>Training Plan Preview</DialogTitle>
             <DialogDescription>
@@ -43,8 +40,8 @@ export default function PlanPreviewDialog({
           </DialogHeader>
         </div>
 
-        {/* Scrollable Content Area */}
-        <ScrollArea className="relative">
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto h-[calc(90vh-8rem)]">
           <div className="px-6 py-4 space-y-8">
             {/* Plan Overview */}
             <div className="space-y-4">
@@ -78,7 +75,7 @@ export default function PlanPreviewDialog({
             {/* Weekly Plans */}
             <div className="space-y-6">
               <h3 className="text-lg font-semibold">Weekly Training Schedule</h3>
-              <div className="grid gap-6">
+              <div className="space-y-6">
                 {plan.weeklyPlans?.map((week, index) => (
                   <div 
                     key={index} 
@@ -126,10 +123,10 @@ export default function PlanPreviewDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Fixed Footer */}
-        <div className="px-6 py-4 border-t bg-background">
+        <div className="sticky bottom-0 z-10 bg-background border-t px-6 py-4">
           <DialogFooter>
             <div className="flex justify-end gap-4 w-full">
               <Button variant="outline" onClick={onClose}>
