@@ -7,7 +7,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  emailVerified: boolean("email_verified").default(true), // Default to true while email verification is disabled
+  emailVerified: boolean("email_verified").default(true),
   verificationToken: text("verification_token"),
   connectedApps: json("connected_apps").$type<string[]>().default([]),
   stravaTokens: json("strava_tokens").$type<{
@@ -30,6 +30,7 @@ export const registerUserSchema = z.object({
 // Training Plan Types
 export const weeklyPlanSchema = z.object({
   week: z.number(),
+  phase: z.string(),  // Added phase field
   totalMileage: z.number(),
   workouts: z.array(z.object({
     day: z.string(),

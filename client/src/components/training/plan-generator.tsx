@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -1009,8 +1010,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleApprovePlan)} className="flex-1 flex flex-col">
-            <div className="flex-1 px-6 py-4 overflow-y-auto">{renderQuestion()}
-            </div>
+            <div className="flex-1 px-6 py-4 overflow-y-auto">{renderQuestion()}</div>
 
             <div className="border-t px-6 py-4 flex justify-between items-center">
               {currentStep.id === "preview" ? (

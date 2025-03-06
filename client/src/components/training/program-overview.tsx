@@ -75,13 +75,26 @@ export default function ProgramOverview({
     }
   };
 
+  const getPhaseColor = (phase: string) => {
+    switch (phase.toLowerCase()) {
+      case "base building":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "peak training":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "tapering":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+    }
+  };
+
   const calculateWeeklyCompletion = (workouts: typeof plan.weeklyPlans[0]['workouts']) => {
     const completed = workouts.filter(w => w.completed).length;
     return (completed / workouts.length) * 100;
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-h-[calc(100vh-8rem)] overflow-y-auto px-1">
       {/* Overview Section */}
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
         <div className="px-4 sm:px-6 py-4 flex flex-col gap-4">
@@ -166,7 +179,12 @@ export default function ProgramOverview({
                     <Calendar className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex flex-col items-start">
-                    <span className="font-semibold">Week {week.week}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Week {week.week}</span>
+                      <Badge variant="outline" className={`${getPhaseColor(week.phase)} text-xs`}>
+                        {week.phase}
+                      </Badge>
+                    </div>
                     <span className="text-sm text-muted-foreground">
                       {week.totalMileage} miles planned
                     </span>

@@ -43,11 +43,16 @@ export function generateTrainingPlan(preferences: {
     startingMileage = preferences.trainingPreferences.maxWeeklyMileage * 0.5;
   }
 
+  // Calculate phase transition points
+  const totalWeeks = weeks.length;
+  const basePhaseEnd = Math.floor(totalWeeks * 0.6);  // 60% base building
+  const peakPhaseEnd = Math.floor(totalWeeks * 0.8);  // 20% peak training
+  // Remaining 20% is tapering
+
   // Generate weekly plans
   const weeklyPlans: WeeklyPlan[] = weeks.map((weekStart, index) => {
     // Progressive mileage build-up
     const weekNumber = index + 1;
-    const totalWeeks = weeks.length;
     const buildupPhase = Math.floor(totalWeeks * 0.7);
     const taperPhase = Math.floor(totalWeeks * 0.2);
 
@@ -69,6 +74,12 @@ export function generateTrainingPlan(preferences: {
     }
 
     weeklyMileage = Math.round(weeklyMileage);
+
+    // Determine training phase
+    let phase = "Base Building";
+    if (weekNumber > basePhaseEnd) {
+      phase = weekNumber > peakPhaseEnd ? "Tapering" : "Peak Training";
+    }
 
     const workouts: WeeklyPlan['workouts'] = [];
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -115,6 +126,7 @@ export function generateTrainingPlan(preferences: {
 
     return {
       week: weekNumber,
+      phase,
       totalMileage: weeklyMileage,
       workouts,
     };
