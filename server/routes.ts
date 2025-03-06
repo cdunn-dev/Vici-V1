@@ -29,12 +29,15 @@ export async function registerRoutes(app: Express) {
   app.get("/api/auth/strava/callback", async (req, res) => {
     try {
       const code = req.query.code;
+      const state = req.query.state;
+
       if (!code) {
         console.error("No code provided in Strava callback");
         return res.status(400).json({ error: "No code provided" });
       }
 
       console.log("Received Strava callback with code:", code);
+      console.log("State parameter:", state);
 
       // Exchange code for tokens
       const tokens = await exchangeStravaCode(code.toString());
