@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { StravaConnectButton } from "@/components/auth/strava-connect-button";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -36,6 +37,19 @@ const registerSchema = z.object({
 export default function AuthPage() {
   const [location, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
+  const { toast } = useToast();
+  const searchParams = new URLSearchParams(window.location.search);
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "strava-auth-failed") {
+      toast({
+        title: "Strava Connection Failed",
+        description: "Unable to connect to Strava. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [searchParams, toast]);
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
