@@ -16,18 +16,17 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 // Get the correct domain based on environment
 function getAppDomain() {
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-    return `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
-  return "localhost:5000";
+  return "http://localhost:5000";
 }
 
-const domain = `https://${getAppDomain()}`;
-const REDIRECT_URI = `${domain}/api/auth/strava/callback`;
+const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
 // Log configuration details for debugging
 console.log("\nStrava Configuration:");
 console.log("====================");
-console.log("Website URL:", domain);
+console.log("Website URL:", getAppDomain());
 console.log("Callback URL:", REDIRECT_URI);
 console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
 console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
@@ -54,8 +53,6 @@ export function getStravaAuthUrl(userId: string): string {
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
   console.log("Generated Strava Auth URL:", authUrl);
-  console.log("Using Client ID:", STRAVA_CLIENT_ID);
-  console.log("Using Redirect URI:", REDIRECT_URI);
   return authUrl;
 }
 
