@@ -10,6 +10,7 @@ import Profile from "./pages/profile";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
+import StravaDebugPage from "@/pages/strava-debug"; // Added import
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useAuth();
@@ -47,6 +48,12 @@ function Router() {
           </Route>
           <Route path="/log">
             <ProtectedRoute component={Log} />
+          </Route>
+          <Route path="/activities/:id">
+            <ProtectedRoute component={() => <div>Activity Detail</div>} /> {/* Placeholder */}
+          </Route>
+          <Route path="/strava-debug"> {/* Added Strava debug route */}
+            <StravaDebugPage />
           </Route>
 
           {/* Default route */}

@@ -61,7 +61,13 @@ export function getStravaAuthUrl(userId: string): string {
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
+    console.log(`Exchanging code: ${code.substring(0, 5)}... for tokens`);
+    
     if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
+      console.error("Strava credentials missing:", { 
+        clientIdPresent: !!STRAVA_CLIENT_ID, 
+        clientSecretPresent: !!STRAVA_CLIENT_SECRET 
+      });
       throw new Error("Strava credentials not properly configured");
     }
 
@@ -69,6 +75,13 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     console.log("Using Client ID:", STRAVA_CLIENT_ID);
     console.log("Using Redirect URI:", REDIRECT_URI);
 
+    console.log("POST request to Strava token URL with payload:", {
+      client_id: STRAVA_CLIENT_ID,
+      code: code.substring(0, 5) + "...",
+      grant_type: "authorization_code",
+      redirect_uri: REDIRECT_URI
+    });
+    
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
@@ -77,7 +90,11 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       redirect_uri: REDIRECT_URI
     });
 
-    console.log("Successfully received Strava tokens");
+    console.log("Successfully received Strava tokens:", {
+      access_token_length: response.data.access_token?.length,
+      refresh_token_length: response.data.refresh_token?.length,
+      expires_at: response.data.expires_at
+    });
 
     // Map the response to our internal token structure
     return {
