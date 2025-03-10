@@ -4,7 +4,7 @@ import fetch from "node-fetch";
 import { storage } from "./storage";
 import { generateTrainingPlan } from "./services/training-plan-generator";
 import { userProfileUpdateSchema } from "@shared/schema";
-import { syncStravaActivities, exchangeStravaCode } from "./services/strava";
+import { getStravaAuthUrl, exchangeStravaCode, syncStravaActivities } from "./services/strava";
 import { db } from "./db";
 import { desc, eq } from "drizzle-orm";
 import { stravaActivities, workouts } from "@shared/schema";
@@ -251,9 +251,11 @@ export async function registerRoutes(app: Express) {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Not authenticated" });
       }
-      
+
+      console.log("Generating Strava auth URL for user:", req.user.id);
       const authUrl = getStravaAuthUrl(req.user.id.toString());
-      res.json({ authUrl });
+      console.log("Generated auth URL:", authUrl);
+      res.json({ url: authUrl });
     } catch (error) {
       console.error("Error generating Strava auth URL:", error);
       res.status(500).json({ error: "Failed to generate Strava auth URL" });
