@@ -1,6 +1,7 @@
 import { BaseActivityService } from './base';
 import { Activity, ProviderCredentials } from './types';
 import axios from 'axios';
+import { exchangeStravaCode, refreshStravaToken, syncStravaActivities } from '../strava';
 
 interface StravaTokens extends ProviderCredentials {
   accessToken: string;
@@ -38,37 +39,22 @@ export class StravaService extends BaseActivityService {
 
     const tokens = this.credentials as StravaTokens;
     if (Date.now() >= tokens.expiresAt * 1000) {
-      const response = await axios.post('https://www.strava.com/oauth/token', {
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        grant_type: 'refresh_token',
-        refresh_token: tokens.refreshToken
-      });
-
-      this.credentials = {
-        accessToken: response.data.access_token,
-        refreshToken: response.data.refresh_token,
-        expiresAt: response.data.expires_at
-      };
+      const newTokens = await refreshStravaToken(tokens.refreshToken);
+      this.credentials = newTokens;
     }
   }
 
   protected async fetchActivities(since?: Date): Promise<Activity[]> {
     if (!this.credentials) throw new Error('Not connected to Strava');
+    await this.refreshTokenIfNeeded();
 
-    const params = new URLSearchParams();
-    if (since) {
-      params.append('after', Math.floor(since.getTime() / 1000).toString());
+    try {
+      await syncStravaActivities(this.userId, this.credentials.accessToken);
+      return []; // Activities are synced to database, no need to return them here
+    } catch (error) {
+      console.error('Error syncing Strava activities:', error);
+      throw error;
     }
-
-    const response = await axios.get(
-      `https://www.strava.com/api/v3/athlete/activities?${params.toString()}`,
-      {
-        headers: { Authorization: `Bearer ${this.credentials.accessToken}` }
-      }
-    );
-
-    return response.data.map(this.transformStravaActivity.bind(this));
   }
 
   protected async fetchActivity(id: string): Promise<Activity> {
