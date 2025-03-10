@@ -22,6 +22,19 @@ function getAppDomain() {
   return "localhost:5000";
 }
 
+// Helper function to get the app domain
+function getAppDomain(): string {
+  const replit_slug = process.env.REPL_SLUG;
+  const replit_owner = process.env.REPL_OWNER;
+  
+  if (replit_slug && replit_owner) {
+    return `${replit_slug}.${replit_owner}.repl.co`;
+  }
+  
+  // Fallback to local development
+  return process.env.APP_DOMAIN || 'localhost:5000';
+}
+
 const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
 
 // Log configuration details for debugging
