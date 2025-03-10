@@ -50,17 +50,6 @@ function Router() {
           </Route>
 
           {/* Default route */}
-
-          <Route path="/profile">
-            <ProfilePage />
-          </Route>
-          <Route path="/strava-debug">
-            <StravaDebugPage />
-          </Route>
-          <Route path="/auth">
-            <AuthPage />
-          </Route>
-
           <Route path="/">
             <Redirect to="/training" />
           </Route>
