@@ -10,29 +10,17 @@ interface StravaConnectButtonProps {
 export function StravaConnectButton({ className, onConnect }: StravaConnectButtonProps) {
   const { toast } = useToast();
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     try {
-      const clientId = import.meta.env.VITE_STRAVA_CLIENT_ID;
-      if (!clientId) {
-        throw new Error("Strava Client ID not configured");
+      const res = await fetch('/api/strava/auth');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get auth URL');
       }
 
-      // Using hardcoded domain for Strava callback
-      const redirectUri = `https://b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev/api/auth/strava/callback`;
-      const scope = 'read,activity:read_all';
-
-      const authUrl = new URL('https://www.strava.com/oauth/authorize');
-      authUrl.searchParams.append('client_id', clientId);
-      authUrl.searchParams.append('redirect_uri', redirectUri);
-      authUrl.searchParams.append('response_type', 'code');
-      authUrl.searchParams.append('scope', scope);
-
-      // Log the auth URL for debugging
-      console.log('Initiating Strava OAuth with URL:', authUrl.toString());
-      console.log('Using Client ID:', clientId);
-      console.log('Using Redirect URI:', redirectUri);
-
-      window.location.href = authUrl.toString();
+      const { url } = await res.json();
+      console.log('Redirecting to Strava auth URL:', url);
+      window.location.href = url;
 
       if (onConnect) {
         onConnect();

@@ -245,6 +245,21 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Get Strava auth URL
+  app.get("/api/strava/auth", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const authUrl = getStravaAuthUrl(req.user.id.toString());
+      res.json({ authUrl });
+    } catch (error) {
+      console.error("Error generating Strava auth URL:", error);
+      res.status(500).json({ error: "Failed to generate Strava auth URL" });
+    }
+  });
+
   // Manual sync endpoint
   app.post("/api/activities/sync", async (req, res) => {
     try {
