@@ -22,7 +22,7 @@ function getAppDomain() {
   return "localhost:5000";
 }
 
-const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
+const REDIRECT_URI = `https://b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev/api/auth/strava/callback`;
 
 // Log configuration details for debugging
 console.log("\nStrava Configuration:");
