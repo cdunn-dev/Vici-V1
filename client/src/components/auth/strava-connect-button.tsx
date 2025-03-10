@@ -17,10 +17,8 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
         throw new Error("Strava Client ID not configured");
       }
 
-      // Get the current domain - handle both Replit and local development
-      const protocol = window.location.protocol;
-      const domain = window.location.host;
-      const redirectUri = `${protocol}//${domain}/api/auth/strava/callback`;
+      // Using hardcoded domain for Strava callback
+      const redirectUri = `https://b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev/api/auth/strava/callback`;
       const scope = 'read,activity:read_all';
 
       const authUrl = new URL('https://www.strava.com/oauth/authorize');
