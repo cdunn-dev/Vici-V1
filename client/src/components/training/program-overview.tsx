@@ -11,9 +11,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
-import { Calendar, ChevronDown, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
+import { Calendar, Check, ChevronDown, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
 
 interface ProgramOverviewProps {
   plan: TrainingPlanWithWeeklyPlans;
@@ -24,6 +23,7 @@ interface ProgramOverviewProps {
   onSelectWeek?: (weekNumber: number) => void;
   onSelectDay?: (date: Date | null) => void;
   selectedDate?: Date;
+  isSubmitting?: boolean;
 }
 
 export default function ProgramOverview({
@@ -35,13 +35,14 @@ export default function ProgramOverview({
   onSelectWeek,
   onSelectDay,
   selectedDate,
+  isSubmitting = false,
 }: ProgramOverviewProps) {
   const [question, setQuestion] = useState("");
   const [changes, setChanges] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
 
+  // Calculate metrics
   const totalWeeks = plan.weeklyPlans.length;
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
   const completedWeeks = plan.weeklyPlans.filter(week =>
@@ -55,30 +56,6 @@ export default function ProgramOverview({
   );
   const completionPercentage = (completedWeeks / totalWeeks) * 100;
   const followThroughPercentage = (completedWorkouts / totalWorkouts) * 100;
-
-  const handleAskQuestion = async () => {
-    if (!question.trim() || !onAskQuestion) return;
-    setIsSubmitting(true);
-    try {
-      await onAskQuestion(question);
-      setQuestion("");
-      setShowQuestionForm(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRequestChanges = async () => {
-    if (!changes.trim() || !onRequestChanges) return;
-    setIsSubmitting(true);
-    try {
-      await onRequestChanges(changes);
-      setChanges("");
-      setShowChangesForm(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -224,98 +201,6 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
-      {/* Only show AI interaction section when not in preview mode */}
-      {showActions && !onApprove && (
-        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
-          {showQuestionForm ? (
-            <div className="space-y-4">
-              <Textarea
-                placeholder="Ask your AI coach about your training plan..."
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                className="min-h-[100px]"
-              />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() => setShowQuestionForm(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={handleAskQuestion}
-                  disabled={isSubmitting || !question.trim()}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Asking...
-                    </>
-                  ) : (
-                    "Ask Question"
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : showChangesForm ? (
-            <div className="space-y-4">
-              <Textarea
-                placeholder="Describe what changes you'd like to make to your training plan..."
-                value={changes}
-                onChange={(e) => setChanges(e.target.value)}
-                className="min-h-[100px]"
-              />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full sm:w-auto"
-                  onClick={() => setShowChangesForm(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="w-full sm:w-auto"
-                  onClick={handleRequestChanges}
-                  disabled={isSubmitting || !changes.trim()}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
-                    </>
-                  ) : (
-                    "Request Changes"
-                  )}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                variant="outline"
-                className="w-full sm:w-40"
-                onClick={() => setShowQuestionForm(true)}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Ask a Question
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full sm:w-40"
-                onClick={() => setShowChangesForm(true)}
-              >
-                <ChevronDown className="mr-2 h-4 w-4" />
-                Request Changes
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Show approve button only in preview mode */}
       {onApprove && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
@@ -323,10 +208,44 @@ export default function ProgramOverview({
             className="w-full"
             onClick={onApprove}
             size="lg"
+            disabled={isSubmitting}
           >
-            <ThumbsUp className="mr-2 h-4 w-4" />
-            Approve Plan
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving Plan...
+              </>
+            ) : (
+              <>
+                <ThumbsUp className="mr-2 h-4 w-4" />
+                Approve Plan
+              </>
+            )}
           </Button>
+        </div>
+      )}
+
+      {/* Show AI interaction section only when not in preview mode */}
+      {showActions && !onApprove && (
+        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              variant="outline"
+              className="w-full sm:w-40"
+              onClick={() => setShowQuestionForm(true)}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Ask a Question
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-40"
+              onClick={() => setShowChangesForm(true)}
+            >
+              <ChevronDown className="mr-2 h-4 w-4" />
+              Request Changes
+            </Button>
+          </div>
         </div>
       )}
     </div>

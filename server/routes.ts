@@ -195,9 +195,10 @@ export async function registerRoutes(app: Express) {
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
-      // Handle dates properly
       try {
-        const startDate = new Date(req.body.startDate);
+        // Handle dates properly
+        const now = new Date();
+        const startDate = now;
         const endDate = req.body.targetRace?.date 
           ? new Date(req.body.targetRace.date)
           : addWeeks(startDate, 12);
@@ -241,7 +242,7 @@ export async function registerRoutes(app: Express) {
       }
     } catch (error) {
       console.error("Error generating training plan:", error);
-      res.status(500).json({ error: "Failed to generate training plan", details: error.message });
+      res.status(500).json({ error: "Failed to generate training plan" });
     }
   });
 
