@@ -70,6 +70,9 @@ export default function PlanPreview({
   // Create a clean version of the plan data without any circular references
   const cleanPlanData = {
     ...planDetails,
+    active: true, // Required by ProgramOverview
+    id: undefined, // Temporary, will be set when saved
+    userId: undefined, // Temporary, will be set when saved
     weeklyPlans: planDetails.weeklyPlans.map(week => ({
       ...week,
       workouts: week.workouts.map(workout => ({
