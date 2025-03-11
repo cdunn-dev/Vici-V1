@@ -97,6 +97,10 @@ export const userProfileUpdateSchema = z.object({
 });
 
 // Training plans table
+/**
+ * Training plans table schema
+ * Stores user training plans with their associated metadata and workout schedules
+ */
 export const trainingPlans = pgTable("training_plans", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
@@ -106,8 +110,14 @@ export const trainingPlans = pgTable("training_plans", {
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   weeklyMileage: serial("weekly_mileage").notNull(),
-  weeklyPlans: json("weekly_plans").$type<any[]>().default([]),
-  targetRace: json("target_race").$type<any>(),
+  weeklyPlans: json("weekly_plans").$type<WeeklyPlan[]>().default([]),
+  targetRace: json("target_race").$type<{
+    distance: string;
+    date: string;
+    customDistance?: { value: number; unit: string };
+    previousBest?: string;
+    goalTime?: string;
+  }>(),
   runningExperience: json("running_experience").$type<{
     level: string;
     fitnessLevel: string;
@@ -119,7 +129,7 @@ export const trainingPlans = pgTable("training_plans", {
     preferredLongRunDay: string;
     coachingStyle: string;
   }>(),
-  isActive: boolean("is_active").default(true),
+  active: boolean("is_active").default(true),
 });
 
 // Strava activities table
@@ -208,6 +218,10 @@ export const trainingPreferencesSchema = z.object({
   coachingStyle: z.string(),
 });
 
+/**
+ * Zod schema for training plans
+ * Validates training plan data structure and enforces type safety
+ */
 export const trainingPlanSchema = z.object({
   id: z.number(),
   userId: z.number(),
@@ -218,6 +232,7 @@ export const trainingPlanSchema = z.object({
   runningExperience: runningExperienceSchema,
   trainingPreferences: trainingPreferencesSchema,
   weeklyPlans: z.array(weeklyPlanSchema),
+  active: z.boolean().default(true),
 });
 
 // Basic insert schema without confirmation password
@@ -252,10 +267,21 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type WeeklyPlan = z.infer<typeof weeklyPlanSchema>;
+
+/**
+ * Type definition for a training plan
+ * Generated from the Zod schema to ensure type safety
+ */
 export type TrainingPlan = z.infer<typeof trainingPlanSchema>;
+
+/**
+ * Extended type that includes weekly plans
+ * Used when the full training plan data structure is needed
+ */
 export type TrainingPlanWithWeeklyPlans = TrainingPlan & {
   weeklyPlans: WeeklyPlan[];
 };
+
 export type StravaActivity = typeof stravaActivities.$inferSelect;
 export type InsertStravaActivity = z.infer<typeof insertStravaActivitySchema>;
 export type Workout = typeof workouts.$inferSelect;

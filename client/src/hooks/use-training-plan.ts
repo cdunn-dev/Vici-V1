@@ -4,18 +4,78 @@ import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
+/**
+ * Options for configuring the useTrainingPlan hook
+ */
 interface UseTrainingPlanOptions {
+  /** Callback function to be executed after a plan is successfully created */
   onPlanCreated?: () => void;
 }
 
-export function useTrainingPlan(options: UseTrainingPlanOptions = {}) {
+/**
+ * Return type for the useTrainingPlan hook
+ */
+interface UseTrainingPlanReturn {
+  /** The current active training plan */
+  trainingPlan: TrainingPlanWithWeeklyPlans | null;
+  /** Loading state for the training plan query */
+  isLoading: boolean;
+  /** Preview data for a new training plan */
+  previewPlan: TrainingPlanWithWeeklyPlans | null;
+  /** Whether the preview modal is shown */
+  showPreview: boolean;
+  /** Function to set the preview plan data */
+  setPreviewPlan: (plan: TrainingPlanWithWeeklyPlans | null) => void;
+  /** Function to toggle the preview modal */
+  setShowPreview: (show: boolean) => void;
+  /** Function to create a new training plan */
+  createPlan: (plan: TrainingPlanWithWeeklyPlans) => void;
+  /** Loading state for plan creation */
+  isCreating: boolean;
+  /** Function to adjust an existing plan */
+  adjustPlan: (params: { feedback: string; plan: TrainingPlanWithWeeklyPlans }) => void;
+  /** Loading state for plan adjustment */
+  isAdjusting: boolean;
+  /** Function to reorder workouts in a week */
+  reorderWorkouts: (params: { planId: number; weekId: number; workouts: any[] }) => void;
+  /** Loading state for workout reordering */
+  isReordering: boolean;
+}
+
+/**
+ * Custom hook for managing training plan state and operations
+ * 
+ * This hook provides functionality for:
+ * - Fetching the current training plan
+ * - Creating new training plans
+ * - Adjusting existing plans
+ * - Managing plan previews
+ * - Reordering workouts within a plan
+ * 
+ * @param options - Configuration options for the hook
+ * @returns Object containing training plan state and operations
+ * 
+ * @example
+ * ```typescript
+ * const {
+ *   trainingPlan,
+ *   isLoading,
+ *   createPlan,
+ *   adjustPlan
+ * } = useTrainingPlan({
+ *   onPlanCreated: () => console.log('Plan created successfully')
+ * });
+ * ```
+ */
+export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTrainingPlanReturn {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const [previewPlan, setPreviewPlan] = useState<TrainingPlanWithWeeklyPlans | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Query for fetching the current training plan
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
     queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
@@ -25,7 +85,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}) {
           throw new Error(`Failed to fetch training plan: ${response.statusText}`);
         }
         const plans = await response.json();
-        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) ||
+        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.active) ||
           (plans.length > 0 ? plans[plans.length - 1] : null);
       } catch (error) {
         console.error("Training plan fetch error:", error);
@@ -35,6 +95,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}) {
     enabled: !!user?.id,
   });
 
+  // Mutation for creating a new training plan
   const createPlanMutation = useMutation({
     mutationFn: async (plan: TrainingPlanWithWeeklyPlans) => {
       if (!user?.id) {
@@ -79,6 +140,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}) {
     },
   });
 
+  // Mutation for adjusting an existing plan
   const adjustPlanMutation = useMutation({
     mutationFn: async ({ feedback, plan }: { feedback: string; plan: TrainingPlanWithWeeklyPlans }) => {
       const response = await fetch(`/api/training-plans/adjust`, {
@@ -115,6 +177,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}) {
     },
   });
 
+  // Mutation for reordering workouts
   const reorderWorkoutsMutation = useMutation({
     mutationFn: async ({ 
       planId, 

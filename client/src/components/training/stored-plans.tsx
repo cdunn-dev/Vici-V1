@@ -3,14 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Clock, MapPin, User, Trophy, History } from "lucide-react";
-import { formatDistance } from "@/lib/utils";
+import { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { format } from "date-fns";
 
 interface StoredPlansProps {
   onLoadPlan: (planId: number) => void;
 }
 
 export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
-  const { data: trainingPlans, isLoading, error } = useQuery({
+  const { data: trainingPlans, isLoading, error } = useQuery<TrainingPlanWithWeeklyPlans[]>({
     queryKey: ["trainingPlans"],
     queryFn: async () => {
       const response = await fetch("/api/training-plans?userId=1");
@@ -35,12 +36,16 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
         <History className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
         <p className="text-muted-foreground text-lg">No past training plans found.</p>
         <p className="text-sm mt-2 mb-4">Create a new plan to get started!</p>
-        <Button variant="outline" onClick={() => window.location.href = "#"}>
+        <Button variant="outline" onClick={() => window.location.href = "/training"}>
           Create New Plan
         </Button>
       </div>
     );
   }
+
+  const formatDistance = (distance: string): string => {
+    return distance.toLowerCase().replace(/_/g, ' ');
+  };
 
   return (
     <div className="space-y-8">
@@ -51,7 +56,7 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
             <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5">
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Trophy className="h-5 w-5 text-primary" />
-                {plan.name}
+                {plan.goal}
               </CardTitle>
               <CardDescription className="text-sm line-clamp-2">{plan.goalDescription}</CardDescription>
             </CardHeader>
@@ -59,8 +64,8 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  {new Date(plan.startDate).toLocaleDateString()} to{" "}
-                  {new Date(plan.endDate).toLocaleDateString()}
+                  {format(new Date(plan.startDate), 'MMM d, yyyy')} to{" "}
+                  {format(new Date(plan.endDate), 'MMM d, yyyy')}
                 </span>
               </div>
 
@@ -68,8 +73,8 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    Target: {plan.targetRace.distance}{" "}
-                    {plan.targetRace.date && `on ${new Date(plan.targetRace.date).toLocaleDateString()}`}
+                    Target: {formatDistance(plan.targetRace.distance)}{" "}
+                    {plan.targetRace.date && `on ${format(new Date(plan.targetRace.date), 'MMM d, yyyy')}`}
                   </span>
                 </div>
               )}
@@ -77,13 +82,15 @@ export function StoredPlans({ onLoadPlan }: StoredPlansProps) {
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                    Experience Level: {plan.runningExperience?.level || "Not specified"}
-                  </span>
-                </div>
+                  Experience Level: {plan.runningExperience?.level || "Not specified"}
+                </span>
+              </div>
+
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm">
-                  {plan.trainingPreferences.weeklyRunningDays} days/week, {plan.weeklyMileage} miles max
+                  {plan.trainingPreferences.weeklyRunningDays} days/week,{" "}
+                  {plan.trainingPreferences.maxWeeklyMileage} miles max
                 </span>
               </div>
             </CardContent>
