@@ -2,6 +2,7 @@ import { SiStrava } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface StravaConnectButtonProps {
   className?: string;
@@ -10,13 +11,26 @@ interface StravaConnectButtonProps {
 
 export function StravaConnectButton({ className, onConnect }: StravaConnectButtonProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
     try {
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in before connecting to Strava",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setIsConnecting(true);
 
-      const res = await fetch('/api/strava/auth');
+      const res = await fetch('/api/strava/auth', {
+        credentials: 'include', // Include credentials in the request
+      });
+
       const data = await res.json();
 
       if (!res.ok) {
