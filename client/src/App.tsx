@@ -31,10 +31,10 @@ function Router() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      {user && <Navbar />}
       <main className="container mx-auto px-4 py-8">
         <Switch>
-          {/* Auth route - redirect to training if already logged in */}
+          {/* Public route - redirect to training if already logged in */}
           <Route path="/auth">
             {user ? <Redirect to="/training" /> : <Auth />}
           </Route>
