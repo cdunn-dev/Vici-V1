@@ -19,6 +19,8 @@ import { StoredPlans } from "@/components/training/stored-plans";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
+import DayView from "@/components/training/day-view";
+import WeekView from "@/components/training/week-view";
 
 interface WorkoutDetailType {
   date: Date;
@@ -108,12 +110,16 @@ export default function Training() {
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
   const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
+  const [showDayView, setShowDayView] = useState(false);
+  const [showWeekView, setShowWeekView] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutDetailType | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<any>(null);
 
 
   // Derived state
   const currentWeek = getCurrentWeek(trainingPlan);
-  const selectedWeek = getSelectedWeek(trainingPlan, selectedDate);
-  const selectedDayWorkout = selectedWeek?.workouts.find(
+  const selectedWeek2 = getSelectedWeek(trainingPlan, selectedDate);
+  const selectedDayWorkout = selectedWeek2?.workouts.find(
     workout => isSameDay(new Date(workout.day), selectedDate)
   );
 
@@ -391,6 +397,49 @@ export default function Training() {
     ],
   } : null;
 
+  const handleWorkoutSelect = (workout: WorkoutDetailType) => {
+    setSelectedWorkout(workout);
+    setShowDayView(true);
+  };
+
+  const handleWeekSelect = (week: number) => {
+    const selectedWeek = trainingPlan?.weeklyPlans.find(w => w.week === week);
+    if (selectedWeek) {
+      setSelectedWeek(selectedWeek);
+      setShowWeekView(true);
+    }
+  };
+
+  const handleReorderWorkouts = async (weekId: number, workouts: any[]) => {
+    try {
+      const response = await fetch(`/api/training-plans/${trainingPlan?.id}/weeks/${weekId}/reorder`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ workouts }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reorder workouts');
+      }
+
+      // Invalidate and refetch training plan data
+      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+
+      toast({
+        title: "Success",
+        description: "Workout schedule updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update workout schedule",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -462,12 +511,7 @@ export default function Training() {
                     completedWeeks={calculateCompletedWeeks()}
                     progressPercentage={calculateProgressPercentage()}
                     totalMileage={calculateCompletedMiles()}
-                    onSelectWeek={(weekNumber) => {
-                      const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                      if (week) {
-                        setSelectedDate(new Date(week.workouts[0].day));
-                      }
-                    }}
+                    onSelectWeek={handleWeekSelect}
                     onSelectDay={handleDateSelect}
                     selectedDate={selectedDate}
                     goal={trainingPlan.goal || "No goal set"}
@@ -528,6 +572,7 @@ export default function Training() {
                     week={currentWeek}
                     onSelectDay={handleDateSelect}
                     selectedDate={selectedDate}
+                    onSelectWorkout={handleWorkoutSelect}
                   />
                 )}
               </div>
@@ -562,12 +607,7 @@ export default function Training() {
             {trainingPlan && (
               <ProgramOverview
                 weeklyPlans={trainingPlan.weeklyPlans}
-                onSelectWeek={(weekNumber) => {
-                  const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
-                  if (week) {
-                    setSelectedDate(new Date(week.workouts[0].day));
-                  }
-                }}
+                onSelectWeek={handleWeekSelect}
                 onSelectDay={handleDateSelect}
                 selectedDate={selectedDate}
                 goal={trainingPlan.goal || "No goal set"}
@@ -662,6 +702,72 @@ export default function Training() {
                 </Button>
               </div>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {selectedWorkout && (
+        <DayView
+          isOpen={showDayView}
+          onClose={() => setShowDayView(false)}
+          date={selectedWorkout.date}
+          workout={selectedWorkout.workout}
+          onComplete={async () => {
+            try {
+              await fetch(`/api/training-plans/${trainingPlan?.id}/workouts/${selectedWorkout.id}/complete`, {
+                method: 'POST',
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+              setShowDayView(false);
+              toast({
+                title: "Success",
+                description: "Workout marked as complete",
+              });
+            } catch (error) {
+              toast({
+                title: "Error",
+                description: "Failed to mark workout as complete",
+                variant: "destructive",
+              });
+            }
+          }}
+          onAskQuestion={handleAIQuery}
+          onRequestChange={handleAIQuery}
+          onSyncToWatch={async () => {
+            // Implement watch sync functionality
+            toast({
+              title: "Not Implemented",
+              description: "Watch sync functionality coming soon",
+            });
+          }}
+        />
+      )}
+
+      {showWeekView && selectedWeek && (
+        <Dialog open={showWeekView} onOpenChange={setShowWeekView}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <WeekView
+              week={selectedWeek}
+              onReorderWorkouts={(workouts) => handleReorderWorkouts(selectedWeek.week, workouts)}
+              onAskQuestion={handleAIQuery}
+              onRequestChange={handleAIQuery}
+              onSelectWorkout={(date) => {
+                const workout = selectedWeek.workouts.find(w =>
+                  isSameDay(new Date(w.day), date)
+                );
+                if (workout) {
+                  handleWorkoutSelect({
+                    date,
+                    workout: {
+                      type: workout.type,
+                      distance: workout.distance,
+                      description: workout.description,
+                      completed: workout.completed,
+                    },
+                  });
+                }
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}
