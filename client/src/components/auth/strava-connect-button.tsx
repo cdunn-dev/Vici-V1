@@ -13,14 +13,14 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
   const handleConnect = async () => {
     try {
       const res = await fetch('/api/strava/auth');
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to get auth URL');
+        throw new Error(data.error || 'Failed to get auth URL');
       }
 
-      const { url } = await res.json();
-      console.log('Redirecting to Strava auth URL:', url);
-      window.location.href = url;
+      console.log('Redirecting to Strava auth URL:', data.url);
+      window.location.href = data.url;
 
       if (onConnect) {
         onConnect();
