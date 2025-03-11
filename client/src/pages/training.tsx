@@ -1,24 +1,22 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format, isSameDay } from "date-fns";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { useTrainingPlan } from "@/hooks/use-training-plan";
+import { useWorkoutCalculations } from "@/hooks/use-workout-calculations";
 import CalendarView from "@/components/training/calendar-view";
 import WeeklyOverview from "@/components/training/weekly-overview";
 import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isSameDay, format, differenceInDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, CalendarDays, BarChart2, History, XCircle, CheckCircle2 } from "lucide-react";
+import { MessageCircle, CalendarDays, BarChart2, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProgressTracker from "@/components/training/progress-tracker";
 import { StoredPlans } from "@/components/training/stored-plans";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { useAuth } from "@/hooks/use-auth";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import DayView from "@/components/training/day-view";
 import WeekView from "@/components/training/week-view";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -37,49 +35,6 @@ interface WorkoutDetailType {
   };
 }
 
-function calculateCompletedWeeks(trainingPlan: TrainingPlanWithWeeklyPlans): number {
-  const today = new Date();
-  let completedWeeks = 0;
-  const sortedPlans = [...trainingPlan.weeklyPlans].sort((a, b) => a.week - b.week);
-  for (const plan of sortedPlans) {
-    const lastWorkoutOfWeek = [...plan.workouts].sort((a, b) =>
-      new Date(b.day).getTime() - new Date(a.day).getTime()
-    )[0];
-    if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < today) {
-      completedWeeks++;
-    } else {
-      break;
-    }
-  }
-  return completedWeeks;
-}
-
-function getCurrentWeek(trainingPlan: TrainingPlanWithWeeklyPlans | undefined | null): typeof trainingPlan extends null | undefined ? null : (typeof trainingPlan.weeklyPlans)[number] | null {
-  if (!trainingPlan?.weeklyPlans) return null;
-  const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-  return trainingPlan.weeklyPlans.find(week => {
-    const workoutDates = week.workouts.map(w => new Date(w.day));
-    const firstDay = workoutDates[0];
-    const lastDay = workoutDates[workoutDates.length - 1];
-    return (
-      (firstDay >= weekStart && firstDay <= weekEnd) ||
-      (lastDay >= weekStart && lastDay <= weekEnd)
-    );
-  }) || null;
-}
-
-const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | undefined | null, selectedDate: Date) => {
-  if (!trainingPlan?.weeklyPlans) return null;
-  return trainingPlan.weeklyPlans.find(week => {
-    const workoutDates = week.workouts.map(w => new Date(w.day));
-    const firstDay = workoutDates[0];
-    const lastDay = workoutDates[workoutDates.length - 1];
-    return selectedDate >= firstDay && selectedDate <= lastDay;
-  }) || null;
-};
-
 export default function Training() {
   return (
     <ErrorBoundary>
@@ -90,15 +45,10 @@ export default function Training() {
 
 function TrainingContent() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState<"current" | "overall" | "stored">("current");
   const [aiQuery, setAiQuery] = useState<string>("");
   const [weeklyAiQuery, setWeeklyAiQuery] = useState<string>("");
-  const [showPreview, setShowPreview] = useState<boolean>(false);
-  const [previewPlan, setPreviewPlan] = useState<TrainingPlanWithWeeklyPlans | null>(null);
-  const [activeTab, setActiveTab] = useState<"current" | "overall" | "stored">("current");
   const [showWorkoutDetail, setShowWorkoutDetail] = useState<boolean>(false);
   const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
   const [showDayView, setShowDayView] = useState<boolean>(false);
@@ -106,67 +56,27 @@ function TrainingContent() {
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutDetailType | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<any>(null);
 
-  const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
-    queryKey: ["/api/training-plans", { userId: user?.id }],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/training-plans?userId=${user?.id}&active=true`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch training plan: ${response.statusText}`);
-        }
-        const plans = await response.json();
-        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) ||
-          (plans.length > 0 ? plans[plans.length - 1] : null);
-      } catch (error) {
-        console.error("Training plan fetch error:", error);
-        throw error;
-      }
-    },
-    enabled: !!user?.id,
+  const {
+    trainingPlan,
+    isLoading,
+    previewPlan,
+    showPreview,
+    setPreviewPlan,
+    setShowPreview,
+    createPlan,
+    isCreating,
+    adjustPlan,
+    reorderWorkouts,
+  } = useTrainingPlan({
+    onPlanCreated: () => setActiveTab("current"),
   });
 
-  const { execute: confirmPlan, isLoading: isSubmittingPlan } = useAsyncAction(
-    async () => {
-      if (!user?.id || !previewPlan) {
-        throw new Error("Missing required data for plan creation");
-      }
-
-      const response = await fetch(`/api/training-plans/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...previewPlan,
-          userId: user.id,
-        }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to generate plan");
-      }
-
-      return response.json();
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-        setShowPreview(false);
-        setPreviewPlan(null);
-        setActiveTab("current");
-      },
-      successMessage: "Training plan has been created",
-      errorMessage: "Failed to create training plan. Please try again.",
-    }
-  );
-
-  const currentWeek = getCurrentWeek(trainingPlan);
-  const selectedWeek2 = getSelectedWeek(trainingPlan, selectedDate);
-  const selectedDayWorkout = selectedWeek2?.workouts.find(
-    workout => isSameDay(new Date(workout.day), selectedDate)
-  );
+  const {
+    currentWeek,
+    selectedWeek: selectedWeek2,
+    selectedDayWorkout,
+    stats
+  } = useWorkoutCalculations(trainingPlan, selectedDate);
 
   useEffect(() => {
     setSelectedDate(new Date());
@@ -187,7 +97,7 @@ function TrainingContent() {
     }
   }, [currentWeek]);
 
-  const handlePreviewPlan = (plan: any) => {
+  const handlePreviewPlan = (plan: TrainingPlanWithWeeklyPlans) => {
     if (!plan) {
       console.error("No plan data received");
       return;
@@ -198,146 +108,85 @@ function TrainingContent() {
     setActiveTab("overall");
   };
 
-  const handleAdjustPlan = async (feedback: string) => {
-    try {
-      setIsSubmittingQuery(true);
-      const response = await fetch(`/api/training-plans/adjust`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          feedback,
-          currentPlan: previewPlan,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.details || data.error || 'Failed to adjust plan');
+  const handleAIQuery = useAsyncAction(
+    async (query: string, type: 'overall' | 'weekly') => {
+      if (!trainingPlan) {
+        throw new Error("No active training plan");
       }
 
-      setPreviewPlan(data);
-      toast({
-        title: "Plan Adjusted",
-        description: "Your training plan has been updated based on your feedback.",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to adjust the training plan. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingQuery(false);
-    }
-  };
+      const response = await fetch(
+        `/api/training-plans/${trainingPlan.id}/adjust`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            feedback: query,
+            currentPlan: type === 'overall' ? trainingPlan : currentWeek,
+          }),
+        }
+      );
 
-  const calculateCompletedMiles = () => {
-    if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
-    let totalMiles = 0;
-    trainingPlan.weeklyPlans.forEach(week => {
-        week.workouts.forEach(workout => {
-            totalMiles += workout.distance;
-        });
-    });
-    return totalMiles;
-  };
-
-  const calculateCompletedWeeks = () => {
-      if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
-      return calculateCompletedWeeks(trainingPlan);
-  }
-
-  const calculateProgressPercentage = () => {
-      if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
-      const totalWeeks = trainingPlan.weeklyPlans.length;
-      const completedWeeks = calculateCompletedWeeks(trainingPlan);
-      return (completedWeeks / totalWeeks) * 100;
-  }
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date || !trainingPlan) return;
-    const planStart = startOfDay(new Date(trainingPlan.startDate));
-    const planEnd = startOfDay(new Date(trainingPlan.endDate));
-    const selectedDay = startOfDay(date);
-    if (isBefore(selectedDay, planStart) || isAfter(selectedDay, planEnd)) {
-      return;
-    }
-    setSelectedDate(date);
-  };
-
-  const handleAIQuery = async (query: string, type: 'overall' | 'weekly') => {
-    if (!trainingPlan) return;
-    try {
-      setIsSubmittingQuery(true);
-      const response = await fetch(`/api/training-plans/${trainingPlan.id}/adjust`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          feedback: query,
-          currentPlan: type === 'overall' ? trainingPlan : currentWeek,
-        }),
-      });
-
-      const data = await response.json();
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.details || data.error || 'Failed to get AI response');
       }
 
-      toast({
-        title: "AI Coach Response",
-        description: data.reasoning,
-        action: data.suggestedPlan ? (
-          <Button onClick={async () => {
-            try {
-              const updateResponse = await fetch(`/api/training-plans/${trainingPlan.id}`, {
-                method: 'PATCH',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data.suggestedPlan),
-              });
-
-              if (!updateResponse.ok) {
-                const errorData = await updateResponse.json();
-                throw new Error(errorData.details || errorData.error || 'Failed to update plan');
-              }
-
-              queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-              toast({
-                title: "Success",
-                description: "Training plan updated successfully",
-              });
-            } catch (error) {
-              console.error('Plan update error:', error);
-              toast({
-                title: "Error",
-                description: error instanceof Error ? error.message : "Failed to update training plan",
-                variant: "destructive",
-              });
-            }
-          }}>
-            Apply Changes
-          </Button>
-        ) : undefined,
-      });
-    } catch (error) {
-      console.error('AI query error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to get AI coach response",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingQuery(false);
-      setAiQuery("");
-      setWeeklyAiQuery("");
+      return response.json();
+    },
+    {
+      onSuccess: (data) => {
+        if (data.suggestedPlan) {
+          setPreviewPlan(data.suggestedPlan);
+        }
+        toast({
+          title: "AI Coach Response",
+          description: data.reasoning,
+        });
+      },
+      errorMessage: "Failed to get AI coach response",
     }
-  };
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Training</h1>
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showPreview || !trainingPlan) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Training</h1>
+        </div>
+
+        {showPreview ? (
+          <PlanPreview
+            planDetails={previewPlan}
+            onConfirm={createPlan}
+            onAdjust={adjustPlan}
+            onBack={() => setShowPreview(false)}
+            isSubmitting={isCreating}
+          />
+        ) : (
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
+            <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const workoutOptions = selectedDayWorkout ? {
     type: selectedDayWorkout.type,
@@ -385,77 +234,17 @@ function TrainingContent() {
     }
   };
 
-  const handleReorderWorkouts = async (weekId: number, workouts: any[]) => {
-    try {
-      const response = await fetch(`/api/training-plans/${trainingPlan?.id}/weeks/${weekId}/reorder`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ workouts }),
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to reorder workouts');
-      }
-
-      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-
-      toast({
-        title: "Success",
-        description: "Workout schedule updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update workout schedule",
-        variant: "destructive",
-      });
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date || !trainingPlan) return;
+    const planStart = new Date(trainingPlan.startDate);
+    const planEnd = new Date(trainingPlan.endDate);
+    const selectedDay = new Date(date);
+    if (selectedDay < planStart || selectedDay > planEnd) {
+      return;
     }
+    setSelectedDate(date);
   };
-
-  function LoadingState() {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Training</h1>
-          <div className="space-y-4">
-            <Skeleton className="h-[200px] w-full" />
-            <Skeleton className="h-[400px] w-full" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (showPreview || !trainingPlan) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Training</h1>
-        </div>
-
-        {showPreview ? (
-          <PlanPreview
-            planDetails={previewPlan}
-            onConfirm={confirmPlan}
-            onAdjust={handleAdjustPlan}
-            onBack={() => setShowPreview(false)}
-            isSubmitting={isSubmittingPlan}
-          />
-        ) : (
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">No training plan found. Create one to get started!</p>
-            <PlanGenerator existingPlan={false} onPreview={handlePreviewPlan} />
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -484,23 +273,23 @@ function TrainingContent() {
             {currentWeek && (
               <>
                 <ProgramOverview
-                    weeklyPlans={trainingPlan.weeklyPlans}
-                    totalWeeks={trainingPlan.weeklyPlans.length}
-                    completedWeeks={calculateCompletedWeeks()}
-                    progressPercentage={calculateProgressPercentage()}
-                    totalMileage={calculateCompletedMiles()}
-                    onSelectWeek={handleWeekSelect}
-                    onSelectDay={handleDateSelect}
-                    selectedDate={selectedDate}
-                    goal={trainingPlan.goal || "No goal set"}
-                    endDate={new Date(trainingPlan.endDate)}
-                    targetRace={trainingPlan.targetRace ? {
-                      distance: trainingPlan.targetRace.distance,
-                      date: trainingPlan.targetRace.date
-                    } : undefined}
-                  />
+                  weeklyPlans={trainingPlan.weeklyPlans}
+                  totalWeeks={trainingPlan.weeklyPlans.length}
+                  completedWeeks={stats.completedWeeks}
+                  progressPercentage={stats.progressPercentage}
+                  totalMileage={stats.totalMileage}
+                  onSelectWeek={handleWeekSelect}
+                  onSelectDay={handleDateSelect}
+                  selectedDate={selectedDate}
+                  goal={trainingPlan.goal || "No goal set"}
+                  endDate={new Date(trainingPlan.endDate)}
+                  targetRace={trainingPlan.targetRace ? {
+                    distance: trainingPlan.targetRace.distance,
+                    date: trainingPlan.targetRace.date
+                  } : undefined}
+                />
                 <ProgressTracker
-                  completed={calculateCompletedMiles()}
+                  completed={stats.completedMileage}
                   total={trainingPlan.totalMileage}
                   label="miles"
                 />
@@ -566,7 +355,7 @@ function TrainingContent() {
                 <Button
                   className="w-full gap-2"
                   onClick={() => handleAIQuery(weeklyAiQuery, 'weekly')}
-                  disabled={!weeklyAiQuery || isSubmittingQuery}
+                  disabled={!weeklyAiQuery}
                 >
                   <MessageCircle className="h-4 w-4" />
                   Get Workout Advice
@@ -607,79 +396,65 @@ function TrainingContent() {
       {workoutDetail && (
         <Dialog open={showWorkoutDetail} onOpenChange={setShowWorkoutDetail}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">
-                {workoutDetail.workout.type} - {format(workoutDetail.date, 'EEEE, MMMM d')}
-              </DialogTitle>
-              <DialogDescription>
-                {workoutDetail.workout.distance} miles
-              </DialogDescription>
-            </DialogHeader>
+            <div className="p-4">
+              <h2 className="text-xl font-bold mb-2">{workoutDetail.workout.type} - {format(workoutDetail.date, 'EEEE, MMMM d')}</h2>
+              <p className="text-base mb-4">{workoutDetail.workout.distance} miles</p>
+              <div className="space-y-6">
+                <div className="rounded-lg bg-muted p-4">
+                  <h3 className="font-medium mb-2">Workout Goal</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {workoutDetail.workout.type.toLowerCase().includes('easy')
+                      ? "Build aerobic base and recover between harder sessions."
+                      : workoutDetail.workout.type.toLowerCase().includes('interval')
+                      ? "Improve VO2 max and running economy with high-intensity efforts."
+                      : workoutDetail.workout.type.toLowerCase().includes('tempo')
+                      ? "Improve lactate threshold and maintain pace for longer periods."
+                      : workoutDetail.workout.type.toLowerCase().includes('long')
+                      ? "Build endurance and train your body to use fat as fuel efficiently."
+                      : "Complete the workout as prescribed to build fitness and progress in your training plan."}
+                  </p>
+                </div>
 
-            <div className="space-y-6 py-4">
-              <div className="rounded-lg bg-muted p-4">
-                <h3 className="font-medium mb-2">Workout Goal</h3>
-                <p className="text-sm text-muted-foreground">
-                  {workoutDetail.workout.type.toLowerCase().includes('easy')
-                    ? "Build aerobic base and recover between harder sessions."
-                    : workoutDetail.workout.type.toLowerCase().includes('interval')
-                    ? "Improve VO2 max and running economy with high-intensity efforts."
-                    : workoutDetail.workout.type.toLowerCase().includes('tempo')
-                    ? "Improve lactate threshold and maintain pace for longer periods."
-                    : workoutDetail.workout.type.toLowerCase().includes('long')
-                    ? "Build endurance and train your body to use fat as fuel efficiently."
-                    : "Complete the workout as prescribed to build fitness and progress in your training plan."}
-                </p>
-              </div>
+                <div className="space-y-4">
+                  <h3 className="font-medium">Workout Options</h3>
+                  <Tabs defaultValue="option-0" className="w-full">
+                    <TabsList className="grid grid-cols-3">
+                      {workoutDetail.workout.options.map((_, index) => (
+                        <TabsTrigger key={`option-${index}`} value={`option-${index}`}>
+                          Option {index + 1}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
-              <div className="space-y-4">
-                <h3 className="font-medium">Workout Options</h3>
-                <Tabs defaultValue="option-0" className="w-full">
-                  <TabsList className="grid grid-cols-3">
-                    {workoutDetail.workout.options.map((_, index) => (
-                      <TabsTrigger key={`option-${index}`} value={`option-${index}`}>
-                        Option {index + 1}
-                      </TabsTrigger>
+                    {workoutDetail.workout.options.map((option, index) => (
+                      <TabsContent key={`option-${index}`} value={`option-${index}`} className="space-y-4 pt-4">
+                        <h4 className="font-medium">{option.title}</h4>
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
+                      </TabsContent>
                     ))}
-                  </TabsList>
+                  </Tabs>
+                </div>
 
-                  {workoutDetail.workout.options.map((option, index) => (
-                    <TabsContent key={`option-${index}`} value={`option-${index}`} className="space-y-4 pt-4">
-                      <h4 className="font-medium">{option.title}</h4>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
-                    </TabsContent>
-                  ))}
-                </Tabs>
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">About {workoutDetail.workout.type.split(' ')[0]} Workouts</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {workoutDetail.workout.type.toLowerCase().includes('easy')
+                      ? "Easy runs build your aerobic base and allow your body to recover. They should feel comfortable, and you should be able to hold a conversation."
+                      : workoutDetail.workout.type.toLowerCase().includes('interval')
+                      ? "Interval workouts include short bursts of high-intensity effort followed by recovery periods. They improve speed, power, and running economy."
+                      : workoutDetail.workout.type.toLowerCase().includes('tempo')
+                      ? "Tempo runs are sustained efforts at a challenging but controlled pace. They improve your lactate threshold and teach your body to clear lactic acid efficiently."
+                      : workoutDetail.workout.type.toLowerCase().includes('long')
+                      ? "Long runs build endurance and train your body to use fat as fuel. They prepare you mentally and physically for longer race distances."
+                      : "This workout is designed to improve specific aspects of your running fitness as part of your overall training plan."}
+                  </p>
+                </div>
               </div>
-
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold">About {workoutDetail.workout.type.split(' ')[0]} Workouts</h4>
-                <p className="text-sm text-muted-foreground">
-                  {workoutDetail.workout.type.toLowerCase().includes('easy')
-                    ? "Easy runs build your aerobic base and allow your body to recover. They should feel comfortable, and you should be able to hold a conversation."
-                    : workoutDetail.workout.type.toLowerCase().includes('interval')
-                    ? "Interval workouts include short bursts of high-intensity effort followed by recovery periods. They improve speed, power, and running economy."
-                    : workoutDetail.workout.type.toLowerCase().includes('tempo')
-                    ? "Tempo runs are sustained efforts at a challenging but controlled pace. They improve your lactate threshold and teach your body to clear lactic acid efficiently."
-                    : workoutDetail.workout.type.toLowerCase().includes('long')
-                    ? "Long runs build endurance and train your body to use fat as fuel. They prepare you mentally and physically for longer race distances."
-                    : "This workout is designed to improve specific aspects of your running fitness as part of your overall training plan."}
-                </p>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowWorkoutDetail(false)}>Close</Button>
+                <Button>Complete Workout</Button>
               </div>
             </div>
-
-            <DialogFooter className="mt-6">
-              <div className="flex justify-between w-full">
-                <Button variant="outline" className="gap-2" onClick={() => setShowWorkoutDetail(false)}>
-                  <XCircle className="h-4 w-4" />
-                  Close
-                </Button>
-                <Button className="gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Complete Workout
-                </Button>
-              </div>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
@@ -695,7 +470,7 @@ function TrainingContent() {
               await fetch(`/api/training-plans/${trainingPlan?.id}/workouts/${selectedWorkout.id}/complete`, {
                 method: 'POST',
               });
-              queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+              //queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] }); // Removed as invalidateQueries is handled in the hook
               setShowDayView(false);
               toast({
                 title: "Success",
@@ -725,7 +500,7 @@ function TrainingContent() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <WeekView
               week={selectedWeek}
-              onReorderWorkouts={(workouts) => handleReorderWorkouts(selectedWeek.week, workouts)}
+              onReorderWorkouts={reorderWorkouts}
               onAskQuestion={handleAIQuery}
               onRequestChange={handleAIQuery}
               onSelectWorkout={(date) => {
