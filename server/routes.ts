@@ -316,17 +316,17 @@ export async function registerRoutes(app: Express) {
   // Get Strava auth URL
   app.get("/api/strava/auth", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-
-      console.log("Generating Strava auth URL for user:", req.user.id);
-      const authUrl = getStravaAuthUrl(req.user.id.toString());
+      // Allow unauthenticated users to get auth URL for initial connection
+      const userId = req.isAuthenticated() ? req.user.id.toString() : 'guest';
+      
+      console.log("Generating Strava auth URL for user:", userId);
+      const authUrl = getStravaAuthUrl(userId);
       console.log("Generated auth URL:", authUrl);
-      res.json({ url: authUrl });
+      
+      return res.json({ url: authUrl });
     } catch (error) {
       console.error("Error generating Strava auth URL:", error);
-      res.status(500).json({ error: "Failed to generate Strava auth URL" });
+      return res.status(500).json({ error: "Failed to generate Strava auth URL" });
     }
   });
 

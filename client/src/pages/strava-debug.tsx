@@ -28,7 +28,8 @@ export default function StravaDebugPage() {
     try {
       const response = await fetch('/api/strava/auth');
       const data = await response.json();
-      setAuthUrl(data.authUrl);
+      setAuthUrl(data.url);
+      console.log('Received auth URL:', data.url);
     } catch (error) {
       console.error('Error fetching Strava auth URL:', error);
       setAuthUrl(null);
