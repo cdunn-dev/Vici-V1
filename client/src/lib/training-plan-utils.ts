@@ -216,6 +216,16 @@ export const validatePlanData = (plan: TrainingPlan): void => {
       if (!isValidDate(workout.day)) {
         throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
       }
+
+      const workoutDate = new Date(workout.day);
+      const startDate = new Date(plan.startDate);
+      if (workoutDate < startDate) {
+        throw new Error("Workout date cannot be before plan start date");
+      }
+
+      if (workout.distance <= 0) {
+        throw new Error("Workout distance must be positive");
+      }
     });
   });
 };

@@ -109,6 +109,27 @@ describe("Training Plan Utilities", () => {
         endDate: "2025-06-15"
       };
       expect(() => validatePlanData(planWithInvalidDates)).toThrow("Invalid start date format: invalid");
+
+      const planWithInvalidEndDate = {
+        ...validPlan,
+        startDate: "2025-03-15",
+        endDate: "invalid"
+      };
+      expect(() => validatePlanData(planWithInvalidEndDate)).toThrow("Invalid end date format: invalid");
+
+      const planWithMissingStartDate = {
+        ...validPlan,
+        startDate: "",
+        endDate: "2025-06-15"
+      };
+      expect(() => validatePlanData(planWithMissingStartDate)).toThrow("Start date and end date are required");
+
+      const planWithMissingEndDate = {
+        ...validPlan,
+        startDate: "2025-03-15",
+        endDate: ""
+      };
+      expect(() => validatePlanData(planWithMissingEndDate)).toThrow("Start date and end date are required");
     });
 
     test("validatePlanData checks date order", () => {
@@ -118,6 +139,13 @@ describe("Training Plan Utilities", () => {
         endDate: "2025-03-15"
       };
       expect(() => validatePlanData(planWithWrongDateOrder)).toThrow("End date must be after start date");
+
+      const planWithSameDates = {
+        ...validPlan,
+        startDate: "2025-03-15",
+        endDate: "2025-03-15"
+      };
+      expect(() => validatePlanData(planWithSameDates)).toThrow("End date must be after start date");
     });
 
     test("validatePlanData validates workout dates", () => {
@@ -133,6 +161,20 @@ describe("Training Plan Utilities", () => {
       };
       expect(() => validatePlanData(planWithInvalidWorkoutDate))
         .toThrow("Invalid date format for workout 1 in week 1: invalid-date");
+
+      const planWithWorkoutDateBeforeStart = {
+        ...validPlan,
+        startDate: "2025-03-15",
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            day: "2025-03-14"
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithWorkoutDateBeforeStart))
+        .toThrow("Workout date cannot be before plan start date");
     });
 
     test("validatePlanData requires workout description", () => {
@@ -148,6 +190,47 @@ describe("Training Plan Utilities", () => {
       };
       expect(() => validatePlanData(planWithMissingDescription))
         .toThrow("Workout 1 in week 1 is missing a description");
+
+      const planWithWhitespaceDescription = {
+        ...validPlan,
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            description: "   "
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithWhitespaceDescription))
+        .toThrow("Workout 1 in week 1 is missing a description");
+    });
+
+    test("validatePlanData validates workout distance", () => {
+      const planWithNegativeDistance = {
+        ...validPlan,
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            distance: -1
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithNegativeDistance))
+        .toThrow("Workout distance must be positive");
+
+      const planWithZeroDistance = {
+        ...validPlan,
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            distance: 0
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithZeroDistance))
+        .toThrow("Workout distance must be positive");
     });
   });
 
