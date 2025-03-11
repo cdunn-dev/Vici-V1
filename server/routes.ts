@@ -114,42 +114,53 @@ export async function registerRoutes(app: Express) {
     try {
       const code = req.query.code;
       const state = req.query.state;
+      const error = req.query.error;
+
+      if (error) {
+        console.error("Strava returned an error:", error);
+        return res.redirect(`/auth?error=strava-auth-failed&reason=${encodeURIComponent(error.toString())}`);
+      }
 
       if (!code) {
         console.error("No code provided in Strava callback");
-        return res.status(400).json({ error: "No code provided" });
+        return res.redirect("/auth?error=strava-auth-failed&reason=no-code");
       }
 
       console.log("Received Strava callback with code:", code);
       console.log("State parameter:", state);
 
       // Exchange code for tokens
-      const tokens = await exchangeStravaCode(code.toString());
-      console.log("Successfully received Strava tokens");
+      try {
+        const tokens = await exchangeStravaCode(code.toString());
+        console.log("Successfully received Strava tokens");
 
-      // If user is already authenticated, update their Strava tokens
-      if (req.isAuthenticated() && req.user) {
-        console.log("Updating Strava tokens for user:", req.user.id);
-        await storage.updateUser(req.user.id, {
-          stravaTokens: tokens,
-          connectedApps: [...(req.user.connectedApps || []), "strava"],
-        });
+        // If user is already authenticated, update their Strava tokens
+        if (req.isAuthenticated() && req.user) {
+          console.log("Updating Strava tokens for user:", req.user.id);
+          await storage.updateUser(req.user.id, {
+            stravaTokens: tokens,
+            connectedApps: [...(req.user.connectedApps || []), "strava"],
+          });
 
-        // Sync activities after successful connection
-        try {
-          await syncStravaActivities(req.user.id, tokens.accessToken);
-          console.log("Successfully synced Strava activities");
-        } catch (syncError) {
-          console.error("Error syncing activities:", syncError);
-          // Continue with redirect even if sync fails
+          // Sync activities after successful connection
+          try {
+            await syncStravaActivities(req.user.id, tokens.accessToken);
+            console.log("Successfully synced Strava activities");
+          } catch (syncError) {
+            console.error("Error syncing activities:", syncError);
+            // Continue with redirect even if sync fails
+          }
         }
-      }
 
-      // Redirect back to the app
-      res.redirect("/training");
+        // Redirect back to the app
+        return res.redirect("/training");
+      } catch (tokenError) {
+        console.error("Error exchanging Strava code for tokens:", tokenError);
+        return res.redirect("/auth?error=strava-auth-failed&reason=token-exchange-failed");
+      }
     } catch (error) {
       console.error("Error in Strava OAuth callback:", error);
-      res.redirect("/auth?error=strava-auth-failed");
+      return res.redirect("/auth?error=strava-auth-failed&reason=server-error");
     }
   });
 
@@ -404,3 +415,21 @@ export async function registerRoutes(app: Express) {
 
   return createServer(app);
 }
+
+  // Debug endpoint for Strava configuration
+  app.get("/api/strava/config", (req, res) => {
+    try {
+      const clientId = !!process.env.STRAVA_CLIENT_ID;
+      const clientSecret = !!process.env.STRAVA_CLIENT_SECRET;
+      const callbackUrl = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.${process.env.REPL_ENVIRONMENT}.repl.co/api/auth/strava/callback`;
+      
+      res.json({
+        clientId,
+        clientSecret,
+        callbackUrl
+      });
+    } catch (error) {
+      console.error("Error getting Strava config:", error);
+      res.status(500).json({ error: "Failed to get Strava configuration" });
+    }
+  });
