@@ -11,7 +11,6 @@ import {
 import { format } from "date-fns";
 import ProgramOverview from "./program-overview";
 import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity, Loader2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -59,7 +58,7 @@ export default function PlanPreview({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className={`h-full flex flex-col ${isDialog ? "" : "absolute inset-0 bg-background"}`}>
+    <div className="h-full flex flex-col">
       {isAdjusting ? (
         <div className="flex flex-col p-4">
           <Card className="shadow-md border-primary/20">
@@ -102,10 +101,10 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col flex-1">
-          {/* Only show header/footer when not in dialog mode */}
+        <div className="flex flex-col h-full">
+          {/* Header */}
           {!isDialog && (
-            <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+            <div className="sticky top-0 z-10 p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="flex gap-4 justify-center">
                 <Button variant="outline" onClick={onBack} className="gap-2">
                   <ChevronLeft className="h-4 w-4" />
@@ -123,7 +122,7 @@ export default function PlanPreview({
             </div>
           )}
 
-          {/* Content */}
+          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="container mx-auto py-4 px-4 space-y-6">
               {/* Overview Card */}
@@ -236,9 +235,9 @@ export default function PlanPreview({
             </div>
           </div>
 
-          {/* Only show footer when not in dialog mode */}
+          {/* Footer */}
           {!isDialog && (
-            <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+            <div className="sticky bottom-0 z-10 p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="flex justify-center">
                 <Button
                   onClick={onConfirm}
