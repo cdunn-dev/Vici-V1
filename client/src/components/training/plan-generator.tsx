@@ -93,7 +93,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
-      goal: undefined,
       startDate: new Date().toISOString(),
       age: undefined,
       gender: undefined,
@@ -109,6 +108,7 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
         preferredLongRunDay: undefined,
         coachingStyle: undefined,
       },
+      goal: undefined,
       targetRace: undefined,
     },
   });
@@ -218,16 +218,15 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
 
     try {
       setIsSubmitting(true);
-      const now = new Date();
 
       // Prepare plan data with properly formatted dates
       const planData = {
         ...previewData,
         userId: user.id,
-        startDate: now.toISOString(),
+        startDate: new Date().toISOString(),
         endDate: previewData.targetRace ? 
           new Date(previewData.targetRace.date).toISOString() :
-          addWeeks(now, 12).toISOString(),
+          addWeeks(new Date(), 12).toISOString(),
         weeklyPlans: previewData.weeklyPlans.map(week => ({
           ...week,
           workouts: week.workouts.map(workout => ({
@@ -791,7 +790,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
             previewData && (
               <ProgramOverview
                 plan={previewData}
-                showActions={false}
                 onApprove={handleApprovePlan}
                 isSubmitting={isSubmitting}
               />
