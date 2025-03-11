@@ -46,7 +46,7 @@ export function getStravaAuthUrl(userId: string): string {
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "read,activity:read_all",
+    scope: "activity:read_all",  // Updated scope based on documentation
     state: userId,
     approval_prompt: "auto"
   });
