@@ -611,19 +611,23 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-2">
+        <DialogHeader className="px-6 pt-6 pb-2 border-b">
           <DialogTitle>Create Training Plan</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1">
-            <ScrollArea className="flex-1 overflow-y-auto px-6">
-              <div className="py-4 space-y-6">
-                {renderStepContent()}
-              </div>
-            </ScrollArea>
+            {/* Main content area with scroll */}
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[calc(90vh-8rem)]">
+                <div className="px-6 py-4 space-y-6">
+                  {renderStepContent()}
+                </div>
+              </ScrollArea>
+            </div>
 
-            <div className="flex justify-between items-center p-6 mt-auto border-t bg-background sticky bottom-0">
+            {/* Fixed navigation footer */}
+            <div className="flex justify-between items-center px-6 py-4 border-t bg-background">
               <Button
                 type="button"
                 variant="outline"
