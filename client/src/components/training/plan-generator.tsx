@@ -93,7 +93,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [mileageValue, setMileageValue] = useState(15);
   const [workoutsValue, setWorkoutsValue] = useState(1);
 
-  // Form initialization with proper defaults including coachingStyle and new fields
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -220,16 +219,11 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Handle dates
+        // Handle dates properly
         formData.startDate = new Date(formData.startDate).toISOString();
 
-        // Handle race-specific data
-        if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
-          if (formData.targetRace) {
-            formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
-          }
-        } else {
-          delete formData.targetRace;
+        if (formData.targetRace) {
+          formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
         }
 
         const response = await fetch('/api/training-plans/preview', {
@@ -272,7 +266,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // Update the handleApprovePlan function
   const handleApprovePlan = async () => {
     if (!previewData || !user?.id) {
       toast({
@@ -286,7 +279,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     try {
       setIsSubmitting(true);
 
-      // Ensure all dates are properly formatted as ISO strings
+      // Prepare plan data with properly formatted dates
       const planData = {
         ...previewData,
         userId: user.id,
@@ -299,6 +292,14 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           }))
         }))
       };
+
+      // If target race exists, ensure its date is properly formatted
+      if (planData.targetRace) {
+        planData.targetRace = {
+          ...planData.targetRace,
+          date: new Date(planData.targetRace.date).toISOString()
+        };
+      }
 
       const response = await fetch('/api/training-plans/generate', {
         method: 'POST',
@@ -975,31 +976,29 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full">
+        <Button className="w-full md:w-auto">
           <Wand2 className="mr-2 h-4 w-4" />
-          Generate Training Plan
+          Create Training Plan
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate Training Plan</DialogTitle>
+          <DialogTitle>Create Your Training Plan</DialogTitle>
           <DialogDescription>
-            Let's create a personalized training plan tailored to your goals and preferences.
+            Let our AI build a plan based on your running history and goals
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-4">
-          <div className="relative">
-            <div className="absolute left-0 top-2">
-              <Progress value={progress} className="w-[60px] h-2" />
-            </div>
-            <div className="mb-8 text-center text-sm text-muted-foreground">
+        <div className="py-4">
+          <div className="mb-8">
+            <Progress value={progress} className="h-2" />
+            <p className="text-sm text-muted-foreground mt-2">
               Step {currentStepIndex + 1} of {visibleSteps.length}
-            </div>
+            </p>
           </div>
 
           <Form {...form}>
-            <form className="space-y-8">
+            <div className="space-y-8">
               {renderStepContent(currentStep.id)}
 
               <div className="flex justify-between pt-4 border-t">
@@ -1007,7 +1006,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   type="button"
                   variant="outline"
                   onClick={handleBack}
-                  disabled={currentStepIndex === 0}
+                  disabled={currentStepIndex === 0 || isSubmitting}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back
@@ -1029,7 +1028,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                         <ThumbsUp className="mr-2 h-4 w-4" />
                         Approve Plan
                       </>
-                    )}
+                                        )}
                   </Button>
                 ) : (
                   <Button
@@ -1042,7 +1041,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   </Button>
                 )}
               </div>
-            </form>
+            </div>
           </Form>
         </div>
       </DialogContent>

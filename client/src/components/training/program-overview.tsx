@@ -1,6 +1,5 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
-import { ChevronDown, MessageSquare, ThumbsUp, Loader2, MapPin, Calendar, Check } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -8,12 +7,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { Calendar, ChevronDown, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
 
 interface ProgramOverviewProps {
   plan: TrainingPlanWithWeeklyPlans;
@@ -42,7 +42,6 @@ export default function ProgramOverview({
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
 
-  // Calculate total plan metrics
   const totalWeeks = plan.weeklyPlans.length;
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
   const completedWeeks = plan.weeklyPlans.filter(week =>
@@ -57,7 +56,6 @@ export default function ProgramOverview({
   const completionPercentage = (completedWeeks / totalWeeks) * 100;
   const followThroughPercentage = (completedWorkouts / totalWorkouts) * 100;
 
-  // Handle AI interactions
   const handleAskQuestion = async () => {
     if (!question.trim() || !onAskQuestion) return;
     setIsSubmitting(true);
@@ -84,7 +82,6 @@ export default function ProgramOverview({
 
   return (
     <div className="space-y-6">
-      {/* Plan Overview Card */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -129,7 +126,6 @@ export default function ProgramOverview({
         </CardContent>
       </Card>
 
-      {/* Weekly Plans Accordion */}
       <Accordion type="single" collapsible className="w-full space-y-2">
         {plan.weeklyPlans.map((week) => (
           <AccordionItem
@@ -228,7 +224,7 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
-      {/* AI Interaction Section - Only show if showActions is true */}
+      {/* Only show AI interaction section when not in preview mode */}
       {showActions && !onApprove && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           {showQuestionForm ? (
@@ -320,7 +316,7 @@ export default function ProgramOverview({
         </div>
       )}
 
-      {/* Single Approve Button - Only show during plan preview */}
+      {/* Show approve button only in preview mode */}
       {onApprove && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           <Button
