@@ -52,7 +52,11 @@ import { TimeInput } from "./time-input";
 
 // Update STEPS array to include a final confirmation step
 const STEPS = [
+  { id: "welcome", label: "Welcome" },
+  { id: "stravaConnect", label: "Strava Connect" },
+  { id: "userProfile", label: "User Profile" },
   { id: "goal", label: "Training Goal" },
+  { id: "trainingPreferences", label: "Training Preferences" },
   {
     id: "raceDistance",
     label: "Race Distance",
@@ -71,13 +75,6 @@ const STEPS = [
     conditional: (data: PlanGeneratorFormData) =>
       data.goal === TrainingGoals.PERSONAL_BEST,
   },
-  { id: "experience", label: "Running Experience" },
-  { id: "fitness", label: "Current Fitness" },
-  { id: "runningDays", label: "Weekly Running Days" },
-  { id: "mileage", label: "Weekly Mileage" },
-  { id: "workouts", label: "Quality Sessions" },
-  { id: "longRunDay", label: "Long Run Day" },
-  { id: "coachingStyle", label: "Coaching Style" },
   { id: "startDate", label: "Training Plan Start Date" },
   { id: "confirmation", label: "Confirm Plan Generation" },
   { id: "preview", label: "Preview Plan" },
@@ -364,9 +361,113 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
+  const goToNextStep = () => {
+    setCurrentStepIndex(currentStepIndex + 1);
+  };
+
   // Render the current step
-  const renderQuestion = () => {
-    switch (currentStep.id) {
+  const renderStepContent = (step: string) => {
+    switch (step) {
+      case "welcome":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Create Your Personalised Training Plan</h2>
+            <p className="text-muted-foreground">
+              Let our AI build a plan based on your running history and goals. We'll guide you through a few simple steps to create a training plan tailored to your needs.
+            </p>
+            <div className="flex justify-center py-4">
+              <Wand2 className="h-16 w-16 text-primary" />
+            </div>
+          </div>
+        );
+
+      case "stravaConnect":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Connect Your Running Data</h2>
+            <p className="text-muted-foreground">
+              Connect with Strava to let us analyze your running history and tailor your plan accordingly. This helps us create a more personalized training experience.
+            </p>
+            <div className="flex justify-center py-4">
+              {/* You can replace this with your actual Strava connect button component */}
+              <Button variant="outline" className="bg-[#FC4C02] text-white hover:bg-[#E34402]">
+                Connect with Strava
+              </Button>
+            </div>
+            <div className="text-center mt-4">
+              <Button variant="link" onClick={() => goToNextStep()}>
+                Skip this step
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "userProfile":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Tell Us About Yourself</h2>
+            <p className="text-muted-foreground">
+              To create a plan that fits your needs, we need to know a bit about your running background.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="runningExperience.level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Experience Level</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your experience level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(ExperienceLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="runningExperience.fitnessLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Fitness Level</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your current fitness level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(FitnessLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
       case "goal":
         return (
           <FormField
@@ -396,6 +497,150 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               </FormItem>
             )}
           />
+        );
+
+      case "trainingPreferences":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Your Training Preferences</h2>
+            <p className="text-muted-foreground">
+              Tell us about your preferred training schedule and approach.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyRunningDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weekly Running Days: {runningDaysValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[runningDaysValue]}
+                      min={1}
+                      max={7}
+                      step={1}
+                      onValueChange={(value) => {
+                        setRunningDaysValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Select between 1-7 days per week
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.maxWeeklyMileage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Weekly Mileage: {mileageValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[mileageValue]}
+                      min={5}
+                      max={100}
+                      step={5}
+                      onValueChange={(value) => {
+                        setMileageValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Target weekly mileage (approximate)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyWorkouts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weekly Quality Sessions: {workoutsValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[workoutsValue]}
+                      min={0}
+                      max={3}
+                      step={1}
+                      onValueChange={(value) => {
+                        setWorkoutsValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Quality sessions like intervals or tempo runs
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.preferredLongRunDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Long Run Day</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a day" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(DaysOfWeek).map(([key, value]) => (
+                        <SelectItem key={key} value={key}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    The day of the week for your longest run
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.coachingStyle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Desired Coaching Style</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a coaching style" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(CoachingStyles).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         );
 
       case "raceDistance":
@@ -609,161 +854,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           />
         );
 
-      case "runningDays":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.weeklyRunningDays"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How many days per week would you like to run?</FormLabel>
-                <FormDescription>Choose between 1 to 7 days per week</FormDescription>
-                <FormControl>
-                  <Slider
-                    min={1}
-                    max={7}
-                    step={1}
-                    value={[runningDaysValue]}
-                    onValueChange={(vals) => {
-                      const newValue = Math.min(Math.max(Math.round(vals[0]), 1), 7);
-                      setRunningDaysValue(newValue);
-                      field.onChange(newValue);
-                    }}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {runningDaysValue} days per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-
-      case "mileage":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.maxWeeklyMileage"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What's your target weekly mileage?</FormLabel>
-                <FormDescription>
-                  This will be the peak mileage in your training plan (0-150 miles)
-                </FormDescription>
-                <FormControl>
-                  <Slider
-                    min={0}
-                    max={150}
-                    step={5}
-                    value={[mileageValue]}
-                    onValueChange={(vals) => {
-                      const newValue = Math.min(Math.max(Math.round(vals[0] / 5) * 5, 0), 150);
-                      setMileageValue(newValue);
-                      field.onChange(newValue);
-                    }}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {mileageValue} miles per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-
-      case "workouts":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.weeklyWorkouts"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>How many quality sessions per week?</FormLabel>
-                <FormDescription>
-                  These are harder workouts like intervals, tempo runs, or progression runs (0-3 sessions)
-                </FormDescription>
-                <FormControl>
-                  <Slider
-                    min={0}
-                    max={3}
-                    step={1}
-                    value={[workoutsValue]}
-                    onValueChange={(vals) => {
-                      const newValue = Math.min(Math.max(Math.round(vals[0]), 0), 3);
-                      setWorkoutsValue(newValue);
-                      field.onChange(newValue);
-                    }}
-                  />
-                </FormControl>
-                <div className="text-sm text-muted-foreground text-center">
-                  {workoutsValue} quality sessions per week
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-
-      case "longRunDay":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.preferredLongRunDay"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Which day would you prefer for your long run?</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select preferred day" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(DaysOfWeek).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
-      case "coachingStyle":
-        return (
-          <FormField
-            control={form.control}
-            name="trainingPreferences.coachingStyle"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What type of coaching style would you prefer?</FormLabel>
-                <FormDescription>
-                  {CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions] ||
-                    "Choose a coaching style that matches your preferences"}
-                </FormDescription>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select coaching style" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(CoachingStyles).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        );
       case "startDate":
         return (
           <FormField
@@ -954,6 +1044,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
+  const currentVisibleStepIndex = currentStepIndex;
+
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "goal") {
@@ -968,106 +1060,37 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   }, [form.watch]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="gap-2">
-          <Wand2 className="h-5 w-5" />
-          Create New Training Plan
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl min-h-[80vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            {currentStep.label}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-0">
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="max-w-xs">Help text for {currentStep.label}</p>
-              </TooltipContent>
-            </Tooltip>
-          </DialogTitle>
-          <div className="mt-2">
-            <Progress value={progress} className="h-2" />
-            <div className="mt-2 flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                Step {currentStepIndex + 1} of {visibleSteps.length}
-              </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={showDebugInfo}
-                className="px-2"
-              >
-                <Bug className="h-4 w-4" />
-              </Button>
-            </div>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="gap-2" onClick={() => {
+            setCurrentStepIndex(0);
+            form.reset();
+            setPreviewData(null);
+          }}>
+            <Wand2 className="h-4 w-4" />
+            {existingPlan ? "Update Training Plan" : "Create Training Plan"}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {currentStep?.id === "welcome"
+                ? "Create Your Personalised Training Plan"
+                : (existingPlan ? "Update Training Plan" : "Create Training Plan")}
+            </DialogTitle>
+            <DialogDescription>
+              {currentStep && currentStep.id !== "welcome"
+                ? `Step ${currentVisibleStepIndex + 1} of ${visibleSteps.length}: ${currentStep.label}`
+                : "Let our AI build a plan based on your running history and goals"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-6">
+            {renderStepContent(currentStep?.id || "")}
           </div>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleApprovePlan)} className="flex-1 flex flex-col">
-            <div className="flex-1 px-6 py-4 overflow-y-auto">{renderQuestion()}</div>
-
-            <div className="border-t px-6 py-4 flex justify-between items-center">
-              {currentStep.id === "preview" ? (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Plan...
-                    </>
-                  ) : (
-                    "Create Plan"
-                  )}
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    onClick={handleBack}
-                    disabled={currentStepIndex === 0}
-                    variant="outline"
-                    className="gap-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={isSubmitting}
-                    className="gap-2"
-                  >
-                    {currentStep.id === "confirmation" ? (
-                      isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-Generating Preview...
-                        </>
-                      ) : (
-                        <>
-                          Preview Plan
-                          <ChevronRight className="ml-2 h-4 w-4" />
-                        </>
-                      )
-                    ) : (
-                      <>
-                        Next
-                        <ChevronRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </>
-              )}
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
