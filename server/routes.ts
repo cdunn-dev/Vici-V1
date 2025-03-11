@@ -11,6 +11,8 @@ import { stravaActivities, workouts } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import { setupAuth } from "./auth";
+import { addWeeks } from "date-fns";
+
 
 // Configure multer for profile picture uploads
 const upload = multer({
@@ -178,6 +180,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Update the training plan generation route
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -192,15 +195,19 @@ export async function registerRoutes(app: Express) {
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
+      // Convert date objects to ISO strings
+      const startDate = new Date(req.body.startDate).toISOString();
+      const endDate = req.body.targetRace?.date 
+        ? new Date(req.body.targetRace.date).toISOString()
+        : new Date(startDate).setDate(new Date(startDate).getDate() + 84).toISOString(); // 12 weeks
+
       const trainingPlan = {
         userId,
         name: `Training Plan - ${req.body.goal}`,
         goal: req.body.goal,
-        goalDescription: req.body.goalDescription,
-        startDate: new Date(req.body.startDate),
-        endDate: req.body.targetRace?.date
-          ? new Date(req.body.targetRace.date)
-          : addWeeks(new Date(req.body.startDate), 12),
+        goalDescription: req.body.goalDescription || "",
+        startDate,
+        endDate,
         weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
         weeklyPlans: req.body.weeklyPlans || [],
         targetRace: req.body.targetRace || null,
@@ -209,7 +216,10 @@ export async function registerRoutes(app: Express) {
         isActive: true,
       };
 
+      console.log("Creating training plan:", trainingPlan);
       const plan = await storage.createTrainingPlan(trainingPlan);
+      console.log("Training plan created:", plan);
+
       res.json(plan);
     } catch (error) {
       console.error("Error generating training plan:", error);
