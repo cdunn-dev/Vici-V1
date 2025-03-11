@@ -196,40 +196,49 @@ export async function registerRoutes(app: Express) {
       await storage.archiveActiveTrainingPlans(userId);
 
       // Handle dates properly
-      const startDate = new Date(req.body.startDate);
-      const endDate = req.body.targetRace?.date 
-        ? new Date(req.body.targetRace.date)
-        : addWeeks(startDate, 12);
+      try {
+        const startDate = new Date(req.body.startDate);
+        const endDate = req.body.targetRace?.date 
+          ? new Date(req.body.targetRace.date)
+          : addWeeks(startDate, 12);
 
-      const trainingPlan = {
-        userId,
-        name: `Training Plan - ${req.body.goal}`,
-        goal: req.body.goal,
-        goalDescription: req.body.goalDescription || "",
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
-        weeklyPlans: req.body.weeklyPlans.map(week => ({
-          ...week,
-          workouts: week.workouts.map(workout => ({
-            ...workout,
-            day: new Date(workout.day).toISOString()
-          }))
-        })),
-        targetRace: req.body.targetRace ? {
-          ...req.body.targetRace,
-          date: new Date(req.body.targetRace.date).toISOString()
-        } : null,
-        runningExperience: req.body.runningExperience,
-        trainingPreferences: req.body.trainingPreferences,
-        isActive: true,
-      };
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error("Invalid date format");
+        }
 
-      console.log("Creating training plan:", trainingPlan);
-      const plan = await storage.createTrainingPlan(trainingPlan);
-      console.log("Training plan created:", plan);
+        const trainingPlan = {
+          userId,
+          name: `Training Plan - ${req.body.goal}`,
+          goal: req.body.goal,
+          goalDescription: req.body.goalDescription || "",
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
+          weeklyPlans: req.body.weeklyPlans.map(week => ({
+            ...week,
+            workouts: week.workouts.map(workout => ({
+              ...workout,
+              day: new Date(workout.day).toISOString()
+            }))
+          })),
+          targetRace: req.body.targetRace ? {
+            ...req.body.targetRace,
+            date: new Date(req.body.targetRace.date).toISOString()
+          } : null,
+          runningExperience: req.body.runningExperience,
+          trainingPreferences: req.body.trainingPreferences,
+          isActive: true,
+        };
 
-      res.json(plan);
+        console.log("Creating training plan:", JSON.stringify(trainingPlan, null, 2));
+        const plan = await storage.createTrainingPlan(trainingPlan);
+        console.log("Training plan created:", JSON.stringify(plan, null, 2));
+
+        res.json(plan);
+      } catch (dateError) {
+        console.error("Date parsing error:", dateError);
+        return res.status(400).json({ error: "Invalid date format in request" });
+      }
     } catch (error) {
       console.error("Error generating training plan:", error);
       res.status(500).json({ error: "Failed to generate training plan", details: error.message });
