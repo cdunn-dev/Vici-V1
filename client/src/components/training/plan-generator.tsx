@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -289,8 +290,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         ...previewData,
         userId: user.id,
         startDate: new Date(previewData.startDate).toISOString(),
-        endDate: previewData.targetRace ? 
-          new Date(previewData.targetRace.date).toISOString() : 
+        endDate: previewData.targetRace ?
+          new Date(previewData.targetRace.date).toISOString() :
           addWeeks(new Date(previewData.startDate), 12).toISOString(),
       };
 
