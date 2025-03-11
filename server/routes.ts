@@ -10,6 +10,7 @@ import { desc, eq } from "drizzle-orm";
 import { stravaActivities, workouts } from "@shared/schema";
 import multer from "multer";
 import path from "path";
+import { setupAuth } from "./auth";
 
 // Configure multer for profile picture uploads
 const upload = multer({
@@ -33,6 +34,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express) {
+  // Setup authentication routes and middleware
+  setupAuth(app);
+
   // Get current user
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
