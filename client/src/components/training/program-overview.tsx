@@ -9,12 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
-import { Calendar, Check, Loader2, ThumbsUp } from "lucide-react";
+import { Check, Loader2, ThumbsUp } from "lucide-react";
 
 interface ProgramOverviewProps {
-  plan: TrainingPlanWithWeeklyPlans;
+  plan: Omit<TrainingPlanWithWeeklyPlans, 'id' | 'userId'> & {
+    id?: number;
+    userId?: number;
+  };
   onApprove?: () => void;
   isSubmitting?: boolean;
 }
@@ -76,24 +78,19 @@ export default function ProgramOverview({
             className="border rounded-lg overflow-hidden"
           >
             <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50">
-              <div className="flex flex-1 items-center gap-4">
+              <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <Calendar className="h-4 w-4 text-primary" />
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Week {week.week}</span>
+                    <Badge variant="outline" className="bg-primary/10 text-primary">
+                      {week.phase}
+                    </Badge>
                   </div>
-                  <div className="flex flex-col items-start">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Week {week.week}</span>
-                      <Badge variant="outline" className="bg-primary/10 text-primary">
-                        {week.phase}
-                      </Badge>
-                      <span className="text-sm font-medium">{week.totalMileage} miles</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {format(new Date(week.workouts[0].day), "MMM d")} - {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
-                    </div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(week.workouts[0].day), "MMM d")} - {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
                   </div>
                 </div>
+                <div className="text-sm font-medium">{week.totalMileage} miles</div>
               </div>
             </AccordionTrigger>
             <AccordionContent>
@@ -101,7 +98,7 @@ export default function ProgramOverview({
                 {week.workouts.map((workout, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-background rounded-lg border gap-3"
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center h-8 w-8">
@@ -121,9 +118,7 @@ export default function ProgramOverview({
                               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
                               : workout.type.toLowerCase().includes("long")
                               ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                              : workout.type.toLowerCase().includes("tempo")
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                              : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
                           }`}
                         >
                           {workout.type}

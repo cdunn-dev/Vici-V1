@@ -15,9 +15,9 @@ import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock,
 interface PlanPreviewProps {
   planDetails: {
     goal: string;
-    goalDescription: string;
+    goalDescription?: string;
     startDate: string;
-    endDate: Date;
+    endDate: string;
     targetRace?: {
       distance: string;
       customDistance?: string;
@@ -36,7 +36,18 @@ interface PlanPreviewProps {
       preferredLongRunDay: string;
       coachingStyle: string;
     };
-    weeklyPlans?: any[];
+    weeklyPlans: Array<{
+      week: number;
+      phase: string;
+      totalMileage: number;
+      workouts: Array<{
+        day: string;
+        type: string;
+        distance: number;
+        description: string;
+        completed?: boolean;
+      }>;
+    }>;
   };
   onConfirm: () => void;
   onAdjust: (feedback: string) => void;
@@ -55,6 +66,19 @@ export default function PlanPreview({
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
+
+  // Create a clean version of the plan data without any circular references
+  const cleanPlanData = {
+    ...planDetails,
+    weeklyPlans: planDetails.weeklyPlans.map(week => ({
+      ...week,
+      workouts: week.workouts.map(workout => ({
+        ...workout,
+        day: new Date(workout.day).toISOString(),
+        completed: workout.completed || false
+      }))
+    }))
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -135,23 +159,23 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Training Goal
                           <div className="text-sm text-muted-foreground">
-                            {planDetails.goal}
-                            <div className="text-xs mt-1">{planDetails.goalDescription}</div>
+                            {cleanPlanData.goal}
+                            <div className="text-xs mt-1">{cleanPlanData.goalDescription}</div>
                           </div>
                         </div>
                       </div>
 
-                      {planDetails.targetRace && (
+                      {cleanPlanData.targetRace && (
                         <div className="flex items-center gap-2 text-primary">
                           <Medal className="h-5 w-5" />
                           <div className="font-medium">
                             Target Race
                             <div className="text-sm text-muted-foreground">
-                              {planDetails.targetRace.customDistance || planDetails.targetRace.distance}
+                              {cleanPlanData.targetRace.customDistance || cleanPlanData.targetRace.distance}
                               <div className="text-xs mt-1">
-                                Date: {format(new Date(planDetails.targetRace.date), "MMMM d, yyyy")}
-                                {planDetails.targetRace.goalTime && (
-                                  <div>Goal Time: {planDetails.targetRace.goalTime}</div>
+                                Date: {format(new Date(cleanPlanData.targetRace.date), "MMMM d, yyyy")}
+                                {cleanPlanData.targetRace.goalTime && (
+                                  <div>Goal Time: {cleanPlanData.targetRace.goalTime}</div>
                                 )}
                               </div>
                             </div>
@@ -164,7 +188,7 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Program Timeline
                           <div className="text-sm text-muted-foreground">
-                            {format(new Date(planDetails.startDate), "MMMM d, yyyy")} - {format(new Date(planDetails.endDate), "MMMM d, yyyy")}
+                            {format(new Date(cleanPlanData.startDate), "MMMM d, yyyy")} - {format(new Date(cleanPlanData.endDate), "MMMM d, yyyy")}
                           </div>
                         </div>
                       </div>
@@ -177,9 +201,9 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Experience Level
                           <div className="text-sm text-muted-foreground">
-                            {planDetails.runningExperience.level} Runner
+                            {cleanPlanData.runningExperience.level} Runner
                             <div className="text-xs mt-1">
-                              Fitness Level: {planDetails.runningExperience.fitnessLevel}
+                              Fitness Level: {cleanPlanData.runningExperience.fitnessLevel}
                             </div>
                           </div>
                         </div>
@@ -190,9 +214,9 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Weekly Schedule
                           <div className="text-sm text-muted-foreground">
-                            {planDetails.trainingPreferences.weeklyRunningDays} running days per week
+                            {cleanPlanData.trainingPreferences.weeklyRunningDays} running days per week
                             <div className="text-xs mt-1">
-                              Long runs on {planDetails.trainingPreferences.preferredLongRunDay}s
+                              Long runs on {cleanPlanData.trainingPreferences.preferredLongRunDay}s
                             </div>
                           </div>
                         </div>
@@ -203,9 +227,9 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Training Volume
                           <div className="text-sm text-muted-foreground">
-                            Up to {planDetails.trainingPreferences.maxWeeklyMileage} miles per week
+                            Up to {cleanPlanData.trainingPreferences.maxWeeklyMileage} miles per week
                             <div className="text-xs mt-1">
-                              {planDetails.trainingPreferences.weeklyWorkouts} quality workouts per week
+                              {cleanPlanData.trainingPreferences.weeklyWorkouts} quality workouts per week
                             </div>
                           </div>
                         </div>
@@ -215,21 +239,12 @@ export default function PlanPreview({
                 </CardContent>
               </Card>
 
-              {/* Weekly Plans Overview */}
-              {planDetails.weeklyPlans && (
-                <div className="w-full">
-                  <ProgramOverview
-                    plan={{
-                      ...planDetails,
-                      id: 0, // Temporary ID for preview
-                      userId: 0, // Temporary user ID for preview
-                      active: true,
-                    }}
-                    onApprove={onConfirm}
-                    isSubmitting={isSubmitting}
-                  />
-                </div>
-              )}
+              {/* Program Overview */}
+              <ProgramOverview
+                plan={cleanPlanData}
+                onApprove={onConfirm}
+                isSubmitting={isSubmitting}
+              />
             </div>
           </div>
 
