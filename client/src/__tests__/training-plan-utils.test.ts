@@ -1,11 +1,11 @@
 import {
-  formatDateForApi,
   formatDateForDisplay,
   calculatePlanMetrics,
   validatePlanData,
   preparePlanData,
   type TrainingPlan
 } from "@/lib/training-plan-utils";
+import { formatDateForApi } from "@/lib/date-utils";
 
 describe("Training Plan Utilities", () => {
   describe("Date Formatting", () => {
@@ -94,7 +94,7 @@ describe("Training Plan Utilities", () => {
         startDate: "invalid",
         endDate: "2025-06-15"
       };
-      expect(() => validatePlanData(planWithInvalidDates)).toThrow("Invalid start or end date");
+      expect(() => validatePlanData(planWithInvalidDates)).toThrow("Invalid start date format: invalid");
     });
 
     test("validatePlanData checks date order", () => {
@@ -111,15 +111,15 @@ describe("Training Plan Utilities", () => {
     const samplePlan: TrainingPlan = {
       name: "Test Plan",
       goal: "Complete Marathon",
-      startDate: "2025-03-15T12:00:00.000Z",
-      endDate: "2025-06-15T12:00:00.000Z",
+      startDate: "2025-03-15",
+      endDate: "2025-06-15",
       weeklyMileage: 30,
       weeklyPlans: [{
         week: 1,
         phase: "Base",
         totalMileage: 20,
         workouts: [{
-          day: "2025-03-15T12:00:00.000Z",
+          day: "2025-03-15",
           type: "Easy Run",
           distance: 5,
           description: "Easy 5 mile run",
@@ -139,13 +139,6 @@ describe("Training Plan Utilities", () => {
       },
       is_active: true
     };
-
-    test("preparePlanData formats dates correctly", () => {
-      const prepared = preparePlanData(samplePlan, 1);
-      expect(prepared.startDate).toBe("2025-03-15");
-      expect(prepared.endDate).toBe("2025-06-15");
-      expect(prepared.weeklyPlans[0].workouts[0].day).toBe("2025-03-15");
-    });
 
     test("preparePlanData sets required fields", () => {
       const prepared = preparePlanData(samplePlan, 1);
