@@ -48,7 +48,7 @@ export function getStravaAuthUrl(userId: string): string {
     response_type: "code",
     scope: "read,activity:read_all",
     state: userId,
-    approval_prompt: "force" // Always show the authorization prompt
+    approval_prompt: "auto"
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
@@ -70,7 +70,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
       code,
-      grant_type: "authorization_code",
+      grant_type: "authorization_code"
     };
 
     console.log("Exchanging code with payload:", {
