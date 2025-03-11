@@ -58,10 +58,10 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         throw new Error("Must be logged in to create a plan");
       }
 
-      // Create a clean copy of the plan data without any potential circular references
+      // Ensure all dates are properly formatted ISO strings
       const cleanPlan = {
         userId: user.id,
-        name: planData.name,
+        name: planData.name || `Training Plan - ${planData.goal}`,
         goal: planData.goal,
         goalDescription: planData.goalDescription || "",
         startDate: new Date(planData.startDate).toISOString(),
@@ -72,7 +72,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           phase: week.phase,
           totalMileage: week.totalMileage,
           workouts: week.workouts.map(workout => ({
-            day: new Date(workout.day).toISOString(),
+            day: new Date(workout.day).toISOString().split('T')[0], // Get only the date part
             type: workout.type,
             distance: workout.distance,
             description: workout.description,
@@ -81,7 +81,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         })),
         targetRace: planData.targetRace ? {
           distance: planData.targetRace.distance,
-          date: new Date(planData.targetRace.date).toISOString(),
+          date: new Date(planData.targetRace.date).toISOString().split('T')[0], // Get only the date part
           customDistance: planData.targetRace.customDistance,
           previousBest: planData.targetRace.previousBest,
           goalTime: planData.targetRace.goalTime

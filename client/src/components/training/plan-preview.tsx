@@ -72,15 +72,15 @@ export default function PlanPreview({
     name: `Training Plan - ${planDetails.goal}`,
     goal: planDetails.goal,
     goalDescription: planDetails.goalDescription || "",
-    startDate: new Date(planDetails.startDate).toISOString(),
-    endDate: new Date(planDetails.endDate).toISOString(),
+    startDate: new Date(planDetails.startDate).toISOString().split('T')[0],
+    endDate: new Date(planDetails.endDate).toISOString().split('T')[0],
     weeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
     weeklyPlans: planDetails.weeklyPlans.map(week => ({
       week: week.week,
       phase: week.phase,
       totalMileage: week.totalMileage,
       workouts: week.workouts.map(workout => ({
-        day: new Date(workout.day).toISOString(),
+        day: new Date(workout.day).toISOString().split('T')[0],
         type: workout.type,
         distance: workout.distance,
         description: workout.description,
@@ -89,7 +89,7 @@ export default function PlanPreview({
     })),
     targetRace: planDetails.targetRace ? {
       distance: planDetails.targetRace.distance,
-      date: new Date(planDetails.targetRace.date).toISOString(),
+      date: new Date(planDetails.targetRace.date).toISOString().split('T')[0],
       customDistance: planDetails.targetRace.customDistance,
       previousBest: planDetails.targetRace.previousBest,
       goalTime: planDetails.targetRace.goalTime
@@ -108,10 +108,11 @@ export default function PlanPreview({
     is_active: true
   };
 
-  // Helper function to safely format dates
+  // Helper function to safely format dates for display
   const formatDate = (dateString: string) => {
     try {
-      return format(parseISO(dateString), "MMMM d, yyyy");
+      const date = parseISO(dateString);
+      return format(date, "MMMM d, yyyy");
     } catch (error) {
       console.error("Date formatting error:", error);
       return "Invalid date";
