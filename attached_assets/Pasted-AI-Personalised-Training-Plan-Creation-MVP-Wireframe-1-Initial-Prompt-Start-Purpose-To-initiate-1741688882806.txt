@@ -1,0 +1,67 @@
+AI Personalised Training Plan Creation [MVP] 
+Wireframe 1: Initial Prompt/Start
+Purpose: To initiate the training plan creation process.
+Elements:
+Headline: "Create Your Personalised Training Plan"
+Brief description: "Let our AI build a plan based on your running history and goals."
+Button: "Start Creating Plan"
+Possibly a small logo for Strava or other integrations.
+Wireframe 2: Strava/Data Integration (If Applicable)
+Purpose: To connect to Strava or other platforms and gather historical data.
+Elements:
+Headline: "Connect Your Running Data"
+Description: "We'll use your running history to tailor your plan."
+Button: "Connect with Strava" (or other platform options)
+(Optional) Explanation of data being collected.
+(Optional) Skip this step button.
+Wireframe 3: User Profile & Basic Questions
+Purpose: To gather essential runner profile information.
+Elements:
+Headline: "Tell Us About Yourself"
+Fields:
+Age (Number)
+Gender (Dropdown: Male, Female, Other)
+Preferred Distance Metric (Dropdown: Miles, Kilometers)
+Experience Level (Dropdown: Beginner, Intermediate, Advanced)
+Current Fitness (Dropdown: Poor, Fair, Good, Excellent)
+Button: "Next"
+Wireframe 4: Training Goal Selection
+Purpose: To define the runner's training goal.
+Elements:
+Headline: "What's Your Training Goal?"
+Options:
+"General Fitness/Maintenance"
+"Race Preparation"
+If "Race Preparation" is selected, show:
+What Distance? (Dropdown or Input)
+What Date? (Date Picker)
+What is the name of the race? (Text Input)
+Previous personal best at this distance (Time Input)
+Goal time for this race (Time Input)
+Button: "Next"
+Wireframe 5: Training Preferences
+Purpose: To gather runner's training preferences.
+Elements:
+Headline: "Your Training Preferences"
+Fields:
+Weekly Running Days (Number Input: 1-7)
+Maximum Weekly Mileage (Number Input: 0-150)
+Weekly Workouts/Sessions (Number Input: 0-3)
+Preferred Long Run Day (Dropdown: Monday-Sunday)
+Desired Coaching Style (Dropdown: Authoritative, Directive, Motivational, Collaborative, Hybrid)
+Button: "Generate Plan"
+Wireframe 6: Plan Review and Adjustment
+Purpose: To display the generated training plan and allow adjustments.
+Elements:
+Headline: "Your Personalised Training Plan"
+Display of the generated plan (e.g., table or list format with weekly overviews).
+Ability to edit individual workouts or weeks.
+Summary of key metrics (total mileage, workout frequency, etc.).
+Button: "Approve and Start"
+Button: "Edit Plan"
+Key Considerations:
+Simplicity: Keep the wireframes clean and focused on the core functionality.
+User Flow: Ensure a logical and intuitive flow through the process.
+Feedback: Consider how to provide feedback to the user during the process (e.g., loading indicators).
+Error Handling: Plan for potential errors (e.g., invalid input, connection issues).
+Mobile Responsiveness: design with mobile in mind.
