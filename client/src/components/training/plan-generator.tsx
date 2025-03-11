@@ -38,6 +38,21 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks } from "date-fns";
 import ProgramOverview from "./program-overview";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import {
+  TrainingGoals,
+  RaceDistances,
+  ExperienceLevels,
+  ExperienceLevelDescriptions,
+  FitnessLevels,
+  FitnessLevelDescriptions,
+  DaysOfWeek,
+  CoachingStyles,
+  CoachingStyleDescriptions,
+  GenderOptions,
+  GenderLabels,
+  DistanceUnits,
+} from "./plan-generator-constants";
+import { TimeInput } from "./time-input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -224,7 +239,7 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
         ...previewData,
         userId: user.id,
         startDate: now.toISOString(),
-        endDate: previewData.targetRace ? 
+        endDate: previewData.targetRace ?
           new Date(previewData.targetRace.date).toISOString() :
           addWeeks(now, 12).toISOString(),
         weeklyPlans: previewData.weeklyPlans.map(week => ({
