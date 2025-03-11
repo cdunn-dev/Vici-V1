@@ -74,11 +74,13 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         }
 
         console.log('Creating plan with data:', {
-          goal: planData.goal,
+          goal: planData?.goal,
           goalLength: planData?.goal?.length,
-          startDate: planData.startDate,
-          endDate: planData.endDate,
-          weeklyPlansCount: planData.weeklyPlans?.length
+          startDate: planData?.startDate,
+          endDate: planData?.endDate,
+          weeklyPlansCount: planData?.weeklyPlans?.length,
+          planDataType: typeof planData,
+          planDataKeys: Object.keys(planData || {})
         });
 
         // Validate plan data before sending to API

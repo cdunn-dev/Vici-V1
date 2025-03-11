@@ -164,12 +164,27 @@ export const formatDateForDisplay = (dateString: string, formatStr: string = "MM
  * @throws Error if validation fails
  */
 export const validatePlanData = (plan: TrainingPlan): void => {
+  // Log entire plan data for debugging
+  console.log('Validating plan data:', {
+    goal: plan?.goal,
+    goalLength: plan?.goal?.length,
+    hasWeeklyPlans: Array.isArray(plan?.weeklyPlans),
+    weeklyPlansLength: plan?.weeklyPlans?.length,
+    startDate: plan?.startDate,
+    endDate: plan?.endDate,
+  });
+
   // Required fields validation
-  if (!plan.goal || plan.goal.trim() === "") {
+  if (!plan?.goal || typeof plan.goal !== 'string' || plan.goal.trim() === "") {
+    console.error('Goal validation failed:', {
+      goalValue: plan?.goal,
+      goalType: typeof plan?.goal,
+      isTrimmedEmpty: plan?.goal?.trim() === ""
+    });
     throw new Error("Training goal is required and cannot be empty");
   }
 
-  if (!Array.isArray(plan.weeklyPlans) || plan.weeklyPlans.length === 0) {
+  if (!Array.isArray(plan?.weeklyPlans) || plan.weeklyPlans.length === 0) {
     throw new Error("Weekly plans are required and must contain at least one week");
   }
 
