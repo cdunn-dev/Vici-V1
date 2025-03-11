@@ -9,13 +9,47 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { Check, Loader2, ThumbsUp } from "lucide-react";
 
 interface ProgramOverviewProps {
-  plan: Omit<TrainingPlanWithWeeklyPlans, 'id' | 'userId'> & {
-    id?: number;
-    userId?: number;
+  plan: {
+    name: string;
+    goal: string;
+    goalDescription?: string;
+    startDate: string;
+    endDate: string;
+    weeklyMileage: number;
+    weeklyPlans: Array<{
+      week: number;
+      phase: string;
+      totalMileage: number;
+      workouts: Array<{
+        day: string;
+        type: string;
+        distance: number;
+        description: string;
+        completed: boolean;
+      }>;
+    }>;
+    targetRace?: {
+      distance: string;
+      date: string;
+      customDistance?: string;
+      previousBest?: string;
+      goalTime?: string;
+    } | null;
+    runningExperience: {
+      level: string;
+      fitnessLevel: string;
+    };
+    trainingPreferences: {
+      weeklyRunningDays: number;
+      maxWeeklyMileage: number;
+      weeklyWorkouts: number;
+      preferredLongRunDay: string;
+      coachingStyle: string;
+    };
+    is_active: boolean;
   };
   onApprove?: () => void;
   isSubmitting?: boolean;

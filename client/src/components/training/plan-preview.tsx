@@ -69,39 +69,12 @@ export default function PlanPreview({
 
   // Create a serializable version of the plan data
   const serializablePlan = {
-    // Basic plan details
+    name: `Training Plan - ${planDetails.goal}`,
     goal: planDetails.goal,
-    goalDescription: planDetails.goalDescription,
+    goalDescription: planDetails.goalDescription || "",
     startDate: new Date(planDetails.startDate).toISOString(),
     endDate: new Date(planDetails.endDate).toISOString(),
-
-    // Running experience
-    runningExperience: {
-      level: planDetails.runningExperience.level,
-      fitnessLevel: planDetails.runningExperience.fitnessLevel
-    },
-
-    // Training preferences
-    trainingPreferences: {
-      weeklyRunningDays: planDetails.trainingPreferences.weeklyRunningDays,
-      maxWeeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
-      weeklyWorkouts: planDetails.trainingPreferences.weeklyWorkouts,
-      preferredLongRunDay: planDetails.trainingPreferences.preferredLongRunDay,
-      coachingStyle: planDetails.trainingPreferences.coachingStyle
-    },
-
-    // Target race if exists
-    ...(planDetails.targetRace && {
-      targetRace: {
-        distance: planDetails.targetRace.distance,
-        customDistance: planDetails.targetRace.customDistance,
-        date: new Date(planDetails.targetRace.date).toISOString(),
-        previousBest: planDetails.targetRace.previousBest,
-        goalTime: planDetails.targetRace.goalTime
-      }
-    }),
-
-    // Weekly plans with serializable dates
+    weeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
     weeklyPlans: planDetails.weeklyPlans.map(week => ({
       week: week.week,
       phase: week.phase,
@@ -114,9 +87,25 @@ export default function PlanPreview({
         completed: false
       }))
     })),
-
-    // Required fields for the API
-    active: true
+    targetRace: planDetails.targetRace ? {
+      distance: planDetails.targetRace.distance,
+      date: new Date(planDetails.targetRace.date).toISOString(),
+      customDistance: planDetails.targetRace.customDistance,
+      previousBest: planDetails.targetRace.previousBest,
+      goalTime: planDetails.targetRace.goalTime
+    } : null,
+    runningExperience: {
+      level: planDetails.runningExperience.level,
+      fitnessLevel: planDetails.runningExperience.fitnessLevel
+    },
+    trainingPreferences: {
+      weeklyRunningDays: planDetails.trainingPreferences.weeklyRunningDays,
+      maxWeeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
+      weeklyWorkouts: planDetails.trainingPreferences.weeklyWorkouts,
+      preferredLongRunDay: planDetails.trainingPreferences.preferredLongRunDay,
+      coachingStyle: planDetails.trainingPreferences.coachingStyle
+    },
+    is_active: true
   };
 
   return (
