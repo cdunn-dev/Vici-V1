@@ -12,18 +12,18 @@ import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
 import StravaDebugPage from "@/pages/strava-debug";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ path, children }: { path: string, children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (!user) {
-    return <Redirect to="/auth" />;
-  }
-
-  return <Component />;
+  return (
+    <Route path={path}>
+      {user ? children : <Redirect to="/auth" />}
+    </Route>
+  );
 }
 
 function Router() {
@@ -40,21 +40,25 @@ function Router() {
           </Route>
 
           {/* Protected routes */}
-          <Route path="/training">
-            <ProtectedRoute component={Training} />
-          </Route>
-          <Route path="/profile">
-            <ProtectedRoute component={Profile} />
-          </Route>
-          <Route path="/log">
-            <ProtectedRoute component={Log} />
-          </Route>
-          <Route path="/activities/:id">
-            <ProtectedRoute component={() => <div>Activity Detail</div>} />
-          </Route>
-          <Route path="/strava-debug">
-            <ProtectedRoute component={StravaDebugPage} />
-          </Route>
+          <ProtectedRoute path="/training">
+            <Training />
+          </ProtectedRoute>
+
+          <ProtectedRoute path="/profile">
+            <Profile />
+          </ProtectedRoute>
+
+          <ProtectedRoute path="/log">
+            <Log />
+          </ProtectedRoute>
+
+          <ProtectedRoute path="/activities/:id">
+            <div>Activity Detail</div>
+          </ProtectedRoute>
+
+          <ProtectedRoute path="/strava-debug">
+            <StravaDebugPage />
+          </ProtectedRoute>
 
           {/* Default route */}
           <Route path="/">
