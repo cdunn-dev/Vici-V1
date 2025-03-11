@@ -65,6 +65,7 @@ export function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user: any, done) => done(null, user.id));
+
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -76,7 +77,7 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      // First validate with register schema (includes password confirmation)
+      // First validate with register schema
       const registerResult = registerUserSchema.safeParse(req.body);
       if (!registerResult.success) {
         return res.status(400).json({ error: registerResult.error.format() });
@@ -87,13 +88,22 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      // Now create user with insert schema (excludes confirmation)
+      // Create user with validated data
       const insertData = {
         email: registerResult.data.email,
         password: await hashPassword(registerResult.data.password),
         emailVerified: true, // Default to true while email verification is disabled
         connectedApps: [],
-        stravaTokens: null
+        stravaTokens: null,
+        profilePicture: null,
+        gender: null,
+        birthday: null,
+        preferredDistanceUnit: "miles",
+        personalBests: [],
+        runningExperience: null,
+        fitnessLevel: null,
+        preferredCoachingStyle: null,
+        stravaStats: null
       };
 
       const user = await storage.createUser(insertData);
@@ -110,8 +120,21 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Invalid credentials" });
+      }
+      req.login(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
