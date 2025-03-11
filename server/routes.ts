@@ -37,6 +37,10 @@ const upload = multer({
 export async function registerRoutes(app: Express) {
   // Authentication routes
   app.post("/api/login", (req, res, next) => {
+    if (!req.body.email || !req.body.password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error("Login error:", err);
@@ -50,13 +54,17 @@ export async function registerRoutes(app: Express) {
           console.error("Session error:", err);
           return res.status(500).json({ error: "Failed to establish session" });
         }
-        return res.json(user);
+        return res.json({ user });
       });
     })(req, res, next);
   });
 
   app.post("/api/register", async (req, res) => {
     try {
+      if (!req.body.email || !req.body.password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
         return res.status(400).json({ error: "Email already registered" });
@@ -77,13 +85,12 @@ export async function registerRoutes(app: Express) {
         stravaTokens: null,
       });
 
-      // Log the user in after registration
       req.logIn(user, (err) => {
         if (err) {
           console.error("Auto-login error:", err);
           return res.status(500).json({ error: "Failed to establish session" });
         }
-        return res.status(201).json(user);
+        return res.status(201).json({ user });
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -106,7 +113,7 @@ export async function registerRoutes(app: Express) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" });
     }
-    res.json(req.user);
+    res.json({ user: req.user });
   });
 
   // Strava OAuth callback
@@ -329,11 +336,11 @@ export async function registerRoutes(app: Express) {
     try {
       // Allow unauthenticated users to get auth URL for initial connection
       const userId = req.isAuthenticated() ? req.user.id.toString() : 'guest';
-      
+
       console.log("Generating Strava auth URL for user:", userId);
       const authUrl = getStravaAuthUrl(userId);
       console.log("Generated auth URL:", authUrl);
-      
+
       return res.json({ url: authUrl });
     } catch (error) {
       console.error("Error generating Strava auth URL:", error);
@@ -419,7 +426,7 @@ export async function registerRoutes(app: Express) {
       const clientId = !!process.env.STRAVA_CLIENT_ID;
       const clientSecret = !!process.env.STRAVA_CLIENT_SECRET;
       const callbackUrl = `https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.${process.env.REPL_ENVIRONMENT}.repl.co/api/auth/strava/callback`;
-      
+
       res.json({
         clientId,
         clientSecret,
