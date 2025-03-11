@@ -45,13 +45,13 @@ export default function ProgramOverview({
   // Calculate total plan metrics
   const totalWeeks = plan.weeklyPlans.length;
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
-  const completedWeeks = plan.weeklyPlans.filter(week => 
+  const completedWeeks = plan.weeklyPlans.filter(week =>
     week.workouts.every(workout => workout.completed)
   ).length;
-  const completedWorkouts = plan.weeklyPlans.reduce((sum, week) => 
+  const completedWorkouts = plan.weeklyPlans.reduce((sum, week) =>
     sum + week.workouts.filter(w => w.completed).length, 0
   );
-  const totalWorkouts = plan.weeklyPlans.reduce((sum, week) => 
+  const totalWorkouts = plan.weeklyPlans.reduce((sum, week) =>
     sum + week.workouts.length, 0
   );
   const completionPercentage = (completedWeeks / totalWeeks) * 100;
@@ -137,7 +137,7 @@ export default function ProgramOverview({
             value={`week-${week.week}`}
             className="border rounded-lg overflow-hidden"
           >
-            <AccordionTrigger 
+            <AccordionTrigger
               className="px-4 py-2 hover:no-underline hover:bg-muted/50"
               onClick={() => onSelectWeek?.(week.week)}
             >
@@ -162,9 +162,9 @@ export default function ProgramOverview({
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium">{week.totalMileage} miles</span>
                   <div className="w-32">
-                    <Progress 
-                      value={week.workouts.filter(w => w.completed).length / week.workouts.length * 100} 
-                      className="h-2" 
+                    <Progress
+                      value={week.workouts.filter(w => w.completed).length / week.workouts.length * 100}
+                      className="h-2"
                     />
                   </div>
                 </div>
@@ -193,8 +193,8 @@ export default function ProgramOverview({
                         )}
                       </div>
                       <div className="min-w-0">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`mb-1 ${
                             workout.type.toLowerCase().includes('easy')
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
@@ -228,8 +228,8 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
-      {/* AI Interaction Section */}
-      {showActions && (
+      {/* AI Interaction Section - Only show if showActions is true */}
+      {showActions && !onApprove && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           {showQuestionForm ? (
             <div className="space-y-4">
@@ -315,14 +315,22 @@ export default function ProgramOverview({
                 <ChevronDown className="mr-2 h-4 w-4" />
                 Request Changes
               </Button>
-              {onApprove && (
-                <Button className="w-full sm:w-40" onClick={onApprove}>
-                  <ThumbsUp className="mr-2 h-4 w-4" />
-                  Approve Plan
-                </Button>
-              )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Single Approve Button - Only show during plan preview */}
+      {onApprove && (
+        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+          <Button
+            className="w-full"
+            onClick={onApprove}
+            size="lg"
+          >
+            <ThumbsUp className="mr-2 h-4 w-4" />
+            Approve Plan
+          </Button>
         </div>
       )}
     </div>
