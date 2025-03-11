@@ -195,11 +195,11 @@ export async function registerRoutes(app: Express) {
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
-      // Convert dates properly
+      // Handle dates properly
       const startDate = new Date(req.body.startDate);
       const endDate = req.body.targetRace?.date 
         ? new Date(req.body.targetRace.date)
-        : addWeeks(startDate, 12); // Use addWeeks helper for date calculation
+        : addWeeks(startDate, 12);
 
       const trainingPlan = {
         userId,
@@ -209,8 +209,17 @@ export async function registerRoutes(app: Express) {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
-        weeklyPlans: req.body.weeklyPlans || [],
-        targetRace: req.body.targetRace || null,
+        weeklyPlans: req.body.weeklyPlans.map(week => ({
+          ...week,
+          workouts: week.workouts.map(workout => ({
+            ...workout,
+            day: new Date(workout.day).toISOString()
+          }))
+        })),
+        targetRace: req.body.targetRace ? {
+          ...req.body.targetRace,
+          date: new Date(req.body.targetRace.date).toISOString()
+        } : null,
         runningExperience: req.body.runningExperience,
         trainingPreferences: req.body.trainingPreferences,
         isActive: true,
