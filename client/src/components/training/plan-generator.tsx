@@ -612,18 +612,20 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           {existingPlan ? "Create New Plan" : "Create Training Plan"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>Create Training Plan</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-[calc(100vh-200px)]">
-            <ScrollArea className="flex-1 px-4 -mx-4">
-              {renderStepContent()}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1">
+            <ScrollArea className="flex-1 px-6 py-4">
+              <div className="space-y-6 pb-6">
+                {renderStepContent()}
+              </div>
             </ScrollArea>
 
-            <div className="sticky bottom-0 flex justify-between items-center pt-4 mt-4 border-t bg-background">
+            <div className="flex justify-between items-center p-6 border-t bg-background">
               <Button
                 type="button"
                 variant="outline"
