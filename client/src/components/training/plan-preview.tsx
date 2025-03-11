@@ -55,7 +55,6 @@ export default function PlanPreview({
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
     <div className="h-full flex flex-col">
@@ -122,12 +121,12 @@ export default function PlanPreview({
             </div>
           )}
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto pb-20">
             <div className="container mx-auto py-4 px-4 space-y-6">
               {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">
-                <CardContent className="pt-6 pb-6">
+                <CardContent className="pt-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Goal and Timeline Information */}
                     <div className="space-y-4">
@@ -220,15 +219,14 @@ export default function PlanPreview({
               {planDetails.weeklyPlans && (
                 <div className="w-full">
                   <ProgramOverview
-                    plan={planDetails}
-                    onSelectWeek={(weekNumber) => {
-                      const week = planDetails.weeklyPlans?.find(w => w.week === weekNumber);
-                      if (week) {
-                        setSelectedDate(new Date(week.workouts[0].day));
-                      }
+                    plan={{
+                      ...planDetails,
+                      id: 0, // Temporary ID for preview
+                      userId: 0, // Temporary user ID for preview
+                      active: true,
                     }}
-                    onSelectDay={(date) => date && setSelectedDate(date)}
-                    selectedDate={selectedDate}
+                    onApprove={onConfirm}
+                    isSubmitting={isSubmitting}
                   />
                 </div>
               )}
@@ -237,8 +235,8 @@ export default function PlanPreview({
 
           {/* Footer */}
           {!isDialog && (
-            <div className="sticky bottom-0 z-10 p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="flex justify-center">
+            <div className="fixed bottom-0 left-0 right-0 z-10 p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <div className="container mx-auto flex justify-center">
                 <Button
                   onClick={onConfirm}
                   size="lg"

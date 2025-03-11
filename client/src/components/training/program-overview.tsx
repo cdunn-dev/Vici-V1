@@ -27,23 +27,14 @@ export default function ProgramOverview({
   // Calculate metrics
   const totalWeeks = plan.weeklyPlans.length;
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
-  const completedWeeks = plan.weeklyPlans.filter(week =>
-    week.workouts.every(workout => workout.completed)
-  ).length;
-  const completedWorkouts = plan.weeklyPlans.reduce((sum, week) =>
-    sum + week.workouts.filter(w => w.completed).length, 0
-  );
-  const totalWorkouts = plan.weeklyPlans.reduce((sum, week) =>
-    sum + week.workouts.length, 0
-  );
-  const completionPercentage = (completedWeeks / totalWeeks) * 100;
-  const followThroughPercentage = (completedWorkouts / totalWorkouts) * 100;
+  const weeklyAverage = Math.round(totalMileage / totalWeeks);
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+      <Card className="shadow-md border-primary/20">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Overview Section */}
             <div>
               <h2 className="text-2xl font-bold mb-2">Training Plan Overview</h2>
               <p className="text-muted-foreground">
@@ -55,32 +46,23 @@ export default function ProgramOverview({
                 )}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Progress</p>
-                <p className="text-2xl font-bold">Week {completedWeeks}/{totalWeeks}</p>
-                <Progress value={completionPercentage} className="h-2 mt-2" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Follow Through</p>
-                <p className="text-2xl font-bold">{Math.round(followThroughPercentage)}%</p>
-                <Progress value={followThroughPercentage} className="h-2 mt-2" />
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Weeks</p>
-              <p className="text-xl font-semibold">{totalWeeks}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Mileage</p>
-              <p className="text-xl font-semibold">{totalMileage} miles</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Weekly Average</p>
-              <p className="text-xl font-semibold">{Math.round(totalMileage / totalWeeks)} miles</p>
+            {/* Stats Section */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-primary/5 rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">Total Weeks</p>
+                <p className="text-2xl font-bold text-primary">{totalWeeks}</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">Total Mileage</p>
+                <p className="text-2xl font-bold text-primary">{totalMileage}</p>
+                <p className="text-xs text-muted-foreground">miles</p>
+              </div>
+              <div className="bg-primary/5 rounded-lg p-4 text-center">
+                <p className="text-sm text-muted-foreground">Weekly Average</p>
+                <p className="text-2xl font-bold text-primary">{weeklyAverage}</p>
+                <p className="text-xs text-muted-foreground">miles</p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -94,7 +76,7 @@ export default function ProgramOverview({
             className="border rounded-lg overflow-hidden"
           >
             <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50">
-              <div className="flex flex-1 items-center justify-between">
+              <div className="flex flex-1 items-center gap-4">
                 <div className="flex items-center gap-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                     <Calendar className="h-4 w-4 text-primary" />
@@ -105,26 +87,11 @@ export default function ProgramOverview({
                       <Badge variant="outline" className="bg-primary/10 text-primary">
                         {week.phase}
                       </Badge>
+                      <span className="text-sm font-medium">{week.totalMileage} miles</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{format(new Date(week.workouts[0].day), "MMM d")} - </span>
-                      <span>
-                        {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
-                      </span>
+                    <div className="text-sm text-muted-foreground">
+                      {format(new Date(week.workouts[0].day), "MMM d")} - {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium">{week.totalMileage} miles</span>
-                  <div className="w-32">
-                    <Progress
-                      value={
-                        (week.workouts.filter((w) => w.completed).length /
-                          week.workouts.length) *
-                        100
-                      }
-                      className="h-2"
-                    />
                   </div>
                 </div>
               </div>
@@ -169,7 +136,7 @@ export default function ProgramOverview({
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm font-medium">
+                    <div className="text-sm font-medium whitespace-nowrap">
                       {workout.distance} miles
                     </div>
                   </div>
@@ -180,9 +147,9 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
-      {/* Only show approve button during plan preview */}
+      {/* Approve button section */}
       {onApprove && (
-        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+        <div className="py-4">
           <Button
             className="w-full"
             onClick={onApprove}
