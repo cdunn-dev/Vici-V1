@@ -38,25 +38,9 @@ import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks } from "date-fns";
 import ProgramOverview from "./program-overview";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
-import {
-  TrainingGoals,
-  RaceDistances,
-  ExperienceLevels,
-  ExperienceLevelDescriptions,
-  FitnessLevels,
-  FitnessLevelDescriptions,
-  DaysOfWeek,
-  CoachingStyles,
-  CoachingStyleDescriptions,
-  GenderOptions,
-  GenderLabels,
-  DistanceUnits,
-} from "./plan-generator-constants";
-import { TimeInput } from "./time-input";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 
-// Update STEPS array to include a final preview step
 const STEPS = [
   { id: "welcome", label: "Welcome" },
   { id: "basicProfile", label: "Basic Profile" },
@@ -252,14 +236,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
         }))
       };
 
-      // Handle target race data if exists
-      if (planData.targetRace) {
-        planData.targetRace = {
-          ...planData.targetRace,
-          date: new Date(planData.targetRace.date).toISOString()
-        };
-      }
-
       const response = await fetch('/api/training-plans/generate', {
         method: 'POST',
         headers: {
@@ -300,7 +276,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
     }
   };
 
-  // Helper function to get fields for each step
   const getFieldsForStep = (stepId: string): string[] => {
     switch (stepId) {
       case "goal":
@@ -381,7 +356,7 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
             previewData && (
               <ProgramOverview
                 plan={previewData}
-                showActions={true} //Corrected showActions prop to true.
+                showActions={false}
                 onApprove={handleApprovePlan}
                 isSubmitting={isSubmitting}
               />
