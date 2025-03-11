@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function StravaDebugPage() {
@@ -13,7 +13,7 @@ export default function StravaDebugPage() {
   useEffect(() => {
     // Get the auth URL on page load
     fetchAuthUrl();
-    
+
     // Check Strava connection status
     if (user) {
       if (user.connectedApps?.includes('strava')) {
@@ -28,7 +28,7 @@ export default function StravaDebugPage() {
     try {
       const response = await fetch('/api/strava/auth');
       const data = await response.json();
-      setAuthUrl(data.authUrl);
+      setAuthUrl(data.url);
     } catch (error) {
       console.error('Error fetching Strava auth URL:', error);
       setAuthUrl(null);
@@ -40,7 +40,7 @@ export default function StravaDebugPage() {
       const res = await fetch('/api/activities/sync', {
         method: 'POST',
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to sync activities');
@@ -62,7 +62,7 @@ export default function StravaDebugPage() {
   return (
     <div className="container py-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-6">Strava Integration Debug</h1>
-      
+
       <div className="grid gap-6">
         <Card>
           <CardHeader>
@@ -110,7 +110,7 @@ export default function StravaDebugPage() {
             <CardDescription>Current Strava integration configuration</CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Callback URL: <code className="bg-muted p-1 rounded">{`https://b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev/api/auth/strava/callback`}</code></p>
+            <p>Callback URL: <code className="bg-muted p-1 rounded">{window.location.origin}/api/auth/strava/callback</code></p>
             <p className="mt-2 text-sm">Make sure this URL is registered in your Strava OAuth application settings.</p>
           </CardContent>
         </Card>

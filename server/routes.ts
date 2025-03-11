@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Update the generate route to properly handle dates
+  // Update the generate route to handle dates robustly
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -192,60 +192,103 @@ export async function registerRoutes(app: Express) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
+      // Validate required fields
+      if (!req.body.goal) {
+        return res.status(400).json({ error: "Training goal is required" });
+      }
+
+      if (!req.body.weeklyPlans || !Array.isArray(req.body.weeklyPlans)) {
+        return res.status(400).json({ error: "Weekly plans are required and must be an array" });
+      }
+
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
       try {
-        // Handle dates properly
+        // Initialize dates
         const now = new Date();
-        const startDate = now;
-        const endDate = req.body.targetRace?.date 
-          ? new Date(req.body.targetRace.date)
-          : addWeeks(startDate, 12);
+        let endDate: Date;
 
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          throw new Error("Invalid date format");
+        // Validate target race date if present
+        if (req.body.targetRace?.date) {
+          const raceDate = new Date(req.body.targetRace.date);
+          if (isNaN(raceDate.getTime())) {
+            throw new Error("Invalid race date format");
+          }
+          if (raceDate <= now) {
+            throw new Error("Race date must be in the future");
+          }
+          endDate = raceDate;
+        } else {
+          endDate = addWeeks(now, 12);
         }
 
-        // Ensure all dates are properly formatted as ISO strings
+        // Validate all workout dates
+        const validatedWeeklyPlans = req.body.weeklyPlans.map((week: any, weekIndex: number) => {
+          if (!week.workouts || !Array.isArray(week.workouts)) {
+            throw new Error(`Week ${weekIndex + 1} must have an array of workouts`);
+          }
+
+          return {
+            ...week,
+            workouts: week.workouts.map((workout: any, workoutIndex: number) => {
+              if (!workout.day) {
+                throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
+              }
+
+              const workoutDate = new Date(workout.day);
+              if (isNaN(workoutDate.getTime())) {
+                throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}`);
+              }
+
+              return {
+                ...workout,
+                day: workoutDate.toISOString()
+              };
+            })
+          };
+        });
+
+        // Construct the training plan with validated data
         const trainingPlan = {
           userId,
           name: `Training Plan - ${req.body.goal}`,
           goal: req.body.goal,
           goalDescription: req.body.goalDescription || "",
-          startDate: startDate.toISOString(),
+          startDate: now.toISOString(),
           endDate: endDate.toISOString(),
-          weeklyMileage: req.body.weeklyMileage,
-          weeklyPlans: req.body.weeklyPlans.map(week => ({
-            ...week,
-            workouts: week.workouts.map(workout => ({
-              ...workout,
-              day: typeof workout.day === 'string' ? workout.day : 
-                   (workout.day instanceof Date ? workout.day.toISOString() : 
-                   new Date(workout.day).toISOString())
-            }))
-          })),
+          weeklyMileage: req.body.weeklyMileage || req.body.trainingPreferences?.maxWeeklyMileage,
+          weeklyPlans: validatedWeeklyPlans,
           targetRace: req.body.targetRace ? {
             ...req.body.targetRace,
-            date: new Date(req.body.targetRace.date).toISOString()
+            date: endDate.toISOString()
           } : null,
           runningExperience: req.body.runningExperience,
           trainingPreferences: req.body.trainingPreferences,
           isActive: true,
         };
 
+        // Log the plan for debugging
         console.log("Creating training plan:", JSON.stringify(trainingPlan, null, 2));
+
+        // Create the plan
         const plan = await storage.createTrainingPlan(trainingPlan);
         console.log("Training plan created:", JSON.stringify(plan, null, 2));
 
         res.json(plan);
       } catch (dateError) {
-        console.error("Date parsing error:", dateError);
-        return res.status(400).json({ error: "Invalid date format in request" });
+        console.error("Date validation error:", dateError);
+        return res.status(400).json({ 
+          error: "Date validation failed",
+          details: dateError instanceof Error ? dateError.message : "Unknown date error"
+        });
       }
     } catch (error) {
       console.error("Error generating training plan:", error);
-      res.status(500).json({ error: "Failed to generate training plan" });
+      res.status(500).json({ 
+        error: "Failed to generate training plan",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

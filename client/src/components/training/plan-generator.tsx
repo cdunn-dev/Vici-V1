@@ -13,51 +13,29 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form } from "@/components/ui/form";
-import { TrainingGoals } from "./training-goals";
 import { useToast } from "@/components/ui/use-toast";
 import { addWeeks } from "date-fns";
+import ProgramOverview from "./program-overview";
+import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { planGeneratorSchema } from "./plan-generator-schema";
+import { useAuth } from "@/hooks/use-auth";
 
-// Form schema
-const trainingPlanSchema = z.object({
-  goal: z.string().min(1, "Please select a goal"),
-  runningExperience: z.object({
-    level: z.string().min(1, "Please select your experience level"),
-    fitnessLevel: z.string().min(1, "Please select your current fitness level")
-  }),
-  trainingPreferences: z.object({
-    weeklyRunningDays: z.number().min(1).max(7),
-    maxWeeklyMileage: z.number().min(5),
-    weeklyWorkouts: z.number().min(0),
-    preferredLongRunDay: z.string(),
-    coachingStyle: z.string()
-  }),
-  targetRace: z.object({
-    distance: z.string(),
-    date: z.string().optional(),
-    customDistance: z.object({
-      value: z.number(),
-      unit: z.string()
-    }).optional(),
-    previousBest: z.string().optional(),
-    goalTime: z.string().optional()
-  }).optional()
-});
-
-type TrainingPlanFormValues = z.infer<typeof trainingPlanSchema>;
+type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
 interface PlanGeneratorProps {
   existingPlan: boolean;
   onPreview: (planDetails: any) => void;
 }
 
-export function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
+function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const auth = useAuth(); // Added useAuth
 
-  const form = useForm<TrainingPlanFormValues>({
-    resolver: zodResolver(trainingPlanSchema),
+  const form = useForm<PlanGeneratorFormData>({
+    resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
       goal: "",
       runningExperience: {
@@ -70,7 +48,8 @@ export function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
         weeklyWorkouts: 1,
         preferredLongRunDay: "Sunday",
         coachingStyle: "directive"
-      }
+      },
+      targetRace: {} // added default value for targetRace
     }
   });
 
@@ -88,13 +67,13 @@ export function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     form.reset();
   };
 
-  const onSubmit = async (values: TrainingPlanFormValues) => {
+  const onSubmit = async (values: PlanGeneratorFormData) => {
     setIsSubmitting(true);
     try {
       // Calculate dates
       const startDate = new Date();
-      const endDate = values.targetRace?.date 
-        ? new Date(values.targetRace.date) 
+      const endDate = values.targetRace?.date
+        ? new Date(values.targetRace.date)
         : addWeeks(startDate, 12);
 
       // Create preview data
@@ -205,3 +184,5 @@ export function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     </Dialog>
   );
 }
+
+export default PlanGenerator;
