@@ -6,8 +6,19 @@ import '@testing-library/jest-dom';
 // Mock date-fns to ensure consistent date handling in tests
 jest.mock('date-fns', () => ({
   ...jest.requireActual('date-fns'),
-  format: jest.fn((date, formatStr) => `Formatted: ${date.toISOString()} (${formatStr})`),
-  parseISO: jest.fn((dateStr) => new Date(dateStr)),
+  format: jest.fn((date, formatStr) => {
+    if (!date || isNaN(date.getTime())) {
+      return "Invalid date";
+    }
+    return `${date.toISOString().split('T')[0]} (${formatStr})`;
+  }),
+  parseISO: jest.fn((dateStr) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid date');
+    }
+    return date;
+  }),
 }));
 
 // Set up global fetch mock
