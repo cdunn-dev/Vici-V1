@@ -85,6 +85,14 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const onSubmit = async (values: PlanGeneratorFormData) => {
     try {
       setIsSubmitting(true);
+      console.log('Form submission started with values:', {
+        goal: values.goal,
+        startDate: values.startDate,
+        runningExperience: values.runningExperience,
+        trainingPreferences: values.trainingPreferences,
+        targetRace: values.targetRace
+      });
+
       // Calculate dates
       const startDate = new Date();
       const endDate = values.targetRace?.date
@@ -98,6 +106,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         endDate: endDate.toISOString()
       };
 
+      console.log('Transformed preview data:', {
+        originalValues: values,
+        transformedData: previewData
+      });
+
       // Generate preview plan
       const response = await fetch('/api/training-plans/preview', {
         method: 'POST',
@@ -108,10 +121,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       });
 
       if (!response.ok) {
+        console.error('Preview generation failed:', {
+          status: response.status,
+          statusText: response.statusText
+        });
         throw new Error('Error generating plan preview');
       }
 
       const previewPlan = await response.json();
+      console.log('Received preview plan:', previewPlan);
+
       onPreview({
         ...values,
         ...previewPlan,
