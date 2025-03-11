@@ -9,52 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Loader2, ThumbsUp } from "lucide-react";
-import { formatDate } from "@/lib/date-utils";
-
-// Types
-interface Workout {
-  day: string;
-  type: string;
-  distance: number;
-  description: string;
-  completed: boolean;
-}
-
-interface WeeklyPlan {
-  week: number;
-  phase: string;
-  totalMileage: number;
-  workouts: Workout[];
-}
-
-interface TrainingPlan {
-  name: string;
-  goal: string;
-  goalDescription?: string;
-  startDate: string;
-  endDate: string;
-  weeklyMileage: number;
-  weeklyPlans: WeeklyPlan[];
-  targetRace?: {
-    distance: string;
-    date: string;
-    customDistance?: string;
-    previousBest?: string;
-    goalTime?: string;
-  } | null;
-  runningExperience: {
-    level: string;
-    fitnessLevel: string;
-  };
-  trainingPreferences: {
-    weeklyRunningDays: number;
-    maxWeeklyMileage: number;
-    weeklyWorkouts: number;
-    preferredLongRunDay: string;
-    coachingStyle: string;
-  };
-  is_active: boolean;
-}
+import {
+  type TrainingPlan,
+  type WeeklyPlan,
+  type Workout,
+  calculatePlanMetrics,
+  getWorkoutBadgeStyle,
+  formatDateForDisplay
+} from "@/lib/training-plan-utils";
 
 interface ProgramOverviewProps {
   plan: TrainingPlan;
@@ -62,32 +24,12 @@ interface ProgramOverviewProps {
   isSubmitting?: boolean;
 }
 
-// Helper functions
-const calculateMetrics = (weeklyPlans: WeeklyPlan[]) => {
-  const totalWeeks = weeklyPlans.length;
-  const totalMileage = weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
-  const weeklyAverage = Math.round(totalMileage / totalWeeks);
-
-  return { totalWeeks, totalMileage, weeklyAverage };
-};
-
-const getWorkoutBadgeStyle = (workoutType: string): string => {
-  const type = workoutType.toLowerCase();
-  if (type.includes("easy")) {
-    return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-  } else if (type.includes("long")) {
-    return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-  }
-  return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-};
-
-// Component
 export default function ProgramOverview({
   plan,
   onApprove,
   isSubmitting = false,
 }: ProgramOverviewProps) {
-  const { totalWeeks, totalMileage, weeklyAverage } = calculateMetrics(plan.weeklyPlans);
+  const { totalWeeks, totalMileage, weeklyAverage } = calculatePlanMetrics(plan.weeklyPlans);
 
   return (
     <div className="space-y-6">
@@ -101,7 +43,7 @@ export default function ProgramOverview({
                 {plan.goal}
                 {plan.targetRace && (
                   <span className="block mt-1">
-                    {plan.targetRace.distance} - {formatDate(plan.targetRace.date, "MMMM d, yyyy")}
+                    {plan.targetRace.distance} - {formatDateForDisplay(plan.targetRace.date, "MMMM d, yyyy")}
                   </span>
                 )}
               </p>
@@ -145,7 +87,7 @@ export default function ProgramOverview({
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {formatDate(week.workouts[0].day)} - {formatDate(week.workouts[week.workouts.length - 1].day)}
+                    {formatDateForDisplay(week.workouts[0].day)} - {formatDateForDisplay(week.workouts[week.workouts.length - 1].day)}
                   </div>
                 </div>
                 <div className="text-sm font-medium">{week.totalMileage} miles</div>
@@ -176,7 +118,7 @@ export default function ProgramOverview({
                           {workout.type}
                         </Badge>
                         <div className="font-medium">
-                          {formatDate(workout.day, "EEEE, MMM d")}
+                          {formatDateForDisplay(workout.day, "EEEE, MMM d")}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {workout.description}
