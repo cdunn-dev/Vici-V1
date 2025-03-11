@@ -15,6 +15,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  RadioGroup,
+  RadioGroupItem,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -49,6 +51,8 @@ import {
   CoachingStyleDescriptions,
 } from "./plan-generator-constants";
 import { TimeInput } from "./time-input";
+import { Label } from "@/components/ui/label";
+
 
 // Update STEPS array to include a final confirmation step
 const STEPS = [
@@ -123,6 +127,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         },
         previousBest: "",
         goalTime: "",
+        raceName: "",
       },
     },
     mode: "onBlur",
@@ -192,7 +197,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       case "raceDate":
         return ["targetRace.date"];
       case "raceTimes":
-        return ["targetRace.previousBest", "targetRace.goalTime"];
+        return ["targetRace.previousBest", "targetRace.goalTime", "targetRace.raceName"];
       case "experience":
         return ["runningExperience.level"];
       case "fitness":
@@ -209,6 +214,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         return ["trainingPreferences.coachingStyle"];
       case "startDate":
         return ["startDate"];
+      case "userProfile":
+        return ["age", "gender", "preferredDistanceUnit", "runningExperience.level", "runningExperience.fitnessLevel"];
       default:
         return [];
     }
@@ -383,13 +390,24 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "stravaConnect":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Connect Your Running Data</h2>
-            <p className="text-muted-foreground">
-              Connect with Strava to let us analyze your running history and tailor your plan accordingly. This helps us create a more personalized training experience.
-            </p>
-            <div className="flex justify-center py-4">
-              {/* You can replace this with your actual Strava connect button component */}
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-semibold">Connect Your Running Data</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                We'll use your running history to tailor your plan.
+              </p>
+            </div>
+            <div className="text-sm text-muted-foreground mb-4 border p-3 rounded-md bg-muted/30">
+              <p>Data we collect from Strava:</p>
+              <ul className="list-disc pl-5 mt-2">
+                <li>Recent activities</li>
+                <li>Running frequency</li>
+                <li>Average pace and distance</li>
+                <li>Recent race results (if any)</li>
+              </ul>
+            </div>
+            <div className="flex justify-center">
+              {/* Replace this with your actual Strava connect button component */}
               <Button variant="outline" className="bg-[#FC4C02] text-white hover:bg-[#E34402]">
                 Connect with Strava
               </Button>
@@ -404,11 +422,76 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "userProfile":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Tell Us About Yourself</h2>
-            <p className="text-muted-foreground">
-              To create a plan that fits your needs, we need to know a bit about your running background.
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Tell Us About Yourself</h3>
+            <p className="text-sm text-muted-foreground">
+              This information helps us create the right plan for you.
             </p>
+
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="Enter your age"
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferredDistanceUnit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Distance Metric</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value || "miles"}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your preferred distance unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="miles">Miles</SelectItem>
+                      <SelectItem value="kilometers">Kilometers</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -443,7 +526,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
               name="runningExperience.fitnessLevel"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Fitness Level</FormLabel>
+                  <FormLabel>Current Fitness</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -451,16 +534,12 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(FitnessLevels).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="poor">Poor</SelectItem>
+                      <SelectItem value="fair">Fair</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="excellent">Excellent</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -479,20 +558,22 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                 <FormDescription>
                   Choose the primary goal you'd like to achieve through your training plan
                 </FormDescription>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your goal" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(TrainingGoals).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <RadioGroup
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="flex flex-col space-y-2"
+                  >
+                    <div className="flex items-center space-x-2 border p-3 rounded-md hover:bg-muted/50 cursor-pointer">
+                      <RadioGroupItem value={TrainingGoals.HEALTHY} id="goal-healthy" />
+                      <Label htmlFor="goal-healthy">General Fitness/Maintenance</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 border p-3 rounded-md hover:bg-muted/50 cursor-pointer">
+                      <RadioGroupItem value={TrainingGoals.FIRST_RACE} id="goal-first-race" />
+                      <Label htmlFor="goal-first-race">Race Preparation</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -750,46 +831,60 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "raceTimes":
         return (
-          <>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Race Details</h3>
+            <p className="text-sm text-muted-foreground">
+              Enter additional information about your race.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="targetRace.raceName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Name (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. London Marathon" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="targetRace.previousBest"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>What's your current personal best?</FormLabel>
+                  <FormLabel>Previous Personal Best (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 1:45:30" {...field} />
+                  </FormControl>
                   <FormDescription>
-                    Enter your time in HH:MM:SS format
+                    Format as hours:minutes:seconds (e.g. 1:45:30)
                   </FormDescription>
-                  <TimeInput
-                    value={field.value || ""}
-                    onChange={field.onChange}
-                    error={!!form.formState.errors.targetRace?.previousBest}
-                  />
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="mt-4">
-              <FormField
-                control={form.control}
-                name="targetRace.goalTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>What's your goal time?</FormLabel>
-                    <FormDescription>
-                      Enter your time in HH:MM:SS format
-                    </FormDescription>
-                    <TimeInput
-                      value={field.value || ""}
-                      onChange={field.onChange}
-                      error={!!form.formState.errors.targetRace?.goalTime}
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </>
+
+            <FormField
+              control={form.control}
+              name="targetRace.goalTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal Time</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 1:40:00" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Format as hours:minutes:seconds (e.g. 1:40:00)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         );
 
       case "experience":
@@ -920,31 +1015,48 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "confirmation":
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Ready to Generate Your Plan</h2>
-            <p className="text-muted-foreground">
-              We'll create a personalized training plan based on your goals and preferences.
-              Click "Preview Plan" to see your customized training schedule.
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Approve Your Training Plan</h3>
+            <p className="text-sm text-muted-foreground">
+              Please review your plan. If everything looks good, click "Approve Plan" to begin your training.
             </p>
-            <div className="bg-muted p-4 rounded-md">
-              <h3 className="font-semibold mb-2">Summary of Your Preferences:</h3>
-              <p><strong>Goal:</strong> {form.getValues().goal}</p>
-              <p>
-                <strong>Training Days:</strong> {form.getValues().trainingPreferences.weeklyRunningDays} days/week
-              </p>
-              <p>
-                <strong>Target Mileage:</strong> {form.getValues().trainingPreferences.maxWeeklyMileage} miles/week
-              </p>
-              <p>
-                <strong>Start Date:</strong> {format(new Date(form.getValues().startDate), "PPP")}
-              </p>
+
+            <div className="space-y-2">
+              {/* Replace this with your actual PlanSummary component */}
+              <div>Plan Summary Placeholder</div>
+            </div>
+
+            <div className="pt-4 space-x-2 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                disabled={isSubmitting}
+              >
+                Back
+              </Button>
+              <Button
+                type="button"
+                onClick={handleApprovePlan}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Approve Plan"
+                )}
+              </Button>
             </div>
           </div>
         );
 
       case "preview":
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Plan Review and Adjustment</h3>
             {isSubmitting ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -1087,6 +1199,14 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           </DialogHeader>
           <div className="p-6">
             {renderStepContent(currentStep?.id || "")}
+          </div>
+          <div className="flex justify-end gap-2 p-4">
+            <Button variant="outline" onClick={handleBack} disabled={currentStepIndex === 0}>
+              Previous
+            </Button>
+            <Button onClick={handleNext} disabled={isSubmitting}>
+              {currentStepIndex === visibleSteps.length -1 ? 'Approve Plan' : 'Next'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

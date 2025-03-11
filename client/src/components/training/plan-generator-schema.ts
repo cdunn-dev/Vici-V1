@@ -30,6 +30,10 @@ const dateStringSchema = z.string().refine((date) => {
 // Base schemas without race-specific fields
 const baseFormSchema = z.object({
   goal: z.enum(Object.values(TrainingGoals) as [string, ...string[]]),
+  startDate: dateStringSchema,
+  age: z.number().min(10).max(120).optional(),
+  gender: z.string().optional(),
+  preferredDistanceUnit: z.string().optional().default("miles"),
   runningExperience: z.object({
     level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
     fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
@@ -50,7 +54,6 @@ const baseFormSchema = z.object({
     preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
     coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]).default("Motivational"),
   }),
-  startDate: dateStringSchema,
 });
 
 // Race-specific schema
@@ -59,6 +62,7 @@ const raceFormSchema = baseFormSchema.extend({
     distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
     date: dateStringSchema,
     customDistance: customDistanceSchema.optional(),
+    raceName: z.string().optional(),
     previousBest: z.string().optional(),
     goalTime: z.string().optional(),
   }),
