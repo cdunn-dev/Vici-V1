@@ -47,7 +47,9 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
     queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
       try {
-        validateRequired(user?.id, ErrorMessages.UNAUTHORIZED);
+        if (!user?.id) {
+          throw new Error(ErrorMessages.UNAUTHORIZED);
+        }
 
         const response = await fetch(`/api/training-plans?userId=${user.id}&active=true`);
         const data = await handleAPIResponse(response);
@@ -67,7 +69,11 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
   const createPlanMutation = useMutation({
     mutationFn: async (planData: TrainingPlan) => {
       try {
-        validateRequired(user?.id, ErrorMessages.UNAUTHORIZED);
+        if (!user?.id) {
+          throw new Error(ErrorMessages.UNAUTHORIZED);
+        }
+
+        // Validate plan data before sending to API
         validatePlanData(planData);
 
         const cleanPlan = preparePlanData(planData, user.id);
@@ -169,7 +175,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
   });
 
   return {
-    trainingPlan,
+    trainingPlan: trainingPlan ?? null,
     isLoading,
     previewPlan,
     showPreview,

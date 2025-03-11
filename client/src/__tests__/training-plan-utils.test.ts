@@ -83,9 +83,23 @@ describe("Training Plan Utilities", () => {
       expect(() => validatePlanData(validPlan)).not.toThrow();
     });
 
-    test("validatePlanData requires goal", () => {
+    test("validatePlanData requires non-empty goal", () => {
       const planWithoutGoal = { ...validPlan, goal: "" };
-      expect(() => validatePlanData(planWithoutGoal)).toThrow("Training goal is required");
+      expect(() => validatePlanData(planWithoutGoal)).toThrow("Training goal is required and cannot be empty");
+
+      const planWithWhitespaceGoal = { ...validPlan, goal: "   " };
+      expect(() => validatePlanData(planWithWhitespaceGoal)).toThrow("Training goal is required and cannot be empty");
+
+      const planWithUndefinedGoal = { ...validPlan, goal: undefined };
+      expect(() => validatePlanData(planWithUndefinedGoal as any)).toThrow("Training goal is required and cannot be empty");
+    });
+
+    test("validatePlanData requires weekly plans", () => {
+      const planWithoutWeeklyPlans = { ...validPlan, weeklyPlans: [] };
+      expect(() => validatePlanData(planWithoutWeeklyPlans)).toThrow("Weekly plans are required and must contain at least one week");
+
+      const planWithNullWeeklyPlans = { ...validPlan, weeklyPlans: null };
+      expect(() => validatePlanData(planWithNullWeeklyPlans as any)).toThrow("Weekly plans are required and must contain at least one week");
     });
 
     test("validatePlanData validates dates", () => {
@@ -104,6 +118,36 @@ describe("Training Plan Utilities", () => {
         endDate: "2025-03-15"
       };
       expect(() => validatePlanData(planWithWrongDateOrder)).toThrow("End date must be after start date");
+    });
+
+    test("validatePlanData validates workout dates", () => {
+      const planWithInvalidWorkoutDate = {
+        ...validPlan,
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            day: "invalid-date"
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithInvalidWorkoutDate))
+        .toThrow("Invalid date format for workout 1 in week 1: invalid-date");
+    });
+
+    test("validatePlanData requires workout description", () => {
+      const planWithMissingDescription = {
+        ...validPlan,
+        weeklyPlans: [{
+          ...validPlan.weeklyPlans[0],
+          workouts: [{
+            ...validPlan.weeklyPlans[0].workouts[0],
+            description: ""
+          }]
+        }]
+      };
+      expect(() => validatePlanData(planWithMissingDescription))
+        .toThrow("Workout 1 in week 1 is missing a description");
     });
   });
 

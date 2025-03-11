@@ -209,6 +209,10 @@ export const validatePlanData = (plan: TrainingPlan): void => {
         throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
       }
 
+      if (!workout.description || workout.description.trim() === "") {
+        throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a description`);
+      }
+
       if (!isValidDate(workout.day)) {
         throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
       }
