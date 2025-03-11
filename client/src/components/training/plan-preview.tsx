@@ -11,6 +11,8 @@ import {
 import { format, parseISO } from "date-fns";
 import ProgramOverview from "./program-overview";
 import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { validatePlanData } from "@/lib/training-plan-utils";
 
 interface PlanPreviewProps {
   planDetails: {
@@ -66,6 +68,22 @@ export default function PlanPreview({
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const { toast } = useToast();
+
+  // Handler for confirming the plan
+  const handleConfirm = () => {
+    try {
+      validatePlanData(serializablePlan);
+      onConfirm();
+    } catch (error) {
+      console.error("Plan validation error:", error);
+      toast({
+        title: "Validation Error",
+        description: error instanceof Error ? error.message : "Failed to validate training plan",
+        variant: "destructive"
+      });
+    }
+  };
 
   // Create a serializable version of the plan data
   const serializablePlan = {
@@ -292,7 +310,7 @@ export default function PlanPreview({
             <div className="fixed bottom-0 left-0 right-0 z-10 p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="container mx-auto flex justify-center">
                 <Button
-                  onClick={onConfirm}
+                  onClick={handleConfirm}
                   size="lg"
                   disabled={isSubmitting}
                   className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"

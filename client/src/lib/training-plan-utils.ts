@@ -2,6 +2,9 @@ import { format, parseISO, addWeeks } from "date-fns";
 import { ErrorMessages } from "./error-utils";
 
 // Types
+/**
+ * Represents a single workout in a training plan
+ */
 export interface Workout {
   day: string;
   type: string;
@@ -10,6 +13,9 @@ export interface Workout {
   completed: boolean;
 }
 
+/**
+ * Represents a week of workouts in a training plan
+ */
 export interface WeeklyPlan {
   week: number;
   phase: string;
@@ -17,6 +23,9 @@ export interface WeeklyPlan {
   workouts: Workout[];
 }
 
+/**
+ * Represents a complete training plan with all its components
+ */
 export interface TrainingPlan {
   id?: number;
   userId?: number;
@@ -50,6 +59,9 @@ export interface TrainingPlan {
 
 /**
  * Prepares training plan data for API submission
+ * @param planData - The raw training plan data
+ * @param userId - The ID of the user creating the plan
+ * @returns A cleaned version of the plan data ready for API submission
  */
 export const preparePlanData = (planData: TrainingPlan, userId: number): TrainingPlan => {
   return {
@@ -95,7 +107,9 @@ export const preparePlanData = (planData: TrainingPlan, userId: number): Trainin
 };
 
 /**
- * Calculates training plan metrics
+ * Calculates various metrics for a training plan
+ * @param weeklyPlans - Array of weekly plans to analyze
+ * @returns Object containing total weeks, total mileage, and weekly average
  */
 export const calculatePlanMetrics = (weeklyPlans: WeeklyPlan[]) => {
   const totalWeeks = weeklyPlans.length;
@@ -107,6 +121,8 @@ export const calculatePlanMetrics = (weeklyPlans: WeeklyPlan[]) => {
 
 /**
  * Returns the appropriate style class for a workout type
+ * @param workoutType - The type of workout
+ * @returns CSS class string for styling the workout badge
  */
 export const getWorkoutBadgeStyle = (workoutType: string): string => {
   const type = workoutType.toLowerCase();
@@ -120,6 +136,9 @@ export const getWorkoutBadgeStyle = (workoutType: string): string => {
 
 /**
  * Formats a date string for API submission
+ * @param dateString - The date string to format
+ * @returns ISO date string without time component
+ * @throws Error if date is invalid
  */
 export const formatDateForApi = (dateString: string): string => {
   try {
@@ -136,6 +155,9 @@ export const formatDateForApi = (dateString: string): string => {
 
 /**
  * Formats a date for display
+ * @param dateString - The date string to format
+ * @param formatStr - Optional format string for date-fns
+ * @returns Formatted date string for display
  */
 export const formatDateForDisplay = (dateString: string, formatStr: string = "MMM d"): string => {
   try {
@@ -148,32 +170,35 @@ export const formatDateForDisplay = (dateString: string, formatStr: string = "MM
 
 /**
  * Validates a training plan's data structure
+ * @param plan - The training plan to validate
+ * @throws Error if validation fails
  */
 export const validatePlanData = (plan: TrainingPlan): void => {
-  if (!plan.goal) {
-    throw new Error("Training goal is required");
+  // Required fields validation
+  if (!plan.goal || plan.goal.trim() === "") {
+    throw new Error("Training goal is required and cannot be empty");
   }
 
-  if (!plan.weeklyPlans || !Array.isArray(plan.weeklyPlans)) {
-    throw new Error("Weekly plans are required and must be an array");
+  if (!Array.isArray(plan.weeklyPlans) || plan.weeklyPlans.length === 0) {
+    throw new Error("Weekly plans are required and must contain at least one week");
   }
 
-  // Validate start and end dates
+  // Date validation
   const startDate = new Date(plan.startDate);
   const endDate = new Date(plan.endDate);
-  
+
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    throw new Error("Invalid start or end date");
+    throw new Error("Invalid start or end date format");
   }
 
   if (endDate <= startDate) {
     throw new Error("End date must be after start date");
   }
 
-  // Validate weekly plans
+  // Weekly plans validation
   plan.weeklyPlans.forEach((week, weekIndex) => {
-    if (!week.workouts || !Array.isArray(week.workouts)) {
-      throw new Error(`Week ${weekIndex + 1} must have an array of workouts`);
+    if (!Array.isArray(week.workouts) || week.workouts.length === 0) {
+      throw new Error(`Week ${weekIndex + 1} must have at least one workout`);
     }
 
     week.workouts.forEach((workout, workoutIndex) => {
