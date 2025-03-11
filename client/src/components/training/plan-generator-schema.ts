@@ -10,30 +10,50 @@ import {
   DistanceUnits,
 } from "./plan-generator-constants";
 
-// Improved date validation
+/**
+ * Validates and transforms date strings to ISO format
+ * Ensures dates are valid and converts them to a consistent format
+ */
 const dateStringSchema = z.string().refine((date) => {
   if (!date) return false;
   const parsed = new Date(date);
   return !isNaN(parsed.getTime());
 }, "Invalid date format").transform(date => new Date(date).toISOString());
 
-// Time format validation (HH:MM:SS)
-const timeStringSchema = z.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/, "Invalid time format (use HH:MM:SS)");
+/**
+ * Validates time strings in HH:MM:SS format
+ * Used for race times and target times
+ */
+const timeStringSchema = z.string().regex(
+  /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/,
+  "Invalid time format (use HH:MM:SS)"
+);
 
-// User profile schema
+/**
+ * User profile information schema
+ * Contains basic demographic and preference data
+ */
 const userProfileSchema = z.object({
-  age: z.number().min(13, "Must be at least 13 years old").max(120, "Invalid age"),
+  age: z.number()
+    .min(13, "Must be at least 13 years old")
+    .max(120, "Invalid age"),
   gender: z.enum(Object.values(GenderOptions) as [string, ...string[]]),
   preferredDistanceUnit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]),
 });
 
-// Running experience schema
+/**
+ * Running experience schema
+ * Captures user's running background and current fitness level
+ */
 const runningExperienceSchema = z.object({
   level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
   fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
 });
 
-// Race target schema
+/**
+ * Race target schema
+ * Used when the training goal is race-specific
+ */
 const raceTargetSchema = z.object({
   name: z.string().min(1, "Race name is required"),
   distance: z.enum(Object.values(RaceDistances) as [string, ...string[]]),
@@ -42,7 +62,10 @@ const raceTargetSchema = z.object({
   goalTime: timeStringSchema.optional(),
 });
 
-// Training preferences schema
+/**
+ * Training preferences schema
+ * Defines user's preferred training schedule and style
+ */
 const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number()
     .int("Must be a whole number")
@@ -60,7 +83,10 @@ const trainingPreferencesSchema = z.object({
   coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]),
 });
 
-// Base schema for all plans
+/**
+ * Base schema shared by all training plans
+ * Contains common fields regardless of goal type
+ */
 const baseSchema = z.object({
   startDate: dateStringSchema,
   ...userProfileSchema.shape,
@@ -68,18 +94,25 @@ const baseSchema = z.object({
   trainingPreferences: trainingPreferencesSchema,
 });
 
-// Final schema with conditional validation based on goal
+/**
+ * Final schema with conditional validation based on goal type
+ * Uses discriminated union to handle different goal types
+ */
 export const planGeneratorSchema = z.discriminatedUnion("goal", [
-  // Race preparation goals
+  // Race training goal (includes race details)
   baseSchema.extend({
-    goal: z.enum([TrainingGoals.FIRST_RACE, TrainingGoals.PERSONAL_BEST] as const),
+    goal: z.literal(TrainingGoals.RACE_TRAINING),
     targetRace: raceTargetSchema,
   }),
-  // General fitness goals
+  // General fitness goal (no race details)
   baseSchema.extend({
-    goal: z.enum([TrainingGoals.GENERAL_FITNESS, TrainingGoals.HEALTH_AND_FITNESS] as const),
+    goal: z.literal(TrainingGoals.GENERAL_FITNESS),
     targetRace: z.undefined(),
   }),
 ]);
 
+/**
+ * Type definition for the form data structure
+ * Generated from the Zod schema to ensure type safety
+ */
 export type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;

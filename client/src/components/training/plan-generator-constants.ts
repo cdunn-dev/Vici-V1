@@ -1,10 +1,10 @@
 // Training Goals
 export const TrainingGoals = {
-  FIRST_RACE: "Race Preparation (First Time)",
-  PERSONAL_BEST: "Race Preparation (Personal Best)",
-  GENERAL_FITNESS: "General Fitness",
-  HEALTH_AND_FITNESS: "Health and Fitness",
+  RACE_TRAINING: "Training for a Race",
+  GENERAL_FITNESS: "Improve General Health & Fitness",
 } as const;
+
+export type TrainingGoalType = typeof TrainingGoals[keyof typeof TrainingGoals];
 
 // Race Distances
 export const RaceDistances = {

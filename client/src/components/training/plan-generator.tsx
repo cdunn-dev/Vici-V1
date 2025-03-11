@@ -1,30 +1,26 @@
-import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { addWeeks } from "date-fns";
-import ProgramOverview from "./program-overview";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { TimeInput } from "./time-input";
 import { planGeneratorSchema } from "./plan-generator-schema";
 import {
-  TrainingGoals,
   RaceDistances,
   ExperienceLevels,
   ExperienceLevelDescriptions,
@@ -37,13 +33,13 @@ import {
   GenderLabels,
   DistanceUnits,
 } from "./plan-generator-constants";
-import { useAuth } from "@/hooks/use-auth";
+import * as z from "zod";
 
 type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
 interface PlanGeneratorProps {
   existingPlan: boolean;
-  onPreview: (planDetails: any) => void;
+  onPreview: (planDetails: TrainingPlanWithWeeklyPlans) => void;
 }
 
 function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
@@ -54,7 +50,6 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [mileageValue, setMileageValue] = useState(15);
   const [workoutsValue, setWorkoutsValue] = useState(1);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
@@ -86,8 +81,8 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   };
 
   const onSubmit = async (values: PlanGeneratorFormData) => {
-    setIsSubmitting(true);
     try {
+      setIsSubmitting(true);
       // Calculate dates
       const startDate = new Date();
       const endDate = values.targetRace?.date
@@ -135,31 +130,6 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     }
   };
 
-  const getFieldsForStep = (step: string): string[] => {
-    switch (step) {
-      case "welcome":
-        return [];
-      case "goal":
-        return ["goal"];
-      case "raceDetails":
-        return ["targetRace.distance", "targetRace.date", "targetRace.name", "targetRace.previousBest", "targetRace.goalTime"];
-      case "basicProfile":
-        return ["age", "gender", "preferredDistanceUnit"];
-      case "runningProfile":
-        return ["runningExperience.level", "runningExperience.fitnessLevel"];
-      case "trainingPreferences":
-        return [
-          "trainingPreferences.weeklyRunningDays",
-          "trainingPreferences.maxWeeklyMileage",
-          "trainingPreferences.weeklyWorkouts",
-          "trainingPreferences.preferredLongRunDay",
-          "trainingPreferences.coachingStyle",
-        ];
-      default:
-        return [];
-    }
-  };
-
   const STEPS = [
     { id: "welcome", label: "Welcome" },
     { id: "basicProfile", label: "Basic Profile" },
@@ -168,8 +138,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     {
       id: "raceDetails",
       label: "Race Details",
-      conditional: (values: PlanGeneratorFormData) =>
-        values.goal === TrainingGoals.FIRST_RACE || values.goal === TrainingGoals.PERSONAL_BEST,
+      conditional: (values: PlanGeneratorFormData) => values.goal === "Training for a Race",
     },
     { id: "trainingPreferences", label: "Training Preferences" },
   ];
@@ -360,16 +329,8 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Race Goals</SelectLabel>
-                        <SelectItem value={TrainingGoals.FIRST_RACE}>First Race</SelectItem>
-                        <SelectItem value={TrainingGoals.PERSONAL_BEST}>Personal Best</SelectItem>
-                      </SelectGroup>
-                      <SelectGroup>
-                        <SelectLabel>General Goals</SelectLabel>
-                        <SelectItem value={TrainingGoals.GENERAL_FITNESS}>General Fitness</SelectItem>
-                        <SelectItem value={TrainingGoals.HEALTH_AND_FITNESS}>Health and Fitness</SelectItem>
-                      </SelectGroup>
+                      <SelectItem value="Training for a Race">Training for a Race</SelectItem>
+                      <SelectItem value="Improve General Health & Fitness">Improve General Health & Fitness</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -614,6 +575,31 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     }
   };
 
+  const getFieldsForStep = (step: string): string[] => {
+    switch (step) {
+      case "welcome":
+        return [];
+      case "goal":
+        return ["goal"];
+      case "raceDetails":
+        return ["targetRace.distance", "targetRace.date", "targetRace.name", "targetRace.previousBest", "targetRace.goalTime"];
+      case "basicProfile":
+        return ["age", "gender", "preferredDistanceUnit"];
+      case "runningProfile":
+        return ["runningExperience.level", "runningExperience.fitnessLevel"];
+      case "trainingPreferences":
+        return [
+          "trainingPreferences.weeklyRunningDays",
+          "trainingPreferences.maxWeeklyMileage",
+          "trainingPreferences.weeklyWorkouts",
+          "trainingPreferences.preferredLongRunDay",
+          "trainingPreferences.coachingStyle",
+        ];
+      default:
+        return [];
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -628,16 +614,21 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {renderStepContent()}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-[calc(100vh-200px)]">
+            <ScrollArea className="flex-1 px-4 -mx-4">
+              {renderStepContent()}
+            </ScrollArea>
 
-            <DialogFooter>
-              {currentStepIndex > 0 && (
-                <Button type="button" variant="outline" onClick={handleBack}>
-                  Back
-                </Button>
-              )}
-
+            <div className="flex justify-between items-center pt-4 mt-4 border-t bg-background">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleBack}
+                className={currentStepIndex === 0 ? "invisible" : ""}
+              >
+                Back
+              </Button>
+              <div className="flex-1" />
               {!isLastStep ? (
                 <Button type="button" onClick={handleNext}>
                   Next
@@ -648,7 +639,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
                   Generate Plan
                 </Button>
               )}
-            </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
