@@ -54,6 +54,8 @@ import {
   DistanceUnits,
 } from "./plan-generator-constants";
 import { TimeInput } from "./time-input";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
 
 // Update STEPS array to include a final confirmation step and basic profile step
 const STEPS = [
@@ -84,6 +86,9 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewData, setPreviewData] = useState<TrainingPlanWithWeeklyPlans | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth(); // Get user from auth context
+
 
   // Independent slider states with initial values
   const [runningDaysValue, setRunningDaysValue] = useState(3);
@@ -296,27 +301,41 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // Handle plan approval with proper error handling
+  // Update the handleApprovePlan function
   const handleApprovePlan = async () => {
-    if (!previewData) return;
+    if (!previewData || !user?.id) {
+      toast({
+        title: "Error",
+        description: "Unable to save plan. Please try logging in again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
+      console.log("Saving plan with user ID:", user.id);
 
-      const response = await fetch('/api/training-plans', {
+      const response = await fetch('/api/training-plans/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(previewData),
+        body: JSON.stringify({
+          ...previewData,
+          userId: user.id,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(await response.text());
       }
 
+      const savedPlan = await response.json();
+      console.log("Plan saved successfully:", savedPlan);
+
       if (onPreview) {
-        onPreview(previewData);
+        onPreview(savedPlan);
       }
 
       setOpen(false);
@@ -328,13 +347,16 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         description: "Your training plan has been created and saved.",
       });
 
+      // Refresh the training plans list
+      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+
       // Redirect to training home
       window.location.href = "/training";
     } catch (error) {
       console.error("Error saving plan:", error);
       toast({
         title: "Error",
-        description: "Failed to save plan. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save plan. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1001,7 +1023,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="`space-y-8">
               {renderStepContent(currentStep.id)}
 
               <div className="flex justify-between pt-4 border-t">
@@ -1017,7 +1039,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
                 {currentStepIndex === visibleSteps.length - 1 ? (
                   <Button
-                    type="submit"
+                                        type="submit"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
