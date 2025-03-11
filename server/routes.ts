@@ -195,19 +195,19 @@ export async function registerRoutes(app: Express) {
       // Archive any existing active plans for this user
       await storage.archiveActiveTrainingPlans(userId);
 
-      // Convert date objects to ISO strings
-      const startDate = new Date(req.body.startDate).toISOString();
+      // Convert dates properly
+      const startDate = new Date(req.body.startDate);
       const endDate = req.body.targetRace?.date 
-        ? new Date(req.body.targetRace.date).toISOString()
-        : new Date(startDate).setDate(new Date(startDate).getDate() + 84).toISOString(); // 12 weeks
+        ? new Date(req.body.targetRace.date)
+        : addWeeks(startDate, 12); // Use addWeeks helper for date calculation
 
       const trainingPlan = {
         userId,
         name: `Training Plan - ${req.body.goal}`,
         goal: req.body.goal,
         goalDescription: req.body.goalDescription || "",
-        startDate,
-        endDate,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
         weeklyPlans: req.body.weeklyPlans || [],
         targetRace: req.body.targetRace || null,
