@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Update the generate route to handle dates robustly
+  // Add robust date validation to the plan generation endpoint
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -243,7 +243,8 @@ export async function registerRoutes(app: Express) {
 
               return {
                 ...workout,
-                day: workoutDate.toISOString()
+                day: workoutDate.toISOString(),
+                completed: false
               };
             })
           };
@@ -252,12 +253,12 @@ export async function registerRoutes(app: Express) {
         // Construct the training plan with validated data
         const trainingPlan = {
           userId,
-          name: `Training Plan - ${req.body.goal}`,
+          name: req.body.name || `Training Plan - ${req.body.goal}`,
           goal: req.body.goal,
           goalDescription: req.body.goalDescription || "",
           startDate: now.toISOString(),
           endDate: endDate.toISOString(),
-          weeklyMileage: req.body.weeklyMileage || req.body.trainingPreferences?.maxWeeklyMileage,
+          weeklyMileage: req.body.weeklyMileage,
           weeklyPlans: validatedWeeklyPlans,
           targetRace: req.body.targetRace ? {
             ...req.body.targetRace,
@@ -265,16 +266,11 @@ export async function registerRoutes(app: Express) {
           } : null,
           runningExperience: req.body.runningExperience,
           trainingPreferences: req.body.trainingPreferences,
-          isActive: true,
+          is_active: true
         };
-
-        // Log the plan for debugging
-        console.log("Creating training plan:", JSON.stringify(trainingPlan, null, 2));
 
         // Create the plan
         const plan = await storage.createTrainingPlan(trainingPlan);
-        console.log("Training plan created:", JSON.stringify(plan, null, 2));
-
         res.json(plan);
       } catch (dateError) {
         console.error("Date validation error:", dateError);

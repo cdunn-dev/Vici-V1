@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import ProgramOverview from "./program-overview";
 import { ChevronLeft, CheckCircle2, MessageSquare, Target, Medal, CalendarClock, Users, Calendar, Activity, Loader2 } from "lucide-react";
 
@@ -108,6 +108,16 @@ export default function PlanPreview({
     is_active: true
   };
 
+  // Helper function to safely format dates
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "MMMM d, yyyy");
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Invalid date";
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {isAdjusting ? (
@@ -201,7 +211,7 @@ export default function PlanPreview({
                             <div className="text-sm text-muted-foreground">
                               {serializablePlan.targetRace.customDistance || serializablePlan.targetRace.distance}
                               <div className="text-xs mt-1">
-                                Date: {format(new Date(serializablePlan.targetRace.date), "MMMM d, yyyy")}
+                                Date: {formatDate(serializablePlan.targetRace.date)}
                                 {serializablePlan.targetRace.goalTime && (
                                   <div>Goal Time: {serializablePlan.targetRace.goalTime}</div>
                                 )}
@@ -216,7 +226,7 @@ export default function PlanPreview({
                         <div className="font-medium">
                           Program Timeline
                           <div className="text-sm text-muted-foreground">
-                            {format(new Date(serializablePlan.startDate), "MMMM d, yyyy")} - {format(new Date(serializablePlan.endDate), "MMMM d, yyyy")}
+                            {formatDate(serializablePlan.startDate)} - {formatDate(serializablePlan.endDate)}
                           </div>
                         </div>
                       </div>
