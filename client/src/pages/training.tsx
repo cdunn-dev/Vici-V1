@@ -21,6 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useAuth } from "@/hooks/use-auth";
 import DayView from "@/components/training/day-view";
 import WeekView from "@/components/training/week-view";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { useAsyncAction } from "@/hooks/use-async-action";
 
 interface WorkoutDetailType {
   date: Date;
@@ -79,51 +81,93 @@ const getSelectedWeek = (trainingPlan: TrainingPlanWithWeeklyPlans | undefined |
 };
 
 export default function Training() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  return (
+    <ErrorBoundary>
+      <TrainingContent />
+    </ErrorBoundary>
+  );
+}
 
-  // Query for training plan
+function TrainingContent() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [aiQuery, setAiQuery] = useState<string>("");
+  const [weeklyAiQuery, setWeeklyAiQuery] = useState<string>("");
+  const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [previewPlan, setPreviewPlan] = useState<TrainingPlanWithWeeklyPlans | null>(null);
+  const [activeTab, setActiveTab] = useState<"current" | "overall" | "stored">("current");
+  const [showWorkoutDetail, setShowWorkoutDetail] = useState<boolean>(false);
+  const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
+  const [showDayView, setShowDayView] = useState<boolean>(false);
+  const [showWeekView, setShowWeekView] = useState<boolean>(false);
+  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutDetailType | null>(null);
+  const [selectedWeek, setSelectedWeek] = useState<any>(null);
+
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlanWithWeeklyPlans | null>({
     queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
-      const response = await fetch(`/api/training-plans?userId=${user?.id}&active=true`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch training plan");
+      try {
+        const response = await fetch(`/api/training-plans?userId=${user?.id}&active=true`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch training plan: ${response.statusText}`);
+        }
+        const plans = await response.json();
+        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) ||
+          (plans.length > 0 ? plans[plans.length - 1] : null);
+      } catch (error) {
+        console.error("Training plan fetch error:", error);
+        throw error;
       }
-      const plans = await response.json();
-      // Return the active plan, or the most recent plan if no active plan exists
-      return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) ||
-        (plans.length > 0 ? plans[plans.length - 1] : null);
     },
     enabled: !!user?.id,
   });
 
-  // State management
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [aiQuery, setAiQuery] = useState("");
-  const [weeklyAiQuery, setWeeklyAiQuery] = useState("");
-  const [isSubmittingQuery, setIsSubmittingQuery] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewPlan, setPreviewPlan] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState("current");
-  const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
-  const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
-  const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
-  const [showDayView, setShowDayView] = useState(false);
-  const [showWeekView, setShowWeekView] = useState(false);
-  const [selectedWorkout, setSelectedWorkout] = useState<WorkoutDetailType | null>(null);
-  const [selectedWeek, setSelectedWeek] = useState<any>(null);
+  const { execute: confirmPlan, isLoading: isSubmittingPlan } = useAsyncAction(
+    async () => {
+      if (!user?.id || !previewPlan) {
+        throw new Error("Missing required data for plan creation");
+      }
 
+      const response = await fetch(`/api/training-plans/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...previewPlan,
+          userId: user.id,
+        }),
+        credentials: 'include',
+      });
 
-  // Derived state
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to generate plan");
+      }
+
+      return response.json();
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+        setShowPreview(false);
+        setPreviewPlan(null);
+        setActiveTab("current");
+      },
+      successMessage: "Training plan has been created",
+      errorMessage: "Failed to create training plan. Please try again.",
+    }
+  );
+
   const currentWeek = getCurrentWeek(trainingPlan);
   const selectedWeek2 = getSelectedWeek(trainingPlan, selectedDate);
   const selectedDayWorkout = selectedWeek2?.workouts.find(
     workout => isSameDay(new Date(workout.day), selectedDate)
   );
 
-  // Effects
   useEffect(() => {
     setSelectedDate(new Date());
   }, []);
@@ -152,75 +196,6 @@ export default function Training() {
     setPreviewPlan(plan);
     setShowPreview(true);
     setActiveTab("overall");
-  };
-
-  const handleConfirmPlan = async () => {
-    try {
-      if (!user?.id) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a training plan",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsSubmittingPlan(true);
-
-      const response = await fetch(`/api/training-plans/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...previewPlan,
-          userId: user.id,
-        }),
-        credentials: 'include',
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate plan");
-      }
-
-      // Invalidate and refetch the training plans query
-      await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-
-      // Force refetch to get the new active plan
-      await queryClient.refetchQueries({
-        queryKey: ["/api/training-plans"],
-        type: 'active'
-      });
-
-      toast({
-        title: "Success",
-        description: "Training plan has been created",
-        duration: 3000,
-      });
-
-      setShowPreview(false);
-      setPreviewPlan(null);
-      setActiveTab("current");
-
-      // Scroll to current week after a short delay to allow for rendering
-      setTimeout(() => {
-        const currentWeekElement = document.querySelector('[data-current-week]');
-        if (currentWeekElement) {
-          currentWeekElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-
-    } catch (error) {
-      console.error('Plan creation error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create training plan. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingPlan(false);
-    }
   };
 
   const handleAdjustPlan = async (feedback: string) => {
@@ -424,7 +399,6 @@ export default function Training() {
         throw new Error('Failed to reorder workouts');
       }
 
-      // Invalidate and refetch training plan data
       queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
 
       toast({
@@ -440,7 +414,7 @@ export default function Training() {
     }
   };
 
-  if (isLoading) {
+  function LoadingState() {
     return (
       <div className="space-y-6">
         <div className="text-center">
@@ -454,6 +428,10 @@ export default function Training() {
     );
   }
 
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -464,7 +442,7 @@ export default function Training() {
         {showPreview ? (
           <PlanPreview
             planDetails={previewPlan}
-            onConfirm={handleConfirmPlan}
+            onConfirm={confirmPlan}
             onAdjust={handleAdjustPlan}
             onBack={() => setShowPreview(false)}
             isSubmitting={isSubmittingPlan}
@@ -734,7 +712,6 @@ export default function Training() {
           onAskQuestion={handleAIQuery}
           onRequestChange={handleAIQuery}
           onSyncToWatch={async () => {
-            // Implement watch sync functionality
             toast({
               title: "Not Implemented",
               description: "Watch sync functionality coming soon",
