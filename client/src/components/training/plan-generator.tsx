@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft, ThumbsUp } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -272,6 +272,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
+  // Update the handleApprovePlan function
   const handleApprovePlan = async () => {
     if (!previewData || !user?.id) {
       toast({
@@ -284,18 +285,20 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
     try {
       setIsSubmitting(true);
-      console.log("Saving plan with user ID:", user.id);
 
+      // Ensure all dates are properly formatted as ISO strings
       const planData = {
         ...previewData,
         userId: user.id,
         startDate: new Date(previewData.startDate).toISOString(),
-        endDate: previewData.targetRace ?
-          new Date(previewData.targetRace.date).toISOString() :
-          addWeeks(new Date(previewData.startDate), 12).toISOString(),
+        weeklyPlans: previewData.weeklyPlans.map(week => ({
+          ...week,
+          workouts: week.workouts.map(workout => ({
+            ...workout,
+            day: new Date(workout.day).toISOString()
+          }))
+        }))
       };
-
-      console.log("Creating training plan:", planData);
 
       const response = await fetch('/api/training-plans/generate', {
         method: 'POST',
@@ -310,7 +313,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       }
 
       const savedPlan = await response.json();
-      console.log("Plan saved successfully:", savedPlan);
 
       setOpen(false);
       setCurrentStepIndex(0);
@@ -967,33 +969,33 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     handleNext();
   };
 
+  const isLastStep = currentStepIndex === visibleSteps.length - 1;
 
+  // Render function (modify the part that shows the approve button)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="w-full md:w-auto" onClick={() => {
-            setCurrentStepIndex(0);
-            form.reset();
-            setPreviewData(null);
-          }}>
+        <Button className="w-full">
           <Wand2 className="mr-2 h-4 w-4" />
-          Create Training Plan
+          Generate Training Plan
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Your Training Plan</DialogTitle>
+          <DialogTitle>Generate Training Plan</DialogTitle>
           <DialogDescription>
-            Let our AI build a plan based on your running history and goals
+            Let's create a personalized training plan tailored to your goals and preferences.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          <div className="mb-8">
-            <Progress value={progress} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2">
+        <div className="mt-4">
+          <div className="relative">
+            <div className="absolute left-0 top-2">
+              <Progress value={progress} className="w-[60px] h-2" />
+            </div>
+            <div className="mb-8 text-center text-sm text-muted-foreground">
               Step {currentStepIndex + 1} of {visibleSteps.length}
-            </p>
+            </div>
           </div>
 
           <Form {...form}>
@@ -1005,7 +1007,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   type="button"
                   variant="outline"
                   onClick={handleBack}
-                  disabled={currentStepIndex === 0 || isSubmitting}
+                  disabled={currentStepIndex === 0}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
                   Back
@@ -1020,12 +1022,12 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Plan...
+                        Saving...
                       </>
                     ) : (
                       <>
+                        <ThumbsUp className="mr-2 h-4 w-4" />
                         Approve Plan
-                        <ChevronRight className="ml-2 h-4 w-4" />
                       </>
                     )}
                   </Button>
@@ -1035,7 +1037,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     onClick={handleNext}
                     disabled={isSubmitting}
                   >
-                                        {currentStep.id === "stravaConnect" ? "Skip" : "Next"}
+                    {currentStep.id === "stravaConnect" ? "Skip" : "Next"}
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
