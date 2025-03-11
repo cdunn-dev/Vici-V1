@@ -1,5 +1,6 @@
 import { format, parseISO, addWeeks } from "date-fns";
 import { ErrorMessages } from "./error-utils";
+import { isValidDate } from "./date-utils";
 
 // Types
 /**
@@ -69,15 +70,15 @@ export const preparePlanData = (planData: TrainingPlan, userId: number): Trainin
     name: planData.name || `Training Plan - ${planData.goal}`,
     goal: planData.goal,
     goalDescription: planData.goalDescription || "",
-    startDate: formatDateForApi(planData.startDate),
-    endDate: formatDateForApi(planData.endDate),
+    startDate: planData.startDate,
+    endDate: planData.endDate,
     weeklyMileage: planData.weeklyMileage,
     weeklyPlans: planData.weeklyPlans.map(week => ({
       week: week.week,
       phase: week.phase,
       totalMileage: week.totalMileage,
       workouts: week.workouts.map(workout => ({
-        day: formatDateForApi(workout.day),
+        day: workout.day,
         type: workout.type,
         distance: workout.distance,
         description: workout.description,
@@ -86,7 +87,7 @@ export const preparePlanData = (planData: TrainingPlan, userId: number): Trainin
     })),
     targetRace: planData.targetRace ? {
       distance: planData.targetRace.distance,
-      date: formatDateForApi(planData.targetRace.date),
+      date: planData.targetRace.date,
       customDistance: planData.targetRace.customDistance,
       previousBest: planData.targetRace.previousBest,
       goalTime: planData.targetRace.goalTime
@@ -135,29 +136,6 @@ export const getWorkoutBadgeStyle = (workoutType: string): string => {
 };
 
 /**
- * Formats a date string for API submission
- * @param dateString - The date string to format
- * @returns ISO date string without time component
- * @throws Error if date is invalid
- */
-export const formatDateForApi = (dateString: string): string => {
-  if (!dateString || typeof dateString !== 'string') {
-    throw new Error(ErrorMessages.INVALID_DATE);
-  }
-
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      throw new Error(ErrorMessages.INVALID_DATE);
-    }
-    return date.toISOString().split('T')[0];
-  } catch (error) {
-    console.error("Date API formatting error:", error);
-    throw new Error(`Invalid date format: ${dateString}`);
-  }
-};
-
-/**
  * Formats a date for display
  * @param dateString - The date string to format
  * @param formatStr - Optional format string for date-fns
@@ -195,22 +173,22 @@ export const validatePlanData = (plan: TrainingPlan): void => {
     throw new Error("Weekly plans are required and must contain at least one week");
   }
 
-  // Date validation with improved error messages
+  // Date validation with improved error handling using our date utilities
   try {
     if (!plan.startDate || !plan.endDate) {
       throw new Error("Start date and end date are required");
     }
 
-    const startDate = new Date(plan.startDate);
-    const endDate = new Date(plan.endDate);
-
-    if (isNaN(startDate.getTime())) {
+    if (!isValidDate(plan.startDate)) {
       throw new Error(`Invalid start date format: ${plan.startDate}`);
     }
 
-    if (isNaN(endDate.getTime())) {
+    if (!isValidDate(plan.endDate)) {
       throw new Error(`Invalid end date format: ${plan.endDate}`);
     }
+
+    const startDate = new Date(plan.startDate);
+    const endDate = new Date(plan.endDate);
 
     if (endDate <= startDate) {
       throw new Error("End date must be after start date");
@@ -231,14 +209,8 @@ export const validatePlanData = (plan: TrainingPlan): void => {
         throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
       }
 
-      try {
-        const workoutDate = new Date(workout.day);
-        if (isNaN(workoutDate.getTime())) {
-          throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
-        }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Invalid date format";
-        throw new Error(`Invalid workout date: ${errorMessage}`);
+      if (!isValidDate(workout.day)) {
+        throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
       }
     });
   });
