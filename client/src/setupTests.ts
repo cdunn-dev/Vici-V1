@@ -2,19 +2,20 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 import '@testing-library/jest-dom';
+import { beforeEach, afterEach, vi } from 'vitest';
 
 // Global test setup
 beforeEach(() => {
   // Clear console mocks between tests
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 // Set up global fetch mock
-global.fetch = jest.fn(() =>
+global.fetch = vi.fn(() =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({}),

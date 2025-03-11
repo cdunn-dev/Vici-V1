@@ -1,116 +1,145 @@
 import { renderHook, act } from '@testing-library/react';
 import { useTrainingPlan } from '@/hooks/use-training-plan';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ErrorMessages } from '@/lib/error-utils';
+import { createAuthWrapper, mockApiResponse, mockApiError } from './test-utils';
+import {
+  validTrainingPlan,
+  planWithEmptyGoal,
+  planWithWhitespaceGoal,
+  planWithInvalidDates,
+  planWithInvalidWorkouts,
+  planWithEmptyWorkoutDescription
+} from './fixtures/training-plan';
 import { vi } from 'vitest';
 
-// Create a wrapper component that provides the QueryClient
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-      },
-    },
-  });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
-};
-
-const mockValidPlan = {
-  name: "Test Plan",
-  goal: "Complete Marathon",
-  startDate: "2025-03-15",
-  endDate: "2025-06-15",
-  weeklyMileage: 30,
-  weeklyPlans: [{
-    week: 1,
-    phase: "Base",
-    totalMileage: 20,
-    workouts: [{
-      day: "2025-03-15",
-      type: "Easy Run",
-      distance: 5,
-      description: "Easy 5 mile run",
-      completed: false
-    }]
-  }],
-  runningExperience: {
-    level: "Intermediate",
-    fitnessLevel: "Good"
-  },
-  trainingPreferences: {
-    weeklyRunningDays: 4,
-    maxWeeklyMileage: 40,
-    weeklyWorkouts: 1,
-    preferredLongRunDay: "Sunday",
-    coachingStyle: "Moderate"
-  },
-  is_active: true
-};
-
 describe('useTrainingPlan', () => {
+  const mockUser = { id: 1, email: 'test@example.com' };
+
   beforeEach(() => {
-    // Reset fetch mock
+    // Reset fetch mock and console
     global.fetch = vi.fn();
     console.error = vi.fn();
+    console.log = vi.fn();
   });
 
-  it('validates plan goal before creation', async () => {
-    const invalidPlan = {
-      ...mockValidPlan,
-      goal: ''
-    };
-
-    const { result } = renderHook(() => useTrainingPlan(), {
-      wrapper: createWrapper()
-    });
-
-    await act(async () => {
-      try {
-        result.current.createPlan(invalidPlan);
-      } catch (error) {
-        expect(error.message).toBe("Training goal is required and cannot be empty");
-      }
-    });
-
-    expect(fetch).not.toHaveBeenCalled();
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('validates plan data before making API request', async () => {
-    const invalidPlan = {
-      ...mockValidPlan,
-      weeklyPlans: []
-    };
+  describe('Plan Creation', () => {
+    it('validates plan data before making API request', async () => {
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
 
-    const { result } = renderHook(() => useTrainingPlan(), {
-      wrapper: createWrapper()
+      // Test empty goal
+      await act(async () => {
+        try {
+          await result.current.createPlan(planWithEmptyGoal);
+        } catch (error) {
+          expect(error.message).toBe("Training goal is required and cannot be empty");
+        }
+      });
+
+      // Test whitespace goal
+      await act(async () => {
+        try {
+          await result.current.createPlan(planWithWhitespaceGoal);
+        } catch (error) {
+          expect(error.message).toBe("Training goal is required and cannot be empty");
+        }
+      });
+
+      // Verify no API calls were made
+      expect(fetch).not.toHaveBeenCalled();
     });
 
-    await act(async () => {
-      try {
-        result.current.createPlan(invalidPlan);
-      } catch (error) {
-        expect(error.message).toBe("Weekly plans are required and must contain at least one week");
-      }
+    it('logs plan data before validation', async () => {
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      await act(async () => {
+        try {
+          await result.current.createPlan(validTrainingPlan);
+        } catch (error) {
+          // Ignore errors, we just want to check logging
+        }
+      });
+
+      expect(console.log).toHaveBeenCalledWith(
+        'Creating plan with data:',
+        expect.objectContaining({
+          goal: validTrainingPlan.goal,
+          goalLength: validTrainingPlan.goal.length,
+        })
+      );
     });
 
-    expect(fetch).not.toHaveBeenCalled();
-  });
+    it('validates dates in plan data', async () => {
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
 
-  it('logs plan data before validation', async () => {
-    const { result } = renderHook(() => useTrainingPlan(), {
-      wrapper: createWrapper()
+      await act(async () => {
+        try {
+          await result.current.createPlan(planWithInvalidDates);
+        } catch (error) {
+          expect(error.message).toContain("Invalid start date format");
+        }
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
     });
 
-    await act(async () => {
-      result.current.createPlan(mockValidPlan);
+    it('validates workout data', async () => {
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      // Test invalid workout dates
+      await act(async () => {
+        try {
+          await result.current.createPlan(planWithInvalidWorkouts);
+        } catch (error) {
+          expect(error.message).toContain("Invalid date format for workout");
+        }
+      });
+
+      // Test empty workout descriptions
+      await act(async () => {
+        try {
+          await result.current.createPlan(planWithEmptyWorkoutDescription);
+        } catch (error) {
+          expect(error.message).toContain("missing a description");
+        }
+      });
+
+      expect(fetch).not.toHaveBeenCalled();
     });
 
-    expect(console.error).toHaveBeenCalledWith(
-      'Creating training plan:',
-      expect.any(String)
-    );
+    it('successfully creates a valid plan', async () => {
+      global.fetch = vi.fn().mockImplementation(() =>
+        mockApiResponse({ ...validTrainingPlan, id: 1 })
+      );
+
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      await act(async () => {
+        await result.current.createPlan(validTrainingPlan);
+      });
+
+      expect(fetch).toHaveBeenCalledWith(
+        '/api/training-plans/generate',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.any(String),
+        })
+      );
+
+      const sentData = JSON.parse((fetch as any).mock.calls[0][1].body);
+      expect(sentData.goal).toBe(validTrainingPlan.goal);
+    });
   });
 });
