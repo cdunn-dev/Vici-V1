@@ -12,12 +12,31 @@ import { Plus, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/components/ui/use-toast";
 import { addWeeks } from "date-fns";
 import ProgramOverview from "./program-overview";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { TimeInput } from "./time-input";
 import { planGeneratorSchema } from "./plan-generator-schema";
+import {
+  TrainingGoals,
+  RaceDistances,
+  ExperienceLevels,
+  ExperienceLevelDescriptions,
+  FitnessLevels,
+  FitnessLevelDescriptions,
+  DaysOfWeek,
+  CoachingStyles,
+  CoachingStyleDescriptions,
+  GenderOptions,
+  GenderLabels,
+  DistanceUnits,
+} from "./plan-generator-constants";
 import { useAuth } from "@/hooks/use-auth";
 
 type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
@@ -32,7 +51,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const auth = useAuth(); // Added useAuth
+  const auth = useAuth();
 
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
@@ -49,7 +68,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
         preferredLongRunDay: "Sunday",
         coachingStyle: "directive"
       },
-      targetRace: {} // added default value for targetRace
+      targetRace: {}
     }
   });
 
