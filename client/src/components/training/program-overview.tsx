@@ -1,5 +1,4 @@
-// Program Overview component updated to only show one approve button
-import React, { useState } from "react";
+import React from "react";
 import { format } from "date-fns";
 import {
   Accordion,
@@ -12,36 +11,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
-import { Calendar, Check, ChevronDown, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
+import { Calendar, Check, Loader2, ThumbsUp } from "lucide-react";
 
 interface ProgramOverviewProps {
   plan: TrainingPlanWithWeeklyPlans;
-  showActions?: boolean;
   onApprove?: () => void;
-  onAskQuestion?: (question: string) => void;
-  onRequestChanges?: (changes: string) => void;
-  onSelectWeek?: (weekNumber: number) => void;
-  onSelectDay?: (date: Date | null) => void;
-  selectedDate?: Date;
   isSubmitting?: boolean;
 }
 
 export default function ProgramOverview({
   plan,
-  showActions = true,
   onApprove,
-  onAskQuestion,
-  onRequestChanges,
-  onSelectWeek,
-  onSelectDay,
-  selectedDate,
   isSubmitting = false,
 }: ProgramOverviewProps) {
-  const [question, setQuestion] = useState("");
-  const [changes, setChanges] = useState("");
-  const [showQuestionForm, setShowQuestionForm] = useState(false);
-  const [showChangesForm, setShowChangesForm] = useState(false);
-
   // Calculate metrics
   const totalWeeks = plan.weeklyPlans.length;
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
@@ -63,14 +45,15 @@ export default function ProgramOverview({
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold mb-2">Training Plan Overview</h2>
+              <p className="text-muted-foreground">
                 {plan.goal}
                 {plan.targetRace && (
-                  <span className="block text-lg font-normal text-muted-foreground mt-1">
+                  <span className="block mt-1">
                     {plan.targetRace.distance} - {format(new Date(plan.targetRace.date), "MMMM d, yyyy")}
                   </span>
                 )}
-              </h2>
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -110,10 +93,7 @@ export default function ProgramOverview({
             value={`week-${week.week}`}
             className="border rounded-lg overflow-hidden"
           >
-            <AccordionTrigger
-              className="px-4 py-2 hover:no-underline hover:bg-muted/50"
-              onClick={() => onSelectWeek?.(week.week)}
-            >
+            <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50">
               <div className="flex flex-1 items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
@@ -154,14 +134,7 @@ export default function ProgramOverview({
                 {week.workouts.map((workout, index) => (
                   <div
                     key={index}
-                    className={`flex items-center justify-between p-3 bg-background rounded-lg border gap-3 cursor-pointer transition-colors ${
-                      selectedDate &&
-                      new Date(workout.day).toDateString() ===
-                        selectedDate.toDateString()
-                        ? "border-primary"
-                        : "hover:bg-accent/5"
-                    }`}
-                    onClick={() => onSelectDay?.(new Date(workout.day))}
+                    className="flex items-center justify-between p-3 bg-background rounded-lg border gap-3"
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex items-center justify-center h-8 w-8">
@@ -207,7 +180,7 @@ export default function ProgramOverview({
         ))}
       </Accordion>
 
-      {/* Show approve button only in preview mode */}
+      {/* Only show approve button during plan preview */}
       {onApprove && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           <Button
@@ -228,30 +201,6 @@ export default function ProgramOverview({
               </>
             )}
           </Button>
-        </div>
-      )}
-
-      {/* Show AI interaction section only when not in preview mode */}
-      {showActions && !onApprove && (
-        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              variant="outline"
-              className="w-full sm:w-40"
-              onClick={() => setShowQuestionForm(true)}
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Ask a Question
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full sm:w-40"
-              onClick={() => setShowChangesForm(true)}
-            >
-              <ChevronDown className="mr-2 h-4 w-4" />
-              Request Changes
-            </Button>
-          </div>
         </div>
       )}
     </div>

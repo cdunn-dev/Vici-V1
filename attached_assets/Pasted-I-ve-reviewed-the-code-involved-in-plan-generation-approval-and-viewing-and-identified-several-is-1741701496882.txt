@@ -1,0 +1,48 @@
+I've reviewed the code involved in plan generation, approval, and viewing, and identified several issues that could be preventing training plans from being saved and displayed correctly. The main error in the attached image shows "Invalid date format in request", which is a key part of the problem.
+
+Root Issues
+1. Date Handling Issues
+The most obvious issue is the date format error. Looking at the server-side code in routes.ts, there are strict date parsing operations:
+
+// Handle dates properly
+const now = new Date();
+const startDate = now;
+const endDate = req.body.targetRace?.date 
+  ? new Date(req.body.targetRace.date)
+  : addWeeks(startDate, 12);
+if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+  throw new Error("Invalid date format");
+}
+This validation is failing based on the error message.
+
+2. Client-Side References Error
+From the webview logs, there are multiple errors:
+
+Uncaught ReferenceError: TrainingGoals is not defined
+Uncaught ReferenceError: renderStepContent is not defined
+These indicate missing components or functions that should be defined within your plan generator.
+
+3. Controlled/Uncontrolled Input Warnings
+There are React warnings about inputs changing from uncontrolled to controlled, suggesting issues with form state management.
+
+Recommended Solutions
+Let's fix these issues one by one:
+
+1. First, let's create the proper plan-generator-constants.ts:
+client/src/components/training/plan-generator-constants.ts
+Create missing constants file
+2. Now, let's create the schema file:
+client/src/components/training/plan-generator-schema.ts
+Create missing schema file
+3. Now, let's fix the PlanGenerator component:
+client/src/components/training/plan-generator.tsx
+Fix plan generator component
+4. Now, let's fix the plan preview component handling:
+client/src/components/training/plan-preview.tsx
+Create or fix plan preview component
+5. Now, let's fix the training.tsx file to correctly handle plan generation and display:
+client/src/pages/training.tsx
+Fix date handling in training page
+6. Finally, let's fix the server-side endpoint for generating training plans:
+server/routes.ts
+Fix date handling in training plan generation endpoint
