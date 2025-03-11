@@ -9,7 +9,6 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
-// Use VITE_ prefix for client ID to match frontend
 const STRAVA_CLIENT_ID = process.env.VITE_STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
@@ -68,10 +67,6 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       throw new Error("Strava credentials not properly configured");
     }
 
-    console.log("Exchanging Strava code for tokens...");
-    console.log("Using Client ID:", STRAVA_CLIENT_ID);
-    console.log("Using Redirect URI:", REDIRECT_URI);
-
     const response = await axios.post(STRAVA_TOKEN_URL, {
       client_id: STRAVA_CLIENT_ID,
       client_secret: STRAVA_CLIENT_SECRET,
@@ -80,11 +75,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       redirect_uri: REDIRECT_URI
     });
 
-    console.log("Successfully received Strava tokens:", {
-      access_token_length: response.data.access_token?.length,
-      refresh_token_length: response.data.refresh_token?.length,
-      expires_at: response.data.expires_at
-    });
+    console.log("Successfully received Strava tokens");
 
     return {
       accessToken: response.data.access_token,
@@ -168,6 +159,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       // Insert the activity, ignore if it already exists
       try {
         await db.insert(stravaActivities).values(newActivity);
+        console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
         console.log(`Activity ${activity.id} already exists, skipping`);
       }
