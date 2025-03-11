@@ -8,7 +8,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -42,6 +42,22 @@ export default function ProgramOverview({
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showChangesForm, setShowChangesForm] = useState(false);
 
+  // Calculate total plan metrics
+  const totalWeeks = plan.weeklyPlans.length;
+  const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
+  const completedWeeks = plan.weeklyPlans.filter(week => 
+    week.workouts.every(workout => workout.completed)
+  ).length;
+  const completedWorkouts = plan.weeklyPlans.reduce((sum, week) => 
+    sum + week.workouts.filter(w => w.completed).length, 0
+  );
+  const totalWorkouts = plan.weeklyPlans.reduce((sum, week) => 
+    sum + week.workouts.length, 0
+  );
+  const completionPercentage = (completedWeeks / totalWeeks) * 100;
+  const followThroughPercentage = (completedWorkouts / totalWorkouts) * 100;
+
+  // Handle AI interactions
   const handleAskQuestion = async () => {
     if (!question.trim() || !onAskQuestion) return;
     setIsSubmitting(true);
@@ -66,149 +82,159 @@ export default function ProgramOverview({
     }
   };
 
-  const getWorkoutTypeColor = (type: string) => {
-    switch (type) {
-      case "Easy Run":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "Long Run":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "Speed Work":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "Tempo Run":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-    }
-  };
-
-  const getPhaseColor = (phase: string) => {
-    switch (phase.toLowerCase()) {
-      case "base building":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "peak training":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
-      case "tapering":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
-    }
-  };
-
-  const calculateWeeklyCompletion = (workouts: typeof plan.weeklyPlans[0]['workouts']) => {
-    const completed = workouts.filter(w => w.completed).length;
-    return (completed / workouts.length) * 100;
-  };
-
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4"> {/* Added overflow-y-auto here */}
-        <div className="space-y-4 py-4">
-          <Card className="shadow-md border-primary/20">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Experience Level</p>
-                  <p className="text-xl sm:text-2xl font-bold">{plan.runningExperience.level}</p>
-                  <p className="text-sm text-muted-foreground">{plan.runningExperience.fitnessLevel}</p>
+    <div className="space-y-6">
+      {/* Plan Overview Card */}
+      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h2 className="text-2xl font-bold">
+                {plan.goal}
+                {plan.targetRace && (
+                  <span className="block text-lg font-normal text-muted-foreground mt-1">
+                    {plan.targetRace.distance} - {format(new Date(plan.targetRace.date), "MMMM d, yyyy")}
+                  </span>
+                )}
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Progress</p>
+                <p className="text-2xl font-bold">Week {completedWeeks}/{totalWeeks}</p>
+                <Progress value={completionPercentage} className="h-2 mt-2" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Follow Through</p>
+                <p className="text-2xl font-bold">{Math.round(followThroughPercentage)}%</p>
+                <Progress value={followThroughPercentage} className="h-2 mt-2" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Total Weeks</p>
+              <p className="text-xl font-semibold">{totalWeeks}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Mileage</p>
+              <p className="text-xl font-semibold">{totalMileage} miles</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Weekly Average</p>
+              <p className="text-xl font-semibold">{Math.round(totalMileage / totalWeeks)} miles</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Plans Accordion */}
+      <Accordion type="single" collapsible className="w-full space-y-2">
+        {plan.weeklyPlans.map((week) => (
+          <AccordionItem
+            key={week.week}
+            value={`week-${week.week}`}
+            className="border rounded-lg overflow-hidden"
+          >
+            <AccordionTrigger 
+              className="px-4 py-2 hover:no-underline hover:bg-muted/50"
+              onClick={() => onSelectWeek?.(week.week)}
+            >
+              <div className="flex flex-1 items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Week {week.week}</span>
+                      <Badge variant="outline" className="bg-primary/10 text-primary">
+                        {week.phase}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{format(new Date(week.workouts[0].day), "MMM d")} - </span>
+                      <span>{format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Weekly Schedule</p>
-                  <p className="text-xl sm:text-2xl font-bold">{plan.trainingPreferences.weeklyRunningDays} days</p>
-                  <p className="text-sm text-muted-foreground">{plan.trainingPreferences.weeklyWorkouts} quality sessions</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Peak Mileage</p>
-                  <p className="text-xl sm:text-2xl font-bold">{plan.trainingPreferences.maxWeeklyMileage}</p>
-                  <p className="text-sm text-muted-foreground">miles per week</p>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium">{week.totalMileage} miles</span>
+                  <div className="w-32">
+                    <Progress 
+                      value={week.workouts.filter(w => w.completed).length / week.workouts.length * 100} 
+                      className="h-2" 
+                    />
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Accordion type="single" collapsible className="w-full space-y-2">
-            {plan.weeklyPlans.map((week) => (
-              <AccordionItem
-                key={week.week}
-                value={`week-${week.week}`}
-                className="border rounded-lg overflow-hidden"
-                style={{ touchAction: 'pan-y' }}
-              >
-                <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-muted/50" onClick={() => onSelectWeek?.(week.week)}>
-                  <div className="flex flex-1 items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                        <Calendar className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">Week {week.week}</span>
-                          <Badge variant="outline" className={`${getPhaseColor(week.phase)} text-xs`}>
-                            {week.phase}
-                          </Badge>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {week.totalMileage} miles planned
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-32">
-                        <Progress value={calculateWeeklyCompletion(week.workouts)} className="h-2" />
-                      </div>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="px-4 py-2 space-y-2">
-                    {week.workouts.map((workout, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background rounded-lg border gap-3 cursor-pointer"
-                        onClick={() => onSelectDay?.(new Date(workout.day))}
-                      >
-                        <div className="flex items-start sm:items-center gap-3">
-                          <div className="flex items-center justify-center h-8 w-8 flex-shrink-0">
-                            {workout.completed ? (
-                              <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                              </div>
-                            ) : (
-                              <div className="h-6 w-6 rounded-full border-2 border-muted" />
-                            )}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="px-4 py-2 space-y-2">
+                {week.workouts.map((workout, index) => (
+                  <div
+                    key={index}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background rounded-lg border gap-3 cursor-pointer transition-colors ${
+                      selectedDate && new Date(workout.day).toDateString() === selectedDate.toDateString()
+                        ? 'border-primary'
+                        : 'hover:bg-accent/5'
+                    }`}
+                    onClick={() => onSelectDay?.(new Date(workout.day))}
+                  >
+                    <div className="flex items-start sm:items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8 flex-shrink-0">
+                        {workout.completed ? (
+                          <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                           </div>
-                          <div className="min-w-0">
-                            <Badge variant="outline" className={`mb-1 ${getWorkoutTypeColor(workout.type)}`}>
-                              {workout.type}
-                            </Badge>
-                            <div>
-                              <div className="font-medium">
-                                {format(new Date(workout.day), "EEEE, MMM d")}
-                              </div>
-                              <div className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-1">
-                                {workout.description}
-                              </div>
-                            </div>
+                        ) : (
+                          <div className="h-6 w-6 rounded-full border-2 border-muted" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <Badge 
+                          variant="outline" 
+                          className={`mb-1 ${
+                            workout.type.toLowerCase().includes('easy')
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                              : workout.type.toLowerCase().includes('long')
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                              : workout.type.toLowerCase().includes('tempo')
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                          }`}
+                        >
+                          {workout.type}
+                        </Badge>
+                        <div>
+                          <div className="font-medium">
+                            {format(new Date(workout.day), "EEEE, MMM d")}
+                          </div>
+                          <div className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-1">
+                            {workout.description}
                           </div>
                         </div>
-                        <div className="text-sm font-medium pl-11 sm:pl-0">
-                          {workout.distance} miles
-                        </div>
                       </div>
-                    ))}
+                    </div>
+                    <div className="text-sm font-medium pl-11 sm:pl-0">
+                      {workout.distance} miles
+                    </div>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
-      </div>
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
 
+      {/* AI Interaction Section */}
       {showActions && (
         <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
           {showQuestionForm ? (
             <div className="space-y-4">
               <Textarea
-                placeholder="Ask your AI coach a question about your training plan..."
+                placeholder="Ask your AI coach about your training plan..."
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 className="min-h-[100px]"

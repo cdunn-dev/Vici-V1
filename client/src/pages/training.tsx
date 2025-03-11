@@ -7,7 +7,7 @@ import DailyWorkout from "@/components/training/daily-workout";
 import PlanGenerator from "@/components/training/plan-generator";
 import PlanPreview from "@/components/training/plan-preview";
 import ProgramOverview from "@/components/training/program-overview";
-import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isSameDay, format } from "date-fns";
+import { isAfter, isBefore, startOfDay, startOfWeek, endOfWeek, isSameDay, format, differenceInDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -91,8 +91,8 @@ export default function Training() {
       }
       const plans = await response.json();
       // Return the active plan, or the most recent plan if no active plan exists
-      return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) || 
-             (plans.length > 0 ? plans[plans.length - 1] : null);
+      return plans.find((p: TrainingPlanWithWeeklyPlans) => p.isActive) ||
+        (plans.length > 0 ? plans[plans.length - 1] : null);
     },
     enabled: !!user?.id,
   });
@@ -108,6 +108,7 @@ export default function Training() {
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [workoutDetail, setWorkoutDetail] = useState<WorkoutDetailType | null>(null);
   const [isSubmittingPlan, setIsSubmittingPlan] = useState(false);
+
 
   // Derived state
   const currentWeek = getCurrentWeek(trainingPlan);
@@ -181,7 +182,7 @@ export default function Training() {
       await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
 
       // Force refetch to get the new active plan
-      await queryClient.refetchQueries({ 
+      await queryClient.refetchQueries({
         queryKey: ["/api/training-plans"],
         type: 'active'
       });
@@ -252,24 +253,28 @@ export default function Training() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Training</h1>
-          <div className="space-y-4">
-            <Skeleton className="h-[200px] w-full" />
-            <Skeleton className="h-[400px] w-full" />
-          </div>
-        </div>
-      </div>
-    );
+  const calculateCompletedMiles = () => {
+    if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
+    let totalMiles = 0;
+    trainingPlan.weeklyPlans.forEach(week => {
+        week.workouts.forEach(workout => {
+            totalMiles += workout.distance;
+        });
+    });
+    return totalMiles;
+  };
+
+  const calculateCompletedWeeks = () => {
+      if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
+      return calculateCompletedWeeks(trainingPlan);
   }
 
-  const calculateCompletedMiles = () => {
-    if (!currentWeek) return 0;
-    return 0;
-  };
+  const calculateProgressPercentage = () => {
+      if (!trainingPlan || !trainingPlan.weeklyPlans) return 0;
+      const totalWeeks = trainingPlan.weeklyPlans.length;
+      const completedWeeks = calculateCompletedWeeks(trainingPlan);
+      return (completedWeeks / totalWeeks) * 100;
+  }
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date || !trainingPlan) return;
@@ -386,6 +391,20 @@ export default function Training() {
     ],
   } : null;
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Training</h1>
+          <div className="space-y-4">
+            <Skeleton className="h-[200px] w-full" />
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (showPreview || !trainingPlan) {
     return (
       <div className="space-y-6">
@@ -436,11 +455,34 @@ export default function Training() {
         <div className="mt-6">
           <TabsContent value="current" className="space-y-6">
             {currentWeek && (
-              <ProgressTracker
-                completed={calculateCompletedMiles()}
-                total={currentWeek.totalMileage}
-                label="miles"
-              />
+              <>
+                <ProgramOverview
+                    weeklyPlans={trainingPlan.weeklyPlans}
+                    totalWeeks={trainingPlan.weeklyPlans.length}
+                    completedWeeks={calculateCompletedWeeks()}
+                    progressPercentage={calculateProgressPercentage()}
+                    totalMileage={calculateCompletedMiles()}
+                    onSelectWeek={(weekNumber) => {
+                      const week = trainingPlan.weeklyPlans.find(w => w.week === weekNumber);
+                      if (week) {
+                        setSelectedDate(new Date(week.workouts[0].day));
+                      }
+                    }}
+                    onSelectDay={handleDateSelect}
+                    selectedDate={selectedDate}
+                    goal={trainingPlan.goal || "No goal set"}
+                    endDate={new Date(trainingPlan.endDate)}
+                    targetRace={trainingPlan.targetRace ? {
+                      distance: trainingPlan.targetRace.distance,
+                      date: trainingPlan.targetRace.date
+                    } : undefined}
+                  />
+                <ProgressTracker
+                  completed={calculateCompletedMiles()}
+                  total={trainingPlan.totalMileage}
+                  label="miles"
+                />
+              </>
             )}
             {workoutOptions && (
               <Card

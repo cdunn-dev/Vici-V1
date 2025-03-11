@@ -1,0 +1,115 @@
+AI Training Plan Home [MVP] 
+Wireframe 1: Main Training Plan Home (Overview)
+Purpose: To provide a high-level overview of the user's training plan.
+Elements:
+Header:
+User Profile Icon/Name
+Settings/Navigation Menu
+Training Plan Overview (Top Section):
+Training Plan Goal (e.g., "Sevilla Marathon, Run Sub-3 Hours")
+Total Weeks (e.g., "14 Weeks")
+Total Mileage (e.g., "600 Miles")
+Training plan completion % (ie, Week 6/12, 50% completed)
+Training plan follow through % (% of recommended workouts completed)
+Weekly Preview (Scrollable):
+Cards or Tiles for each week:
+Week Number (e.g., "Week 3 [March 10]")
+Training Plan Phase (e.g., "Base Building")
+Total Weekly Mileage (e.g., "30 Miles")
+Clicking a week card expands to the "This Week Overview" (Wireframe 3).
+"Daily Overview" (Partial View):
+Shows a snippet of today's workout (Run Type, Total Daily Mileage).
+Clicking this section expands to the "Day View" (Wireframe 2).
+AI Question/Request (Quick Access):
+A text input field or button to prompt the AI for questions or adjustments.
+Wireframe 2: This Week Overview (Defaults to current week unless another week is selected)
+Purpose: To show the detailed plan for the current week.
+Elements:
+Header:
+"Week [Number]"
+Dates
+Training Plan Phase
+Total Weekly Mileage
+Weekly Plan Completion:
+Weekly Mileage completion %
+Weekly Workout completion %
+Daily Workouts (List/Cards):
+Day of the Week (e.g., "Monday")
+Run Type
+Total Daily Mileage
+Drag-and-drop functionality to rearrange workouts.
+AI Question/Request (Contextual):
+"Ask about this week's plan" or "Request adjustments."
+Wireframe 3: Day View (Defaults to Today's Workout unless another day is selected)
+Purpose: To provide detailed information about today's planned workout.
+Elements:
+Header:
+"Today's Workout"
+Date
+Workout Details:
+Run Type (e.g., "Tempo Run")
+Goal/Purpose of the workout.
+Detailed Workout Breakdown (e.g., "2 mile warmup, 2 miles tempo, 400m jog recovery...").
+If a quality session, display alternate workout options.
+Track Version.
+Non-Track Version.
+Total Daily Mileage.
+Sync to Watch Button.
+AI Question/Request (Contextual):
+"Ask about today's workout" or "Request adjustments."
+Wireframe 4: Training Plan Completion Tile
+Purpose: To display training plan progress and completion stats after the training plan is finished.
+Elements:
+Header:
+Training plan progress
+Race Related Goal/Non-Race Related Goal Display:
+Goal description.
+Training plan overview information.
+Training plan completion stats.
+If goal is a race, reconcile with Strava activity completed that day for race completion, time, and whether or not the race was a personal best
+When training plan is completed: "Set Your Next Goal" Section:
+"Well done! You’ve completed your training plan! Ready for your next goal?"
+"Create New Training Plan" Button.
+Completing a Training Plan and Setting a New Goal:
+Wireframe 4.1: Training Plan Completion Screen (Expanded):
+Headline: "Congratulations! You've Completed Your Plan!"
+Detailed completion stats (as per the completion tile, but expanded).
+Button: "Set a New Goal"
+Button: "View Past Training Plans"
+Wireframe 4.2: Goal Selection Screen:
+Headline: "Set Your Next Goal"
+Options: "Race Preparation" or "General Fitness"
+Depending on selection, the appropriate fields to set the goal.
+Adjusting an Existing Training Plan (Beyond Daily/Weekly Adjustments):
+Wireframe 5.1: Plan Settings/Edit Plan Screen:
+Headline: "Plan Settings" or "Edit Plan"
+Fields:
+Training Goal (Dropdown/Input for race details)
+Weekly Running Days (Number Input)
+Maximum Weekly Mileage (Number Input)
+Coaching Style (Dropdown)
+"Regenerate Plan" or "Apply Changes" Button.
+"Cancel" Button.
+Wireframe 5.2: Plan Adjustment Review Screen:
+Headline: "Review Updated Plan"
+Display of changes made to the plan (summary).
+"Approve Changes" Button.
+"Cancel" button.
+Viewing and Sharing Achievements (Badges, PBs, etc.):
+Wireframe 3.1: Achievement Details Screen:
+Headline: Badge/PB Title.
+Detailed description of the achievement.
+Date earned.
+"Share" Button (with options for social media, etc.).
+Key Interactions:
+Clicking a week in the "Weekly Preview" expands to the "This Week Overview."
+Clicking "Today's Workout Overview" expands to the "Day View."
+Drag-and-drop functionality in the "This Week Overview" to rearrange workouts.
+AI Question/Request sections throughout the app for dynamic adjustments.
+"Sync to Watch" button in the "Day View."
+"Create New Training Plan" button on the completion screen.
+Important Considerations:
+Clear Visual Hierarchy: Use visual cues to guide the user's attention.
+Mobile Responsiveness: Design for various screen sizes.
+AI Interaction: Ensure the AI question/request functionality is intuitive and efficient.
+Data Visualization: Consider using charts or graphs to visualize progress.
