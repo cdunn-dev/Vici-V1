@@ -413,9 +413,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  return createServer(app);
-}
-
   // Debug endpoint for Strava configuration
   app.get("/api/strava/config", (req, res) => {
     try {
@@ -433,3 +430,6 @@ export async function registerRoutes(app: Express) {
       res.status(500).json({ error: "Failed to get Strava configuration" });
     }
   });
+
+  return createServer(app);
+}
