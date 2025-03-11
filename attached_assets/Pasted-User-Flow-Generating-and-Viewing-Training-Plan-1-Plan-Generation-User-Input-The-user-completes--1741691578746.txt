@@ -1,0 +1,52 @@
+User Flow: Generating and Viewing Training Plan
+
+1. Plan Generation
+
+User Input: The user completes the training plan creation process, providing information about their goals, preferences, and running history.    
+AI Processing: The AI processes the user input and generates a personalized training plan.    
+Plan Review: The user reviews the generated plan, including the weekly overview and individual workouts.    
+Plan Approval: The user approves the plan to finalize it.    
+Wireframe: Plan Review and Adjustment (from "AI Personalised Training Plan Creation [MVP]")
+
+Purpose: To display the generated training plan and allow adjustments.    
+Elements:
+Headline: "Your Personalised Training Plan"    
+Display of the generated plan (e.g., table or list format with weekly overviews)    
+Ability to edit individual workouts or weeks    
+Summary of key metrics (total mileage, workout frequency, etc.)    
+Button: "Approve and Start"    
+Button: "Edit Plan"    
+2. Transition to Training Plan Home
+
+Automatic Navigation: Upon clicking "Approve and Start," the user is automatically navigated to the Training Plan Home screen.    
+Loading Indicator: A loading indicator is briefly displayed while the Training Plan Home data is loaded.    
+3. Training Plan Home (Initial View)
+
+Training Plan Overview: The user sees a high-level overview of their training plan, including the goal, total weeks, total mileage, and completion percentage.    
+Weekly Preview: The user sees a scrollable preview of the upcoming weeks in their plan.    
+Today's Workout Overview: The user sees a snippet of today's workout, including the run type and total daily mileage.    
+Wireframe: Main Training Plan Home (Overview) (from "AI Training Plan Home [MVP]")
+
+Purpose: To provide a high-level overview of the user's training plan.    
+Elements:
+Header: User Profile Icon/Name, Settings/Navigation Menu    
+Training Plan Overview (Top Section): Training Plan Goal, Total Weeks, Total Mileage, Training plan completion %, Training plan follow through %    
+Weekly Preview (Scrollable): Cards or Tiles for each week (Week Number, Training Plan Phase, Total Weekly Mileage)    
+"Daily Overview" (Partial View): Shows a snippet of today's workout (Run Type, Total Daily Mileage)    
+AI Question/Request (Quick Access): A text input field or button to prompt the AI for questions or adjustments    
+Instructions for AI Coding Agent
+
+Upon clicking the "Approve and Start" button on the Plan Review and Adjustment screen, trigger a navigation event to the Training Plan Home screen.
+Display a loading indicator while fetching the necessary data for the Training Plan Home.
+Populate the Training Plan Home screen with the following data from the generated training plan:
+Training Plan Overview: Goal, total weeks, total mileage, completion percentage.
+Weekly Preview: Week number, training plan phase, total weekly mileage for each upcoming week.
+Today's Workout Overview: Run type and total daily mileage for the current day's workout.
+Ensure smooth transitions and animations between screens.
+Implement error handling for cases where the training plan data cannot be loaded.
+Additional Considerations
+
+Data Synchronization: Ensure that the training plan data is properly synchronized between the AI model, the backend, and the frontend.
+UI/UX: Design the transition and the Training Plan Home screen to be visually appealing and intuitive.
+Performance: Optimize the loading speed of the Training Plan Home to minimize user wait times.
+Accessibility: Ensure that the screens and interactions are accessible to users with disabilities.
