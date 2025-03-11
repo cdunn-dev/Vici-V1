@@ -2,6 +2,29 @@ import { pgTable, text, serial, json, boolean, timestamp, integer, date } from "
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Add new schema types for running experience and fitness assessment
+export const RunningExperienceLevelEnum = z.enum([
+  "beginner",
+  "intermediate",
+  "advanced",
+  "elite"
+]);
+
+export const FitnessLevelEnum = z.enum([
+  "building-base",
+  "maintaining",
+  "peak-training",
+  "recovery"
+]);
+
+export const CoachingStyleEnum = z.enum([
+  "authoritative",
+  "directive",
+  "motivational",
+  "collaborative",
+  "hybrid"
+]);
+
 // User schema with profile fields
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -24,6 +47,23 @@ export const users = pgTable("users", {
     time: string;
     date: string;
   }[]>().default([]),
+  runningExperience: text("running_experience"),
+  fitnessLevel: text("fitness_level"),
+  preferredCoachingStyle: text("preferred_coaching_style"),
+  stravaStats: json("strava_stats").$type<{
+    totalDistance: number;
+    totalRuns: number;
+    averagePace: number;
+    recentRaces: {
+      distance: string;
+      time: string;
+      date: string;
+    }[];
+    predictedRaces: {
+      distance: string;
+      predictedTime: string;
+    }[];
+  } | null>(),
 });
 
 // Personal best record schema
@@ -45,12 +85,15 @@ export const GenderEnum = z.enum([
 // Distance unit options
 export const DistanceUnitEnum = z.enum(["miles", "kilometers"]);
 
-// User profile update schema
+// Update user profile schema
 export const userProfileUpdateSchema = z.object({
   gender: GenderEnum.optional(),
   birthday: z.string().optional(),
   preferredDistanceUnit: DistanceUnitEnum.optional(),
   personalBests: z.array(personalBestSchema).optional(),
+  runningExperience: RunningExperienceLevelEnum.optional(),
+  fitnessLevel: FitnessLevelEnum.optional(),
+  preferredCoachingStyle: CoachingStyleEnum.optional(),
 });
 
 // Training plans table

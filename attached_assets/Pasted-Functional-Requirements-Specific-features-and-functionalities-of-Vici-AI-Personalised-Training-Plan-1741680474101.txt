@@ -1,0 +1,121 @@
+Functional Requirements
+Specific features and functionalities of Vici
+
+AI Personalised Training Plan Creation [MVP] - A personalised training plan creation widget informed by historical running data from Strava or other platforms, and a series of runner responses to questions about their training. Runners will be able to review and adjust the overall plan to ensure it meets their needs before approving and getting started.
+Strava integration to gather insights about the runner using AI
+Runner experience level 
+Current fitness
+Race predictions
+Profile Details
+Age (max HR/ HR zones)
+Gender (Max HR/HR zones)
+Preferred distance metric
+User Inputs
+Training Goal
+If race:
+What Distance?
+What Date?
+What is the name of the race?
+Previous personal best at this distance
+Goal time for this race
+Weekly Running Days (Integer, 1-7)
+Maximum Weekly Mileage (Integer, 0-150)
+Weekly Workouts/Sessions (Integer, 0-3)
+Preferred Long Run Day (Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday)
+Desired Coaching Style (Authoritative, Directive, Motivational, Collaborative, Hybrid)
+AI Training Plan Home [MVP] - A home page to view your training plan with the ability to “zoom in” and “zoom out.” This hub should provide an overarching view of where the athlete is at in their training cycle, get a preview of what is coming in the days/weeks ahead, and dive deep into their planned run/workout for the day. Athletes should also be able to see their training program through the lens of training “phases” (ie, base building, strength building, speed development/refinement, tapering) and develop a deep understanding of the “why” behind specific runs/workouts each day. Runners should also be able to make “lightweight” adjustments to their training program in real time based on things like upcoming travel, illness, injury, fatigue, etc.
+Week/Day View
+AI question/requests + Dynamic plan adjustment - Ask questions about today’s workout, this week’s goal, or request adjustments to the training plan based on personal factors (travel, illness, injury, etc)
+Recommended weekly mileage completion % (ie, 35/45, 78%)
+Recommended weekly workout completion % (ie, ⅘, 80%)
+Today’s Workout Overview
+Run Type (ie, Easy run, Recovery run, Tempo run, Fartlek run, Interval Session, Threshold Session, etc)
+Today’s Goal/Purpose of this workout
+If a quality session (workout), then provide a recommended workout, and two additional options that accomplish similar goal, but give user autonomy over selection
+Track version
+Non-track version
+Workout Breakdown upon click (expands to full screen)
+2 mile warmup at easy pace (users easy pace)
+2 miles tempo 
+400 meter jog recovery
+etc
+Total Daily Mileage
+Sync to Watch - Ability to sync workout to watch 
+This Week Overview
+Training Plan Week (ie, Week 3)
+Date (ie, March 10)
+Training Plan Phase (ie, Base Building, Strength Building, Peak Training, Tapering)
+Total Weekly Mileage
+Daily Workouts 
+Day (ie, Monday, Tuesday, etc)
+Run Type
+Total Daily Mileage
+Ability to move rearrange daily workouts within the week (Drag and drop tiles)
+Training Plan Overview
+AI question/requests + Dynamic Plan Adjustment - Ask questions about the overall training program and make adjustments based on personal factors (not adapting well to the training, injury, not enough time for the recommended mileage, can’t run the recommended number of days/week, etc)
+Training Plan completion % (% of the total plan completed - ie, Week 6/12, 50% completed)
+Training plan follow through % (% of recommended workouts completed - ie )
+Training Plan High Level Overview
+Training Plan Goal (ie, Sevilla Marathon, Run Sub-3 Hours)
+Total Weeks (ie, 14 Weeks)
+Total Mileage (ie, 600 Miles)
+Quality metric?
+
+
+Weekly Preview - Week over week overview of the training plan with the ability to click on weeks to expand the view and see the daily workouts within that week.
+Week 1 [March 10] - Base Building - 30 Miles
+Week 2 [March 17] - Base Building - 33 Miles
+Training Plan “Completion” Tile - The “completion” event for the training plan that will save to the user’s profile to view later/share (Past training Plans)
+Race Related Goal
+Goal: Run my first race
+Sevilla Marathon, 21st February 2025
+Training Plan Overview
+14 Weeks
+600 miles
+Training Plan Completion Stats
+% Training Plan Completion
+Total days run
+Total miles run
+Fitness improvement
+Goal accomplishment
+Non-race Related Goal
+Goal - Get fit
+Training plan Overview
+12 Weeks
+300 Miles
+Training Plan Completion Stats
+% Training Plan Completion
+Total days run
+Total miles run
+Fitness improvement
+Goal accomplishment
+Set your next goal
+Well done! You’ve completed your training plan! Ready for your next goal?
+Create New Training Plan
+User can click to create a new training plan and focus on a new set of goals
+Training Log/Journal [MVP] - An ongoing log and journal of the runner’s runs/completed workouts and their journal entries for those runs. As always, user inputs should continue to educate their AI coach for a more personalised experience. 
+Training Log (Automatic sync with Strava) - A daily log of the users completed runs and key run stats populated via Strava integration
+Recommended Workout Completion/Reconciliation - Ability to “reconcile” a run with “Today’s recommended workout” when user is updating run. AI will also review training data and auto-reconcile where possible
+Did you complete today’s recommended workout? (Yes, No, With modifications)
+Perceived effort
+Run journal
+Training Plan Completion/Accomplishments Gamification
+Recommended Workout Plan completion streaks
+Fitness improvement badges
+90% club (Badge for 90%+ training plan follow through)
+Training plan completion badges (75%+ follow through)
+PB/PR Badges (when the goal of a training plan)
+New Race Distance Completed badges (When the goal of a training plan)
+User Profile [MVP] - A simple user profile capturing key user preferences and settings to help inform their AI training plan generation and future coaching experiences, as well as allowing them to build a “presence”/history within Vici that will become relevant with the incorporation of any social/community features. This should be a space that runners feel proud of over time (capturing their PBs, gamification badges, completed training plans, etc)
+Profile Picture
+Name
+Basic User Information
+Date of Birth
+Gender
+Preferred Distance Unit
+Coaching preferences
+Current Training Plan (overview tile)
+Past Training Plans (completion tile)
+Race Personal Bests
+Gamification Badges/”Trophy Room”
+Connected Apps/Devices

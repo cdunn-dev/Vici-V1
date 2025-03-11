@@ -20,9 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { userProfileUpdateSchema, GenderEnum, DistanceUnitEnum } from "@shared/schema";
-import { 
-  SiStrava, 
-  SiGarmin, 
+import {
+  SiStrava,
+  SiGarmin,
   SiNike,
   SiFitbit,
 } from "react-icons/si";
@@ -47,6 +47,11 @@ import { cn } from "@/lib/utils";
 import { Camera, CalendarIcon, Plus, X, Upload } from "lucide-react";
 import { apiRequest, invalidateQueries } from "@/lib/api";
 import { AddPersonalBestForm } from "@/components/training/add-personal-best-form";
+import {
+  RunningExperienceLevelEnum,
+  FitnessLevelEnum,
+  CoachingStyleEnum,
+} from "@shared/schema";
 
 interface PersonalBest {
   distance: string;
@@ -73,6 +78,9 @@ export default function Profile() {
       birthday: user?.birthday || undefined,
       preferredDistanceUnit: user?.preferredDistanceUnit || "miles",
       personalBests: user?.personalBests || [],
+      runningExperience: user?.runningExperience || undefined,
+      fitnessLevel: user?.fitnessLevel || undefined,
+      preferredCoachingStyle: user?.preferredCoachingStyle || undefined,
     },
   });
 
@@ -84,6 +92,9 @@ export default function Profile() {
         birthday: user.birthday || undefined,
         preferredDistanceUnit: user.preferredDistanceUnit || "miles",
         personalBests: user.personalBests || [],
+        runningExperience: user?.runningExperience || undefined,
+        fitnessLevel: user?.fitnessLevel || undefined,
+        preferredCoachingStyle: user?.preferredCoachingStyle || undefined,
       });
     }
   }, [user, form]);
@@ -373,6 +384,117 @@ export default function Profile() {
                 )}
               />
 
+              {/* Running Profile */}
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Running Profile</CardTitle>
+                  <CardDescription>
+                    Help us understand your running background to provide better training recommendations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <FormField
+                    control={form.control}
+                    name="runningExperience"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Running Experience Level</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={!isEditing}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your experience level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(RunningExperienceLevelEnum.Values).map((level) => (
+                              <SelectItem
+                                key={level}
+                                value={level}
+                                className="capitalize"
+                              >
+                                {level.replace(/-/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="fitnessLevel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Fitness Level</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={!isEditing}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select your current fitness level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(FitnessLevelEnum.Values).map((level) => (
+                              <SelectItem
+                                key={level}
+                                value={level}
+                                className="capitalize"
+                              >
+                                {level.replace(/-/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="preferredCoachingStyle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preferred Coaching Style</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={!isEditing}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select preferred coaching style" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.values(CoachingStyleEnum.Values).map((style) => (
+                              <SelectItem
+                                key={style}
+                                value={style}
+                                className="capitalize"
+                              >
+                                {style.replace(/-/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+
               {isEditing ? (
                 <Button type="submit" disabled={updateProfileMutation.isPending}>
                   {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
@@ -409,7 +531,7 @@ export default function Profile() {
                   <DialogHeader>
                     <DialogTitle>Add Personal Best</DialogTitle>
                   </DialogHeader>
-                  <AddPersonalBestForm 
+                  <AddPersonalBestForm
                     onSubmit={(data) => {
                       const personalBests = form.getValues("personalBests");
                       form.setValue("personalBests", [...personalBests, data]);
@@ -553,6 +675,52 @@ export default function Profile() {
               )}
             </CardContent>
           </Card>
+
+          {/* Strava Stats */}
+          {user?.stravaStats && (
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle>Training Insights</CardTitle>
+                <CardDescription>
+                  Stats and predictions based on your Strava activities
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-lg">
+                    <p className="text-sm text-muted-foreground">Total Distance</p>
+                    <p className="text-2xl font-semibold">
+                      {(user.stravaStats.totalDistance / 1000).toFixed(1)}km
+                    </p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <p className="text-sm text-muted-foreground">Total Runs</p>
+                    <p className="text-2xl font-semibold">{user.stravaStats.totalRuns}</p>
+                  </div>
+                  <div className="p-4 border rounded-lg">
+                    <p className="text-sm text-muted-foreground">Average Pace</p>
+                    <p className="text-2xl font-semibold">
+                      {(user.stravaStats.averagePace / 60).toFixed(2)} min/km
+                    </p>
+                  </div>
+                </div>
+
+                {user.stravaStats.predictedRaces && user.stravaStats.predictedRaces.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Race Predictions</h3>
+                    <div className="space-y-2">
+                      {user.stravaStats.predictedRaces.map((race, index) => (
+                        <div key={index} className="flex justify-between p-3 border rounded-lg">
+                          <span>{race.distance}</span>
+                          <span className="font-medium">{race.predictedTime}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </form>
       </Form>
     </div>
