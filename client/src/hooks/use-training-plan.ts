@@ -4,69 +4,25 @@ import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
-/**
- * Options for configuring the useTrainingPlan hook
- */
 interface UseTrainingPlanOptions {
-  /** Callback function to be executed after a plan is successfully created */
   onPlanCreated?: () => void;
 }
 
-/**
- * Return type for the useTrainingPlan hook
- */
 interface UseTrainingPlanReturn {
-  /** The current active training plan */
   trainingPlan: TrainingPlanWithWeeklyPlans | null;
-  /** Loading state for the training plan query */
   isLoading: boolean;
-  /** Preview data for a new training plan */
   previewPlan: TrainingPlanWithWeeklyPlans | null;
-  /** Whether the preview modal is shown */
   showPreview: boolean;
-  /** Function to set the preview plan data */
   setPreviewPlan: (plan: TrainingPlanWithWeeklyPlans | null) => void;
-  /** Function to toggle the preview modal */
   setShowPreview: (show: boolean) => void;
-  /** Function to create a new training plan */
   createPlan: (plan: TrainingPlanWithWeeklyPlans) => void;
-  /** Loading state for plan creation */
   isCreating: boolean;
-  /** Function to adjust an existing plan */
   adjustPlan: (params: { feedback: string; plan: TrainingPlanWithWeeklyPlans }) => void;
-  /** Loading state for plan adjustment */
   isAdjusting: boolean;
-  /** Function to reorder workouts in a week */
   reorderWorkouts: (params: { planId: number; weekId: number; workouts: any[] }) => void;
-  /** Loading state for workout reordering */
   isReordering: boolean;
 }
 
-/**
- * Custom hook for managing training plan state and operations
- * 
- * This hook provides functionality for:
- * - Fetching the current training plan
- * - Creating new training plans
- * - Adjusting existing plans
- * - Managing plan previews
- * - Reordering workouts within a plan
- * 
- * @param options - Configuration options for the hook
- * @returns Object containing training plan state and operations
- * 
- * @example
- * ```typescript
- * const {
- *   trainingPlan,
- *   isLoading,
- *   createPlan,
- *   adjustPlan
- * } = useTrainingPlan({
- *   onPlanCreated: () => console.log('Plan created successfully')
- * });
- * ```
- */
 export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTrainingPlanReturn {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -85,7 +41,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           throw new Error(`Failed to fetch training plan: ${response.statusText}`);
         }
         const plans = await response.json();
-        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.active) ||
+        return plans.find((p: TrainingPlanWithWeeklyPlans) => p.is_active) ||
           (plans.length > 0 ? plans[plans.length - 1] : null);
       } catch (error) {
         console.error("Training plan fetch error:", error);
@@ -97,20 +53,61 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
 
   // Mutation for creating a new training plan
   const createPlanMutation = useMutation({
-    mutationFn: async (plan: TrainingPlanWithWeeklyPlans) => {
+    mutationFn: async (planData: TrainingPlanWithWeeklyPlans) => {
       if (!user?.id) {
         throw new Error("Must be logged in to create a plan");
       }
+
+      // Create a clean copy of the plan data without any potential circular references
+      const cleanPlan = {
+        userId: user.id,
+        name: planData.name,
+        goal: planData.goal,
+        goalDescription: planData.goalDescription || "",
+        startDate: new Date(planData.startDate).toISOString(),
+        endDate: new Date(planData.endDate).toISOString(),
+        weeklyMileage: planData.weeklyMileage,
+        weeklyPlans: planData.weeklyPlans.map(week => ({
+          week: week.week,
+          phase: week.phase,
+          totalMileage: week.totalMileage,
+          workouts: week.workouts.map(workout => ({
+            day: new Date(workout.day).toISOString(),
+            type: workout.type,
+            distance: workout.distance,
+            description: workout.description,
+            completed: false
+          }))
+        })),
+        targetRace: planData.targetRace ? {
+          distance: planData.targetRace.distance,
+          date: new Date(planData.targetRace.date).toISOString(),
+          customDistance: planData.targetRace.customDistance,
+          previousBest: planData.targetRace.previousBest,
+          goalTime: planData.targetRace.goalTime
+        } : null,
+        runningExperience: {
+          level: planData.runningExperience.level,
+          fitnessLevel: planData.runningExperience.fitnessLevel
+        },
+        trainingPreferences: {
+          weeklyRunningDays: planData.trainingPreferences.weeklyRunningDays,
+          maxWeeklyMileage: planData.trainingPreferences.maxWeeklyMileage,
+          weeklyWorkouts: planData.trainingPreferences.weeklyWorkouts,
+          preferredLongRunDay: planData.trainingPreferences.preferredLongRunDay,
+          coachingStyle: planData.trainingPreferences.coachingStyle
+        },
+        is_active: true
+      };
+
+      console.log('Sending plan data:', JSON.stringify(cleanPlan, null, 2));
 
       const response = await fetch(`/api/training-plans/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...plan,
-          userId: user.id,
-        }),
+        body: JSON.stringify(cleanPlan),
         credentials: 'include',
       });
 
@@ -132,6 +129,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
       });
     },
     onError: (error: Error) => {
+      console.error('Plan creation error:', error);
       toast({
         title: "Error",
         description: error.message,
