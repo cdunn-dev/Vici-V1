@@ -1,11 +1,9 @@
 // Training Goals
 export const TrainingGoals = {
-  FIRST_RACE: "My First Race",
-  PERSONAL_BEST: "A Personal Best",
-  RUN_FASTER: "To Run Faster",
-  RUN_FARTHER: "To Run Farther",
-  GET_FIT: "To Get Fit",
-  BE_HEALTHY: "To Be Healthy",
+  FIRST_RACE: "Race Preparation (First Time)",
+  PERSONAL_BEST: "Race Preparation (Personal Best)",
+  GENERAL_FITNESS: "General Fitness",
+  HEALTH_AND_FITNESS: "Health and Fitness",
 } as const;
 
 // Race Distances
@@ -22,6 +20,21 @@ export const RaceDistances = {
 export const DistanceUnits = {
   MILES: "miles",
   KILOMETERS: "kilometers",
+} as const;
+
+// Gender options
+export const GenderOptions = {
+  MALE: "male",
+  FEMALE: "female",
+  OTHER: "other",
+  PREFER_NOT_TO_SAY: "prefer_not_to_say",
+} as const;
+
+export const GenderLabels = {
+  [GenderOptions.MALE]: "Male",
+  [GenderOptions.FEMALE]: "Female",
+  [GenderOptions.OTHER]: "Other",
+  [GenderOptions.PREFER_NOT_TO_SAY]: "Prefer not to say",
 } as const;
 
 // Experience Levels with descriptions
@@ -75,11 +88,11 @@ export const CoachingStyles = {
 } as const;
 
 export const CoachingStyleDescriptions = {
-  [CoachingStyles.AUTHORITATIVE]: "Clear, structured guidance with detailed explanations",
-  [CoachingStyles.DIRECTIVE]: "Direct instructions and specific workout requirements",
-  [CoachingStyles.MOTIVATIONAL]: "Encouraging and supportive with flexible guidelines",
-  [CoachingStyles.COLLABORATIVE]: "Interactive approach with room for adjustments",
-  [CoachingStyles.HYBRID]: "Mix of different styles adapted to your needs",
+  [CoachingStyles.AUTHORITATIVE]: "Clear, structured guidance with detailed explanations and rationale behind each workout",
+  [CoachingStyles.DIRECTIVE]: "Direct instructions and specific workout requirements with less explanation",
+  [CoachingStyles.MOTIVATIONAL]: "Encouraging and supportive with flexible guidelines and positive reinforcement",
+  [CoachingStyles.COLLABORATIVE]: "Interactive approach with room for adjustments based on your feedback",
+  [CoachingStyles.HYBRID]: "Mix of different styles adapted to your needs and preferences",
 } as const;
 
 // Validation helper functions

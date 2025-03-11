@@ -27,6 +27,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -47,35 +49,26 @@ import {
   DaysOfWeek,
   CoachingStyles,
   CoachingStyleDescriptions,
+  GenderOptions,
+  GenderLabels,
+  DistanceUnits,
 } from "./plan-generator-constants";
 import { TimeInput } from "./time-input";
 
-// Update STEPS array to include a final confirmation step
+// Update STEPS array to include a final confirmation step and basic profile step
 const STEPS = [
   { id: "welcome", label: "Welcome" },
+  { id: "basicProfile", label: "Basic Profile" },
   { id: "stravaConnect", label: "Strava Connect" },
-  { id: "userProfile", label: "User Profile" },
+  { id: "runningProfile", label: "Running Profile" },
   { id: "goal", label: "Training Goal" },
+  {
+    id: "raceDetails",
+    label: "Race Details",
+    conditional: (data: PlanGeneratorFormData) =>
+      data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST,
+  },
   { id: "trainingPreferences", label: "Training Preferences" },
-  {
-    id: "raceDistance",
-    label: "Race Distance",
-    conditional: (data: PlanGeneratorFormData) =>
-      data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST,
-  },
-  {
-    id: "raceDate",
-    label: "Race Date",
-    conditional: (data: PlanGeneratorFormData) =>
-      data.goal === TrainingGoals.FIRST_RACE || data.goal === TrainingGoals.PERSONAL_BEST,
-  },
-  {
-    id: "raceTimes",
-    label: "Race Times",
-    conditional: (data: PlanGeneratorFormData) =>
-      data.goal === TrainingGoals.PERSONAL_BEST,
-  },
-  { id: "startDate", label: "Training Plan Start Date" },
   { id: "confirmation", label: "Confirm Plan Generation" },
   { id: "preview", label: "Preview Plan" },
 ];
@@ -97,7 +90,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [mileageValue, setMileageValue] = useState(15);
   const [workoutsValue, setWorkoutsValue] = useState(1);
 
-  // Form initialization with proper defaults including coachingStyle
+  // Form initialization with proper defaults including coachingStyle and new fields
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
@@ -123,7 +116,12 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         },
         previousBest: "",
         goalTime: "",
+        name: "", // Added race name field
       },
+      age: 0, // Added age field
+      gender: "", // Added gender field
+      preferredDistanceUnit: "miles", // Added preferred distance unit field
+
     },
     mode: "onBlur",
   });
@@ -187,10 +185,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     switch (stepId) {
       case "goal":
         return ["goal"];
-      case "raceDistance":
-        return ["targetRace.distance"];
-      case "raceDate":
-        return ["targetRace.date"];
+      case "raceDetails":
+        return ["targetRace.distance", "targetRace.date", "targetRace.name"]; // Added race name
       case "raceTimes":
         return ["targetRace.previousBest", "targetRace.goalTime"];
       case "experience":
@@ -209,6 +205,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         return ["trainingPreferences.coachingStyle"];
       case "startDate":
         return ["startDate"];
+      case "basicProfile":
+        return ["age", "gender", "preferredDistanceUnit"];
       default:
         return [];
     }
@@ -402,7 +400,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           </div>
         );
 
-      case "userProfile":
+      case "runningProfile":
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Tell Us About Yourself</h2>
@@ -470,33 +468,49 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       case "goal":
         return (
-          <FormField
-            control={form.control}
-            name="goal"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>What's your training goal?</FormLabel>
-                <FormDescription>
-                  Choose the primary goal you'd like to achieve through your training plan
-                </FormDescription>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your goal" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Object.entries(TrainingGoals).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">What's Your Training Goal?</h2>
+            <FormField
+              control={form.control}
+              name="goal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Choose your primary training goal</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your goal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Race Preparation</SelectLabel>
+                        <SelectItem value={TrainingGoals.FIRST_RACE}>
+                          {TrainingGoals.FIRST_RACE}
+                        </SelectItem>
+                        <SelectItem value={TrainingGoals.PERSONAL_BEST}>
+                          {TrainingGoals.PERSONAL_BEST}
+                        </SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>General Fitness</SelectLabel>
+                        <SelectItem value={TrainingGoals.GENERAL_FITNESS}>
+                          {TrainingGoals.GENERAL_FITNESS}
+                        </SelectItem>
+                        <SelectItem value={TrainingGoals.HEALTH_AND_FITNESS}>
+                          {TrainingGoals.HEALTH_AND_FITNESS}
+                        </SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    This will help us tailor your training plan to your specific needs
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         );
 
       case "trainingPreferences":
@@ -636,6 +650,452 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                   <FormDescription>
                     {field.value && CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      case "raceDetails":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Race Details</h2>
+
+            <FormField
+              control={form.control}
+              name="targetRace.name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter the name of your target race" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="targetRace.distance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Distance</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      if (value !== RaceDistances.OTHER) {
+                        form.setValue("targetRace.customDistance.value", 0);
+                        form.setValue("targetRace.customDistance.unit", "miles");
+                      }
+                    }}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select race distance" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(RaceDistances).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="targetRace.date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>When is your race?</FormLabel>
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => field.onChange(date?.toISOString())}
+                    disabled={(date) => date < new Date()}
+                    className="rounded-md border"
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      case "raceTimes":
+        return (
+          <>
+            <FormField
+              control={form.control}
+              name="targetRace.previousBest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>What's your current personal best?</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <TimeInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    error={!!form.formState.errors.targetRace?.previousBest}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="mt-4">
+              <FormField
+                control={form.control}
+                name="targetRace.goalTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>What's your goal time?</FormLabel>
+                    <FormDescription>
+                      Enter your time in HH:MM:SS format
+                    </FormDescription>
+                    <TimeInput
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      error={!!form.formState.errors.targetRace?.goalTime}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </>
+        );
+
+      case "experience":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>What's your running experience level?</FormLabel>
+                <FormDescription>
+                  {ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(ExperienceLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "fitness":
+        return (
+          <FormField
+            control={form.control}
+            name="runningExperience.fitnessLevel"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>How would you describe your current fitness level?</FormLabel>
+                <FormDescription>
+                  {FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                </FormDescription>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your fitness level" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {Object.entries(FitnessLevels).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "startDate":
+        return (
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>When would you like to start your training plan?</FormLabel>
+                <div className="my-4 flex space-x-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const today = new Date();
+                      field.onChange(today.toISOString());
+                      form.setValue("startDate", today.toISOString(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      });
+                    }}
+                  >
+                    Start Today
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      const nextMondayDate = nextMonday(new Date());
+                      field.onChange(nextMondayDate.toISOString());
+                      form.setValue("startDate", nextMondayDate.toISOString(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      });
+                    }}
+                  >
+                    Start Next Week
+                  </Button>
+                </div>
+                <Calendar
+                  mode="single"
+                  selected={field.value ? new Date(field.value) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      field.onChange(date.toISOString());
+                      form.setValue("startDate", date.toISOString(), {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                        shouldTouch: true,
+                      });
+                    }
+                  }}
+                  disabled={(date) => date < new Date()}
+                  className="rounded-md border"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        );
+
+      case "confirmation":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Ready to Generate Your Plan</h2>
+            <p className="text-muted-foreground">
+              We'll create a personalized training plan based on your goals and preferences.
+              Click "Preview Plan" to see your customized training schedule.
+            </p>
+            <div className="bg-muted p-4 rounded-md">
+              <h3 className="font-semibold mb-2">Summary of Your Preferences:</h3>
+              <p><strong>Goal:</strong> {form.getValues().goal}</p>
+              <p>
+                <strong>Training Days:</strong> {form.getValues().trainingPreferences.weeklyRunningDays} days/week
+              </p>
+              <p>
+                <strong>Target Mileage:</strong> {form.getValues().trainingPreferences.maxWeeklyMileage} miles/week
+              </p>
+              <p>
+                <strong>Start Date:</strong> {format(new Date(form.getValues().startDate), "PPP")}
+              </p>
+            </div>
+          </div>
+        );
+
+      case "preview":
+        return (
+          <div className="space-y-6">
+            {isSubmitting ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {previewData ? "Saving your training plan..." : "Generating your personalized training plan..."}
+                </p>
+              </div>
+            ) : previewData ? (
+              <div className="space-y-6">
+                <div className="border rounded-lg p-6">
+                  <ProgramOverview
+                    plan={previewData}
+                    showActions={true}
+                    onApprove={handleApprovePlan}
+                    onAskQuestion={async (question) => {
+                      setIsSubmitting(true);
+                      try {
+                        // Implementation for question handling
+                        const response = await fetch('/api/training-plans/ask', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            planId: previewData.id,
+                            question,
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(await response.text());
+                        }
+
+                        toast({
+                          title: "Question Sent",
+                          description: "Your question has been sent to the AI coach.",
+                        });
+                      } catch (error) {
+                        console.error("Error asking question:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to send question. Please try again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                    onRequestChanges={async (changes) => {
+                      setIsSubmitting(true);
+                      try {
+                        // Implementation for changes handling
+                        const response = await fetch('/api/training-plans/modify', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            planId: previewData.id,
+                            changes,
+                          }),
+                        });
+
+                        if (!response.ok) {
+                          throw new Error(await response.text());
+                        }
+
+                        const updatedPlan = await response.json();
+                        setPreviewData(updatedPlan);
+
+                        toast({
+                          title: "Plan Updated",
+                          description: "Your training plan has been updated based on your feedback.",
+                        });
+                      } catch (error) {
+                        console.error("Error requesting changes:", error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to update plan. Please try again.",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsSubmitting(false);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-32">
+                <p className="text-sm text-muted-foreground">
+                  Please complete previous steps to preview your plan
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case "basicProfile":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Tell Us About Yourself</h2>
+            <p className="text-muted-foreground">
+              This information helps us create a more personalized training experience.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                                <FormItem>
+                  <FormLabel>Age</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={13}
+                      max={120}
+                      {...field}
+                      onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Must be at least 13 years old
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(GenderOptions).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {GenderLabels[value as keyof typeof GenderLabels]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferredDistanceUnit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Distance Unit</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your preferred unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(DistanceUnits).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value.charAt(0).toUpperCase() + value.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -873,7 +1333,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                       form.setValue("startDate", today.toISOString(), {
                         shouldValidate: true,
                         shouldDirty: true,
-                        shouldTouch: true
+                        shouldTouch: true,
                       });
                     }}
                   >
@@ -889,7 +1349,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                       form.setValue("startDate", nextMondayDate.toISOString(), {
                         shouldValidate: true,
                         shouldDirty: true,
-                        shouldTouch: true
+                        shouldTouch: true,
                       });
                     }}
                   >
@@ -905,7 +1365,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                       form.setValue("startDate", date.toISOString(), {
                         shouldValidate: true,
                         shouldDirty: true,
-                        shouldTouch: true
+                        shouldTouch: true,
                       });
                     }
                   }}
@@ -968,7 +1428,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             planId: previewData.id,
-                            question
+                            question,
                           }),
                         });
 
@@ -1000,7 +1460,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
                             planId: previewData.id,
-                            changes
+                            changes,
                           }),
                         });
 
