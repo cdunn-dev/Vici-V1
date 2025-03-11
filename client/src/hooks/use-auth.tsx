@@ -54,12 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Login failed");
+        throw new Error(data.error || "Login failed");
       }
 
-      return res.json();
+      return data;
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
-      // Validate using the schema first
       const result = registerUserSchema.safeParse(data);
       if (!result.success) {
         throw new Error(result.error.format()._errors.join(", "));
@@ -94,12 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
 
+      const responseData = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Registration failed");
+        throw new Error(responseData.error || "Registration failed");
       }
 
-      return res.json();
+      return responseData;
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -125,7 +124,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        throw new Error("Logout failed");
+        const data = await res.json();
+        throw new Error(data.error || "Logout failed");
       }
     },
     onSuccess: () => {
