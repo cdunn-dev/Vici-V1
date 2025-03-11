@@ -113,23 +113,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
     },
   });
 
-  // Reset slider states when form is reset
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "trainingPreferences.weeklyRunningDays") {
-        setRunningDaysValue(value.trainingPreferences?.weeklyRunningDays || 3);
-      }
-      if (name === "trainingPreferences.maxWeeklyMileage") {
-        setMileageValue(value.trainingPreferences?.maxWeeklyMileage || 15);
-      }
-      if (name === "trainingPreferences.weeklyWorkouts") {
-        setWorkoutsValue(value.trainingPreferences?.weeklyWorkouts || 1);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form.watch]);
-
   // Get visible steps and progress
   const visibleSteps = STEPS.filter((step) => !step.conditional || step.conditional(form.getValues()));
   const currentStep = visibleSteps[currentStepIndex];
@@ -311,6 +294,208 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
         ];
       default:
         return [];
+    }
+  };
+
+  // Add the renderStepContent function
+  const renderStepContent = (step: string) => {
+    switch (step) {
+      case "welcome":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Welcome to Training Plan Generator</h2>
+            <p className="text-muted-foreground">
+              Let's create a personalized training plan that matches your goals and preferences.
+            </p>
+          </div>
+        );
+
+      case "basicProfile":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="age"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Age</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(GenderOptions).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {GenderLabels[value as keyof typeof GenderLabels]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferredDistanceUnit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Distance Unit</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(DistanceUnits).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      case "goal":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="goal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Training Goal</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your goal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Race Goals</SelectLabel>
+                        <SelectItem value={TrainingGoals.FIRST_RACE}>First Race</SelectItem>
+                        <SelectItem value={TrainingGoals.PERSONAL_BEST}>Personal Best</SelectItem>
+                      </SelectGroup>
+                      <SelectGroup>
+                        <SelectLabel>General Goals</SelectLabel>
+                        <SelectItem value={TrainingGoals.GENERAL_FITNESS}>General Fitness</SelectItem>
+                        <SelectItem value={TrainingGoals.HEALTH_AND_FITNESS}>Health and Fitness</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      case "trainingPreferences":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="trainingPreferences.weeklyRunningDays"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weekly Running Days: {runningDaysValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[runningDaysValue]}
+                      min={1}
+                      max={7}
+                      step={1}
+                      onValueChange={(value) => {
+                        setRunningDaysValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.maxWeeklyMileage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Weekly Mileage: {mileageValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[mileageValue]}
+                      min={5}
+                      max={100}
+                      step={5}
+                      onValueChange={(value) => {
+                        setMileageValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.preferredLongRunDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Long Run Day</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select day" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(DaysOfWeek).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
