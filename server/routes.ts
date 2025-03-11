@@ -13,6 +13,7 @@ import path from "path";
 import { setupAuth } from "./auth";
 import { addWeeks } from "date-fns";
 
+
 // Configure multer for profile picture uploads
 const upload = multer({
   storage: multer.diskStorage({
@@ -195,65 +196,52 @@ export async function registerRoutes(app: Express) {
       await storage.archiveActiveTrainingPlans(userId);
 
       try {
-        // Ensure proper date parsing
+        // Handle dates properly
         const now = new Date();
-        let endDate: Date;
+        const startDate = now;
+        const endDate = req.body.targetRace?.date 
+          ? new Date(req.body.targetRace.date)
+          : addWeeks(startDate, 12);
 
-        if (req.body.targetRace?.date) {
-          const raceDate = new Date(req.body.targetRace.date);
-          if (isNaN(raceDate.getTime())) {
-            throw new Error("Invalid race date format");
-          }
-          endDate = raceDate;
-        } else {
-          endDate = addWeeks(now, 12);
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error("Invalid date format");
         }
 
-        // Format the training plan with proper date handling
+        // Ensure all dates are properly formatted as ISO strings
         const trainingPlan = {
           userId,
           name: `Training Plan - ${req.body.goal}`,
           goal: req.body.goal,
           goalDescription: req.body.goalDescription || "",
-          startDate: now.toISOString(),
+          startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-          weeklyMileage: req.body.weeklyMileage || req.body.trainingPreferences?.maxWeeklyMileage,
-          weeklyPlans: req.body.weeklyPlans.map((week: any) => ({
+          weeklyMileage: req.body.weeklyMileage,
+          weeklyPlans: req.body.weeklyPlans.map(week => ({
             ...week,
-            workouts: week.workouts.map((workout: any) => {
-              const workoutDate = new Date(workout.day);
-              if (isNaN(workoutDate.getTime())) {
-                throw new Error("Invalid workout date format");
-              }
-              return {
-                ...workout,
-                day: workoutDate.toISOString()
-              };
-            })
+            workouts: week.workouts.map(workout => ({
+              ...workout,
+              day: typeof workout.day === 'string' ? workout.day : 
+                   (workout.day instanceof Date ? workout.day.toISOString() : 
+                   new Date(workout.day).toISOString())
+            }))
           })),
           targetRace: req.body.targetRace ? {
             ...req.body.targetRace,
-            date: endDate.toISOString()
+            date: new Date(req.body.targetRace.date).toISOString()
           } : null,
           runningExperience: req.body.runningExperience,
           trainingPreferences: req.body.trainingPreferences,
           isActive: true,
         };
 
-        // Log the plan for debugging
         console.log("Creating training plan:", JSON.stringify(trainingPlan, null, 2));
-
-        // Create the plan
         const plan = await storage.createTrainingPlan(trainingPlan);
         console.log("Training plan created:", JSON.stringify(plan, null, 2));
 
         res.json(plan);
       } catch (dateError) {
         console.error("Date parsing error:", dateError);
-        return res.status(400).json({ 
-          error: "Invalid date format in request",
-          details: dateError instanceof Error ? dateError.message : "Unknown date error"
-        });
+        return res.status(400).json({ error: "Invalid date format in request" });
       }
     } catch (error) {
       console.error("Error generating training plan:", error);
