@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Update the training plan generation route
+  // Update the generate route to properly handle dates
   app.post("/api/training-plans/generate", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -214,7 +214,7 @@ export async function registerRoutes(app: Express) {
           goalDescription: req.body.goalDescription || "",
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
-          weeklyMileage: req.body.trainingPreferences.maxWeeklyMileage,
+          weeklyMileage: req.body.weeklyMileage,
           weeklyPlans: req.body.weeklyPlans.map(week => ({
             ...week,
             workouts: week.workouts.map(workout => ({

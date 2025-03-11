@@ -1,3 +1,4 @@
+// Program Overview component updated to only show one approve button
 import React, { useState } from "react";
 import { format } from "date-fns";
 import {
@@ -8,7 +9,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
@@ -128,7 +128,9 @@ export default function ProgramOverview({
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>{format(new Date(week.workouts[0].day), "MMM d")} - </span>
-                      <span>{format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}</span>
+                      <span>
+                        {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -136,7 +138,11 @@ export default function ProgramOverview({
                   <span className="text-sm font-medium">{week.totalMileage} miles</span>
                   <div className="w-32">
                     <Progress
-                      value={week.workouts.filter(w => w.completed).length / week.workouts.length * 100}
+                      value={
+                        (week.workouts.filter((w) => w.completed).length /
+                          week.workouts.length) *
+                        100
+                      }
                       className="h-2"
                     />
                   </div>
@@ -148,15 +154,17 @@ export default function ProgramOverview({
                 {week.workouts.map((workout, index) => (
                   <div
                     key={index}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-background rounded-lg border gap-3 cursor-pointer transition-colors ${
-                      selectedDate && new Date(workout.day).toDateString() === selectedDate.toDateString()
-                        ? 'border-primary'
-                        : 'hover:bg-accent/5'
+                    className={`flex items-center justify-between p-3 bg-background rounded-lg border gap-3 cursor-pointer transition-colors ${
+                      selectedDate &&
+                      new Date(workout.day).toDateString() ===
+                        selectedDate.toDateString()
+                        ? "border-primary"
+                        : "hover:bg-accent/5"
                     }`}
                     onClick={() => onSelectDay?.(new Date(workout.day))}
                   >
-                    <div className="flex items-start sm:items-center gap-3">
-                      <div className="flex items-center justify-center h-8 w-8 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-center h-8 w-8">
                         {workout.completed ? (
                           <div className="h-6 w-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
                             <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -165,32 +173,30 @@ export default function ProgramOverview({
                           <div className="h-6 w-6 rounded-full border-2 border-muted" />
                         )}
                       </div>
-                      <div className="min-w-0">
+                      <div>
                         <Badge
                           variant="outline"
-                          className={`mb-1 ${
-                            workout.type.toLowerCase().includes('easy')
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                              : workout.type.toLowerCase().includes('long')
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                              : workout.type.toLowerCase().includes('tempo')
-                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                          className={`${
+                            workout.type.toLowerCase().includes("easy")
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                              : workout.type.toLowerCase().includes("long")
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                              : workout.type.toLowerCase().includes("tempo")
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
                           }`}
                         >
                           {workout.type}
                         </Badge>
-                        <div>
-                          <div className="font-medium">
-                            {format(new Date(workout.day), "EEEE, MMM d")}
-                          </div>
-                          <div className="text-sm text-muted-foreground line-clamp-2 sm:line-clamp-1">
-                            {workout.description}
-                          </div>
+                        <div className="font-medium">
+                          {format(new Date(workout.day), "EEEE, MMM d")}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {workout.description}
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm font-medium pl-11 sm:pl-0">
+                    <div className="text-sm font-medium">
                       {workout.distance} miles
                     </div>
                   </div>
