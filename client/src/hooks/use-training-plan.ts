@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { 
+import {
   APIError,
   ErrorMessages,
   handleAPIResponse,
   showErrorToast,
-  validateRequired 
+  validateRequired
 } from "@/lib/error-utils";
 import {
   type TrainingPlan,
@@ -73,6 +73,7 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           throw new Error(ErrorMessages.UNAUTHORIZED);
         }
 
+        // Log the received plan data in detail
         console.log('Creating plan with data:', {
           goal: planData?.goal,
           goalLength: planData?.goal?.length,
@@ -80,7 +81,8 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           endDate: planData?.endDate,
           weeklyPlansCount: planData?.weeklyPlans?.length,
           planDataType: typeof planData,
-          planDataKeys: Object.keys(planData || {})
+          planDataKeys: Object.keys(planData || {}),
+          fullPlanData: JSON.stringify(planData, null, 2)
         });
 
         // Validate plan data before sending to API

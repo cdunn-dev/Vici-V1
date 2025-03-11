@@ -1,0 +1,29 @@
+While we're in unit testing mode, can we run unit tests on all of the following to identify issues/errors?
+
+Server-side:
+server/services/strava.ts:
+
+Test getStravaAuthUrl to ensure it generates the correct authentication URL with the appropriate parameters.
+Test exchangeStravaCode to ensure it correctly exchanges the authorization code for access and refresh tokens.
+Test refreshStravaToken to ensure it successfully refreshes expired tokens.
+Test syncStravaActivities to ensure it correctly fetches and stores Strava activities, handles existing activities, and updates the database accordingly.
+server/services/ai/openai.ts:
+Test makeRequest to ensure it correctly sends requests to the OpenAI API and handles responses and errors.
+Test generateTrainingPlan, analyzeWorkout, and generateAdjustments to ensure they construct the correct prompts and process the AI responses appropriately.
+server/services/training-plan-generator.ts:
+Test the functions responsible for generating training plans based on user preferences and AI responses.
+server/auth.ts:
+Test the authentication functions to ensure they correctly handle user login, registration, and session management.
+Client-side:
+client/src/components/training/plan-generator.tsx:
+Test the form validation logic to ensure it correctly handles user inputs and provides feedback.
+Test the interaction with the server-side API to ensure it sends the correct data and handles responses appropriately.
+client/src/components/training/plan-preview.tsx:
+Test the rendering of training plans based on data received from the server.
+Test the user interactions, such as editing workouts or weeks.
+client/src/pages/training.tsx:
+Test the overall functionality of the training page, including fetching and displaying training plans, handling user interactions, and managing state.
+Testing Frameworks:
+
+Jest: A popular JavaScript testing framework with built-in mocking and assertion capabilities.
+React Testing Library: A library for testing React components that encourages testing from the user's perspective.
