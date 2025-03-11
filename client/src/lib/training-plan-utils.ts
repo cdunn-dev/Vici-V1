@@ -164,83 +164,105 @@ export const formatDateForDisplay = (dateString: string, formatStr: string = "MM
  * @throws Error if validation fails
  */
 export const validatePlanData = (plan: TrainingPlan): void => {
-  // Log entire plan data for debugging
-  console.log('Validating plan data:', {
-    goal: plan?.goal,
-    goalLength: plan?.goal?.length,
-    hasWeeklyPlans: Array.isArray(plan?.weeklyPlans),
-    weeklyPlansLength: plan?.weeklyPlans?.length,
-    startDate: plan?.startDate,
-    endDate: plan?.endDate,
-  });
+    if (!plan || typeof plan !== 'object') {
+      console.error('Invalid plan data:', plan);
+      throw new Error("Invalid training plan data provided");
+    }
 
-  // Required fields validation
-  if (!plan?.goal || typeof plan.goal !== 'string' || plan.goal.trim() === "") {
-    console.error('Goal validation failed:', {
-      goalValue: plan?.goal,
+    // Log validation attempt with safe data
+    const safeLogData = {
+      goal: plan?.goal,
       goalType: typeof plan?.goal,
-      isTrimmedEmpty: plan?.goal?.trim() === ""
-    });
-    throw new Error("Training goal is required and cannot be empty");
-  }
+      goalLength: plan?.goal?.length,
+      hasWeeklyPlans: Array.isArray(plan?.weeklyPlans),
+      weeklyPlansLength: plan?.weeklyPlans?.length,
+      startDate: plan?.startDate,
+      endDate: plan?.endDate,
+    };
+    console.log('Validating plan data:', safeLogData);
 
-  if (!Array.isArray(plan?.weeklyPlans) || plan.weeklyPlans.length === 0) {
-    throw new Error("Weekly plans are required and must contain at least one week");
-  }
-
-  // Date validation with improved error handling using our date utilities
-  try {
-    if (!plan.startDate || !plan.endDate) {
-      throw new Error("Start date and end date are required");
+    // Required fields validation with detailed error logging
+    if (!plan.goal || typeof plan.goal !== 'string' || plan.goal.trim() === "") {
+      console.error('Goal validation failed:', {
+        goalValue: plan?.goal,
+        goalType: typeof plan?.goal,
+        isTrimmedEmpty: plan?.goal?.trim() === ""
+      });
+      throw new Error("Training goal is required and cannot be empty");
     }
 
-    if (!isValidDate(plan.startDate)) {
-      throw new Error(`Invalid start date format: ${plan.startDate}`);
+    if (!Array.isArray(plan.weeklyPlans) || plan.weeklyPlans.length === 0) {
+      console.error('Weekly plans validation failed:', {
+        isArray: Array.isArray(plan.weeklyPlans),
+        length: plan.weeklyPlans?.length
+      });
+      throw new Error("Weekly plans are required and must contain at least one week");
     }
 
-    if (!isValidDate(plan.endDate)) {
-      throw new Error(`Invalid end date format: ${plan.endDate}`);
-    }
-
-    const startDate = new Date(plan.startDate);
-    const endDate = new Date(plan.endDate);
-
-    if (endDate <= startDate) {
-      throw new Error("End date must be after start date");
-    }
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Invalid date format";
-    throw new Error(`Date validation error: ${errorMessage}`);
-  }
-
-  // Weekly plans validation with improved error handling
-  plan.weeklyPlans.forEach((week, weekIndex) => {
-    if (!Array.isArray(week.workouts) || week.workouts.length === 0) {
-      throw new Error(`Week ${weekIndex + 1} must have at least one workout`);
-    }
-
-    week.workouts.forEach((workout, workoutIndex) => {
-      if (!workout.day) {
-        throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
+    // Date validation with improved error handling
+    try {
+      if (!plan.startDate || !plan.endDate) {
+        throw new Error("Start date and end date are required");
       }
 
-      if (!workout.description || workout.description.trim() === "") {
-        throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a description`);
+      if (!isValidDate(plan.startDate)) {
+        throw new Error(`Invalid start date format: ${plan.startDate}`);
       }
 
-      if (!isValidDate(workout.day)) {
-        throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
+      if (!isValidDate(plan.endDate)) {
+        throw new Error(`Invalid end date format: ${plan.endDate}`);
       }
 
-      const workoutDate = new Date(workout.day);
       const startDate = new Date(plan.startDate);
-      if (workoutDate < startDate) {
-        throw new Error("Workout date cannot be before plan start date");
+      const endDate = new Date(plan.endDate);
+
+      if (endDate <= startDate) {
+        throw new Error("End date must be after start date");
+      }
+    } catch (err) {
+      console.error('Date validation failed:', err);
+      const errorMessage = err instanceof Error ? err.message : "Invalid date format";
+      throw new Error(`Date validation error: ${errorMessage}`);
+    }
+
+    // Weekly plans validation with improved error handling
+    plan.weeklyPlans.forEach((week, weekIndex) => {
+      if (!Array.isArray(week.workouts)) {
+        console.error(`Invalid workouts for week ${weekIndex + 1}:`, week);
+        throw new Error(`Week ${weekIndex + 1} has invalid workouts data`);
       }
 
-      if (workout.distance <= 0) {
-        throw new Error("Workout distance must be positive");
+      if (week.workouts.length === 0) {
+        throw new Error(`Week ${weekIndex + 1} must have at least one workout`);
       }
+
+      week.workouts.forEach((workout, workoutIndex) => {
+        if (!workout.day) {
+          throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
+        }
+
+        if (!workout.description || workout.description.trim() === "") {
+          throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a description`);
+        }
+
+        if (!isValidDate(workout.day)) {
+          console.error(`Invalid workout date:`, {
+            week: weekIndex + 1,
+            workout: workoutIndex + 1,
+            date: workout.day
+          });
+          throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
+        }
+
+        const workoutDate = new Date(workout.day);
+        const startDate = new Date(plan.startDate);
+        if (workoutDate < startDate) {
+          throw new Error("Workout date cannot be before plan start date");
+        }
+
+        if (workout.distance <= 0) {
+          throw new Error("Workout distance must be positive");
+        }
+      });
     });
-  });
-};
+  };
