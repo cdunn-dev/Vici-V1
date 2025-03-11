@@ -1,5 +1,5 @@
 import React from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Accordion,
   AccordionContent,
@@ -65,6 +65,16 @@ export default function ProgramOverview({
   const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
   const weeklyAverage = Math.round(totalMileage / totalWeeks);
 
+  // Helper function to safely format dates
+  const formatDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "MMM d");
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Invalid date";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card className="shadow-md border-primary/20">
@@ -77,7 +87,7 @@ export default function ProgramOverview({
                 {plan.goal}
                 {plan.targetRace && (
                   <span className="block mt-1">
-                    {plan.targetRace.distance} - {format(new Date(plan.targetRace.date), "MMMM d, yyyy")}
+                    {plan.targetRace.distance} - {format(parseISO(plan.targetRace.date), "MMMM d, yyyy")}
                   </span>
                 )}
               </p>
@@ -121,7 +131,7 @@ export default function ProgramOverview({
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {format(new Date(week.workouts[0].day), "MMM d")} - {format(new Date(week.workouts[week.workouts.length - 1].day), "MMM d")}
+                    {formatDate(week.workouts[0].day)} - {formatDate(week.workouts[week.workouts.length - 1].day)}
                   </div>
                 </div>
                 <div className="text-sm font-medium">{week.totalMileage} miles</div>
@@ -158,7 +168,7 @@ export default function ProgramOverview({
                           {workout.type}
                         </Badge>
                         <div className="font-medium">
-                          {format(new Date(workout.day), "EEEE, MMM d")}
+                          {format(parseISO(workout.day), "EEEE, MMM d")}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {workout.description}
