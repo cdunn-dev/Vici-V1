@@ -30,7 +30,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  emailVerified: boolean("email_verified").default(true),
+  emailVerified: boolean("email_verified").default(false),
   verificationToken: text("verification_token"),
   profilePicture: text("profile_picture"),
   gender: text("gender"),

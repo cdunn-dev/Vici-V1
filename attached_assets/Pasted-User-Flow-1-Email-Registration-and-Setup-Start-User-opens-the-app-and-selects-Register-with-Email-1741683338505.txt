@@ -1,0 +1,41 @@
+User Flow 1: Email Registration and Setup
+Start: User opens the app and selects "Register with Email."
+Registration: User enters email, password, and confirms password, then clicks "Register."
+Email Verification: User is directed to the Email Verification Screen.
+Email Check: User checks their email and clicks the verification link.
+Strava Connection: User is immediately prompted to connect their Strava account.
+Profile Setup: User is directed to the Profile setup screen to enter their profile information.
+Training Plan Prompt: User is prompted to create their first training plan.
+Training Plan Creation: User creates a training plan (as per User Flow 1 from the previous response).
+Day View: user is taken to the day view of their training plan.
+End: User is logged in and ready to train.
+User Flow 2: Strava Registration/Login
+Start: User opens the app and selects "Register with Strava" or "Login with Strava."
+Strava Authorization: User is redirected to Strava to authorize the app.
+App Authorization: Strava redirects the user back to the app.
+New User (Registration): If the user is new, they are directed to the Profile setup screen.
+Existing User (Login): If the user exists, they are logged in.
+Training Plan Check: if the user has a plan, they are taken to the day view. if they do not, they are prompted to create a new plan.
+End: User is logged in and ready to train.
+User Flow 3: Email Login
+Start: User opens the app and selects "Login with Email."
+Login: User enters email and password, then clicks "Login."
+Training Plan Check: if the user has a plan, they are taken to the day view. if they do not, they are prompted to create a new plan.
+End: User is logged in and ready to train.
+User Flow 4: Forgot Password
+Start: User opens the app and clicks "Forgot Password?"
+Email Input: User enters their email address.
+Reset Link Sent: User clicks "Send Reset Link."
+Email Check: User checks their email and clicks the reset link.
+Password Reset: User is redirected to a page to enter and confirm a new password.
+Login: User is prompted to login with their new password.
+Training Plan Check: if the user has a plan, they are taken to the day view. if they do not, they are prompted to create a new plan.
+End: User is logged in and ready to train.
+Key Considerations:
+Security: Ensure secure password storage and transmission.
+User Experience: Make the login/registration process smooth and intuitive.
+Error Handling: Provide clear error messages for invalid input.
+Consistency: Maintain a consistent design and user experience throughout the app.
+Strava Integration: Make the Strava connection process seamless.
+Email Verification: Ensure reliable email delivery and verification.
+Onboarding: use the onboarding process to ensure that the user has a great first experience.
