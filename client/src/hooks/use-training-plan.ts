@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { 
   APIError,
   ErrorMessages,
@@ -126,12 +127,11 @@ const preparePlanData = (planData: TrainingPlan, userId: number): TrainingPlan =
 };
 
 export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTrainingPlanReturn {
+  const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [previewPlan, setPreviewPlan] = useState<TrainingPlan | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const {toast} = useToast();
-
 
   // Query for fetching the current training plan
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlan | null>({
