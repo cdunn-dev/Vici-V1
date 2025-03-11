@@ -73,11 +73,19 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           throw new Error(ErrorMessages.UNAUTHORIZED);
         }
 
+        console.log('Creating plan with data:', {
+          goal: planData.goal,
+          goalLength: planData?.goal?.length,
+          startDate: planData.startDate,
+          endDate: planData.endDate,
+          weeklyPlansCount: planData.weeklyPlans?.length
+        });
+
         // Validate plan data before sending to API
         validatePlanData(planData);
 
         const cleanPlan = preparePlanData(planData, user.id);
-        console.log('Creating training plan:', JSON.stringify(cleanPlan, null, 2));
+        console.log('Prepared plan data:', JSON.stringify(cleanPlan, null, 2));
 
         const response = await fetch(`/api/training-plans/generate`, {
           method: 'POST',
