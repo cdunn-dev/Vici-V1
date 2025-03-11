@@ -141,6 +141,10 @@ export const getWorkoutBadgeStyle = (workoutType: string): string => {
  * @throws Error if date is invalid
  */
 export const formatDateForApi = (dateString: string): string => {
+  if (!dateString || typeof dateString !== 'string') {
+    throw new Error(ErrorMessages.INVALID_DATE);
+  }
+
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
@@ -160,8 +164,16 @@ export const formatDateForApi = (dateString: string): string => {
  * @returns Formatted date string for display
  */
 export const formatDateForDisplay = (dateString: string, formatStr: string = "MMM d"): string => {
+  if (!dateString || typeof dateString !== 'string') {
+    return "Invalid date";
+  }
+
   try {
-    return format(parseISO(dateString), formatStr);
+    const parsedDate = parseISO(dateString);
+    if (isNaN(parsedDate.getTime())) {
+      return "Invalid date";
+    }
+    return format(parsedDate, formatStr);
   } catch (error) {
     console.error("Date display formatting error:", error);
     return "Invalid date";
@@ -183,19 +195,32 @@ export const validatePlanData = (plan: TrainingPlan): void => {
     throw new Error("Weekly plans are required and must contain at least one week");
   }
 
-  // Date validation
-  const startDate = new Date(plan.startDate);
-  const endDate = new Date(plan.endDate);
+  // Date validation with improved error messages
+  try {
+    if (!plan.startDate || !plan.endDate) {
+      throw new Error("Start date and end date are required");
+    }
 
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    throw new Error("Invalid start or end date format");
+    const startDate = new Date(plan.startDate);
+    const endDate = new Date(plan.endDate);
+
+    if (isNaN(startDate.getTime())) {
+      throw new Error(`Invalid start date format: ${plan.startDate}`);
+    }
+
+    if (isNaN(endDate.getTime())) {
+      throw new Error(`Invalid end date format: ${plan.endDate}`);
+    }
+
+    if (endDate <= startDate) {
+      throw new Error("End date must be after start date");
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Invalid date format";
+    throw new Error(`Date validation error: ${errorMessage}`);
   }
 
-  if (endDate <= startDate) {
-    throw new Error("End date must be after start date");
-  }
-
-  // Weekly plans validation
+  // Weekly plans validation with improved error handling
   plan.weeklyPlans.forEach((week, weekIndex) => {
     if (!Array.isArray(week.workouts) || week.workouts.length === 0) {
       throw new Error(`Week ${weekIndex + 1} must have at least one workout`);
@@ -206,9 +231,14 @@ export const validatePlanData = (plan: TrainingPlan): void => {
         throw new Error(`Workout ${workoutIndex + 1} in week ${weekIndex + 1} is missing a date`);
       }
 
-      const workoutDate = new Date(workout.day);
-      if (isNaN(workoutDate.getTime())) {
-        throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}`);
+      try {
+        const workoutDate = new Date(workout.day);
+        if (isNaN(workoutDate.getTime())) {
+          throw new Error(`Invalid date format for workout ${workoutIndex + 1} in week ${weekIndex + 1}: ${workout.day}`);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Invalid date format";
+        throw new Error(`Invalid workout date: ${errorMessage}`);
       }
     });
   });
