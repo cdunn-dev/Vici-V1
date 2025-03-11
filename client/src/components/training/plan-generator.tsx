@@ -967,38 +967,87 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
+  const onSubmit = (data: PlanGeneratorFormData) => {
+    handleNext();
+  };
+
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button className="gap-2" onClick={() => {
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="lg" className="w-full md:w-auto" onClick={() => {
             setCurrentStepIndex(0);
             form.reset();
             setPreviewData(null);
           }}>
-            <Wand2 className="h-4 w-4" />
-            {existingPlan ? "Update Training Plan" : "Create Training Plan"}
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {currentStep?.id === "welcome"
-                ? "Create Your Personalised Training Plan"
-                : (existingPlan ? "Update Training Plan" : "Create Training Plan")}
-            </DialogTitle>
-            <DialogDescription>
-              {currentStep && currentStep.id !== "welcome"
-                ? `Step ${currentVisibleStepIndex + 1} of ${visibleSteps.length}: ${currentStep.label}`
-                : "Let our AI build a plan based on your running history and goals"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-6">
-            {renderStepContent(currentStep?.id || "")}
+          <Wand2 className="mr-2 h-4 w-4" />
+          Create Training Plan
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create Your Training Plan</DialogTitle>
+          <DialogDescription>
+            Let our AI build a plan based on your running history and goals
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-4">
+          <div className="mb-8">
+            <Progress value={progress} className="h-2" />
+            <p className="text-sm text-muted-foreground mt-2">
+              Step {currentStepIndex + 1} of {visibleSteps.length}
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {renderStepContent(currentStep.id)}
+
+              <div className="flex justify-between pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBack}
+                  disabled={currentStepIndex === 0 || isSubmitting}
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+
+                {currentStepIndex === visibleSteps.length - 1 ? (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Plan...
+                      </>
+                    ) : (
+                      <>
+                        Save Plan
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={isSubmitting}
+                  >
+                    {currentStep.id === "stravaConnect" ? "Skip" : "Next"}
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
