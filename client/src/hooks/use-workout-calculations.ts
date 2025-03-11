@@ -2,17 +2,29 @@ import { useMemo } from "react";
 import { isSameDay, startOfWeek, endOfWeek } from "date-fns";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 
+/**
+ * Hook for calculating workout-related statistics and retrieving relevant workout data
+ * based on the provided training plan and selected date.
+ * 
+ * @param trainingPlan - The user's current training plan with weekly workout details
+ * @param selectedDate - The currently selected date in the calendar view
+ * @returns An object containing:
+ *  - currentWeek: The week that contains the current date
+ *  - selectedWeek: The week that contains the selected date
+ *  - selectedDayWorkout: The workout scheduled for the selected date
+ *  - stats: Object containing training statistics (completed miles, weeks, progress)
+ */
 export function useWorkoutCalculations(
   trainingPlan: TrainingPlanWithWeeklyPlans | null | undefined,
   selectedDate: Date
 ) {
   const currentWeek = useMemo(() => {
     if (!trainingPlan?.weeklyPlans) return null;
-    
+
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-    
+
     return trainingPlan.weeklyPlans.find(week => {
       const workoutDates = week.workouts.map(w => new Date(w.day));
       const firstDay = workoutDates[0];
@@ -53,7 +65,7 @@ export function useWorkoutCalculations(
     trainingPlan.weeklyPlans.forEach(week => {
       const lastWorkoutOfWeek = [...week.workouts]
         .sort((a, b) => new Date(b.day).getTime() - new Date(a.day).getTime())[0];
-      
+
       if (lastWorkoutOfWeek && new Date(lastWorkoutOfWeek.day) < new Date()) {
         completedWeeks++;
       }
