@@ -7,13 +7,14 @@ import {
   FitnessLevels,
   DaysOfWeek,
   CoachingStyles,
+  GenderOptions,
 } from "./plan-generator-constants";
 
 // Basic user profile schema
 const userProfileSchema = z.object({
   age: z.number().min(13, "Must be at least 13 years old").max(120, "Invalid age"),
-  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]),
-  preferredDistanceUnit: z.enum(["miles", "kilometers"]).default("miles"),
+  gender: z.enum(Object.values(GenderOptions) as [string, ...string[]]),
+  preferredDistanceUnit: z.enum(Object.values(DistanceUnits) as [string, ...string[]]).default("miles"),
   runningExperience: z.object({
     level: z.enum(Object.values(ExperienceLevels) as [string, ...string[]]),
     fitnessLevel: z.enum(Object.values(FitnessLevels) as [string, ...string[]]),
@@ -60,24 +61,23 @@ const raceTargetSchema = z.object({
   goalTime: z.string().optional(),
 });
 
-// Base plan generator schema
+// Base schema for all plan types
 const basePlanSchema = z.object({
-  goal: z.enum(Object.values(TrainingGoals) as [string, ...string[]]),
   startDate: dateStringSchema,
   ...userProfileSchema.shape,
   trainingPreferences: trainingPreferencesSchema,
 });
 
-// Combined schema with conditional validation
+// Discriminated union for different plan types
 export const planGeneratorSchema = z.discriminatedUnion("goal", [
-  // Race-specific goals
+  // Race preparation goals
   basePlanSchema.extend({
-    goal: z.literal(TrainingGoals.FIRST_RACE).or(z.literal(TrainingGoals.PERSONAL_BEST)),
+    goal: z.enum([TrainingGoals.FIRST_RACE, TrainingGoals.PERSONAL_BEST] as const),
     targetRace: raceTargetSchema,
   }),
   // General fitness goals
   basePlanSchema.extend({
-    goal: z.literal(TrainingGoals.GENERAL_FITNESS).or(z.literal(TrainingGoals.HEALTH_AND_FITNESS)),
+    goal: z.enum([TrainingGoals.GENERAL_FITNESS, TrainingGoals.HEALTH_AND_FITNESS] as const),
     targetRace: z.undefined(),
   }),
 ]);
