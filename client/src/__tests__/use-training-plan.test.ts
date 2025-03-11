@@ -25,6 +25,92 @@ describe('useTrainingPlan', () => {
     vi.clearAllMocks();
   });
 
+  describe('Plan Creation and Preview', () => {
+    it('updates preview state after successful plan creation', async () => {
+      global.fetch = vi.fn().mockImplementation(() =>
+        mockApiResponse({ ...validTrainingPlan, id: 1 })
+      );
+
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      // Initial state check
+      expect(result.current.previewPlan).toBeNull();
+      expect(result.current.showPreview).toBeFalsy();
+
+      // Create plan
+      await act(async () => {
+        await result.current.createPlan(validTrainingPlan);
+      });
+
+      // Check that preview state is updated
+      expect(result.current.previewPlan).toEqual(expect.objectContaining({
+        id: 1,
+        goal: validTrainingPlan.goal
+      }));
+      expect(result.current.showPreview).toBeTruthy();
+    });
+
+    it('handles creation errors and updates state accordingly', async () => {
+      global.fetch = vi.fn().mockImplementation(() =>
+        mockApiError(500, 'Failed to generate plan')
+      );
+
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      // Initial state check
+      expect(result.current.isCreating).toBeFalsy();
+
+      // Attempt to create plan
+      await act(async () => {
+        try {
+          await result.current.createPlan(validTrainingPlan);
+        } catch (error) {
+          // Error expected
+        }
+      });
+
+      // Check error state
+      expect(result.current.isCreating).toBeFalsy();
+      expect(result.current.previewPlan).toBeNull();
+      expect(console.error).toHaveBeenCalled();
+    });
+
+    it('properly manages loading state during plan creation', async () => {
+      let resolvePromise: (value: any) => void;
+      const mockResponse = new Promise((resolve) => {
+        resolvePromise = resolve;
+      });
+
+      global.fetch = vi.fn().mockImplementation(() => mockResponse);
+
+      const { result } = renderHook(() => useTrainingPlan(), {
+        wrapper: createAuthWrapper(mockUser)
+      });
+
+      // Start plan creation
+      const createPromise = act(async () => {
+        result.current.createPlan(validTrainingPlan);
+      });
+
+      // Check loading state
+      expect(result.current.isCreating).toBeTruthy();
+
+      // Resolve the API call
+      await act(async () => {
+        resolvePromise!({ ok: true, json: () => ({ ...validTrainingPlan, id: 1 }) });
+      });
+
+      await createPromise;
+
+      // Check final state
+      expect(result.current.isCreating).toBeFalsy();
+    });
+  });
+
   describe('Plan Creation', () => {
     it('validates plan data before making API request', async () => {
       const { result } = renderHook(() => useTrainingPlan(), {

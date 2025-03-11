@@ -94,7 +94,11 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
           credentials: 'include',
         });
 
-        return handleAPIResponse(response);
+        const data = await handleAPIResponse(response);
+        // Set preview and show it after successful generation
+        setPreviewPlan(data);
+        setShowPreview(true);
+        return data;
       } catch (error) {
         console.error("Failed to create training plan:", error);
         throw error;
@@ -102,15 +106,15 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
-      setShowPreview(false);
-      setPreviewPlan(null);
       options.onPlanCreated?.();
       toast({
         title: "Success",
-        description: "Training plan has been created",
+        description: "Training plan preview is ready for review",
       });
     },
     onError: (error: unknown) => {
+      setPreviewPlan(null);
+      setShowPreview(false);
       showErrorToast(error);
     },
   });
