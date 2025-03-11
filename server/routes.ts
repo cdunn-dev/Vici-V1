@@ -252,6 +252,10 @@ export async function registerRoutes(app: Express) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
+      if (!req.user?.id) {
+        return res.status(400).json({ error: "User ID not found" });
+      }
+
       console.log("Generating Strava auth URL for user:", req.user.id);
       const authUrl = getStravaAuthUrl(req.user.id.toString());
       console.log("Generated auth URL:", authUrl);
