@@ -1,5 +1,4 @@
 import React from "react";
-import { format, parseISO } from "date-fns";
 import {
   Accordion,
   AccordionContent,
@@ -10,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Loader2, ThumbsUp } from "lucide-react";
+import { formatDate } from "@/lib/date-utils";
 
-// Define strict types for the component props
+// Types
 interface Workout {
   day: string;
   type: string;
@@ -62,16 +62,7 @@ interface ProgramOverviewProps {
   isSubmitting?: boolean;
 }
 
-// Helper functions for date formatting and calculations
-const formatDate = (dateString: string, formatStr: string = "MMM d"): string => {
-  try {
-    return format(parseISO(dateString), formatStr);
-  } catch (error) {
-    console.error("Date formatting error:", error);
-    return "Invalid date";
-  }
-};
-
+// Helper functions
 const calculateMetrics = (weeklyPlans: WeeklyPlan[]) => {
   const totalWeeks = weeklyPlans.length;
   const totalMileage = weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
@@ -80,6 +71,17 @@ const calculateMetrics = (weeklyPlans: WeeklyPlan[]) => {
   return { totalWeeks, totalMileage, weeklyAverage };
 };
 
+const getWorkoutBadgeStyle = (workoutType: string): string => {
+  const type = workoutType.toLowerCase();
+  if (type.includes("easy")) {
+    return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+  } else if (type.includes("long")) {
+    return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+  }
+  return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+};
+
+// Component
 export default function ProgramOverview({
   plan,
   onApprove,
@@ -169,13 +171,7 @@ export default function ProgramOverview({
                       <div>
                         <Badge
                           variant="outline"
-                          className={`${
-                            workout.type.toLowerCase().includes("easy")
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                              : workout.type.toLowerCase().includes("long")
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                              : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-                          }`}
+                          className={getWorkoutBadgeStyle(workout.type)}
                         >
                           {workout.type}
                         </Badge>
