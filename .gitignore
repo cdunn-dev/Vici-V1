@@ -1,6 +1,45 @@
+# Dependencies
 node_modules
 dist
 .DS_Store
+
+# Build files
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Build output
+build/
+dist/
+out/
+
+# Cache
+.cache/
+.eslintcache
+.npm
