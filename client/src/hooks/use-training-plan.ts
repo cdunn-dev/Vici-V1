@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { 
+  APIError,
+  ErrorMessages,
+  handleAPIResponse,
+  showErrorToast,
+  validateRequired 
+} from "@/lib/error-utils";
 
 // Types for the training plan data structures
 interface Workout {
@@ -120,26 +126,28 @@ const preparePlanData = (planData: TrainingPlan, userId: number): TrainingPlan =
 };
 
 export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTrainingPlanReturn {
-  const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [previewPlan, setPreviewPlan] = useState<TrainingPlan | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const {toast} = useToast();
+
 
   // Query for fetching the current training plan
   const { data: trainingPlan, isLoading } = useQuery<TrainingPlan | null>({
     queryKey: ["/api/training-plans", { userId: user?.id }],
     queryFn: async () => {
       try {
-        const response = await fetch(`/api/training-plans?userId=${user?.id}&active=true`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch training plan: ${response.statusText}`);
-        }
-        const plans = await response.json();
-        return plans.find((p: TrainingPlan) => p.is_active) ||
-          (plans.length > 0 ? plans[plans.length - 1] : null);
+        validateRequired(user?.id, ErrorMessages.UNAUTHORIZED);
+
+        const response = await fetch(`/api/training-plans?userId=${user.id}&active=true`);
+        const data = await handleAPIResponse(response);
+
+        return data.find((p: TrainingPlan) => p.is_active) ||
+          (data.length > 0 ? data[data.length - 1] : null);
       } catch (error) {
-        console.error("Training plan fetch error:", error);
+        console.error("Failed to fetch training plan:", error);
+        showErrorToast(error);
         throw error;
       }
     },
@@ -149,28 +157,24 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
   // Mutation for creating a new training plan
   const createPlanMutation = useMutation({
     mutationFn: async (planData: TrainingPlan) => {
-      if (!user?.id) {
-        throw new Error("Must be logged in to create a plan");
+      try {
+        validateRequired(user?.id, ErrorMessages.UNAUTHORIZED);
+
+        const cleanPlan = preparePlanData(planData, user.id);
+        console.log('Creating training plan:', JSON.stringify(cleanPlan, null, 2));
+
+        const response = await fetch(`/api/training-plans/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cleanPlan),
+          credentials: 'include',
+        });
+
+        return handleAPIResponse(response);
+      } catch (error) {
+        console.error("Failed to create training plan:", error);
+        throw error;
       }
-
-      const cleanPlan = preparePlanData(planData, user.id);
-      console.log('Sending plan data:', JSON.stringify(cleanPlan, null, 2));
-
-      const response = await fetch(`/api/training-plans/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cleanPlan),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to generate plan");
-      }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
@@ -182,36 +186,26 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         description: "Training plan has been created",
       });
     },
-    onError: (error: Error) => {
-      console.error('Plan creation error:', error);
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: unknown) => {
+      showErrorToast(error);
     },
   });
 
   // Mutation for adjusting an existing plan
   const adjustPlanMutation = useMutation({
     mutationFn: async ({ feedback, plan }: { feedback: string; plan: TrainingPlan }) => {
-      const response = await fetch(`/api/training-plans/adjust`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          feedback,
-          currentPlan: plan,
-        }),
-      });
+      try {
+        const response = await fetch(`/api/training-plans/adjust`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ feedback, currentPlan: plan }),
+        });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.details || data.error || 'Failed to adjust plan');
+        return handleAPIResponse(response);
+      } catch (error) {
+        console.error("Failed to adjust training plan:", error);
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: (data) => {
       setPreviewPlan(data);
@@ -220,12 +214,8 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         description: "Your training plan has been updated based on your feedback.",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: unknown) => {
+      showErrorToast(error);
     },
   });
 
@@ -240,22 +230,21 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
       weekId: number; 
       workouts: Workout[];
     }) => {
-      const response = await fetch(
-        `/api/training-plans/${planId}/weeks/${weekId}/reorder`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ workouts }),
-        }
-      );
+      try {
+        const response = await fetch(
+          `/api/training-plans/${planId}/weeks/${weekId}/reorder`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ workouts }),
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error('Failed to reorder workouts');
+        return handleAPIResponse(response);
+      } catch (error) {
+        console.error("Failed to reorder workouts:", error);
+        throw error;
       }
-
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
@@ -264,12 +253,8 @@ export function useTrainingPlan(options: UseTrainingPlanOptions = {}): UseTraini
         description: "Workout schedule updated successfully",
       });
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+    onError: (error: unknown) => {
+      showErrorToast(error);
     },
   });
 
