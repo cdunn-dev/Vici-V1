@@ -2,15 +2,23 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    let errorMessage = `${res.status}: ${res.statusText}`;
     try {
-      // Try to parse as JSON first
-      const data = await res.json();
-      throw new Error(data.error || `${res.status}: ${res.statusText}`);
+      // Clone response before reading
+      const resClone = res.clone();
+      const data = await resClone.json();
+      if (data.error) {
+        errorMessage = data.error;
+      }
     } catch (e) {
-      // If JSON parsing fails, use text content
-      const text = await res.text();
-      throw new Error(`${res.status}: ${text || res.statusText}`);
+      // If JSON parsing fails, try to get the text content
+      const resClone = res.clone();
+      const text = await resClone.text();
+      if (text) {
+        errorMessage = text;
+      }
     }
+    throw new Error(errorMessage);
   }
 }
 
@@ -27,9 +35,7 @@ export async function apiRequest(
       credentials: "include",
     });
 
-    // Clone the response before checking it, so we can still use it later
-    const resClone = res.clone();
-    await throwIfResNotOk(resClone);
+    await throwIfResNotOk(res);
     return res;
   } catch (error) {
     // Ensure we always throw an Error object with a message
@@ -54,9 +60,7 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    // Clone the response before checking it
-    const resClone = res.clone();
-    await throwIfResNotOk(resClone);
+    await throwIfResNotOk(res);
     return await res.json();
   };
 
