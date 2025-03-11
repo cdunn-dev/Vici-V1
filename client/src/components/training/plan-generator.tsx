@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { addWeeks } from "date-fns";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { TimeInput } from "./time-input";
 import { planGeneratorSchema } from "./plan-generator-schema";
@@ -32,6 +35,7 @@ import {
   GenderOptions,
   GenderLabels,
   DistanceUnits,
+  TrainingGoals,
 } from "./plan-generator-constants";
 import * as z from "zod";
 
@@ -42,7 +46,7 @@ interface PlanGeneratorProps {
   onPreview: (planDetails: TrainingPlanWithWeeklyPlans) => void;
 }
 
-function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
+export default function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
   const [open, setOpen] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,8 +63,8 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
       gender: undefined,
       preferredDistanceUnit: "miles",
       runningExperience: {
-        level: "beginner",
-        fitnessLevel: "building-base"
+        level: undefined,
+        fitnessLevel: undefined
       },
       trainingPreferences: {
         weeklyRunningDays: 3,
@@ -138,7 +142,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     {
       id: "raceDetails",
       label: "Race Details",
-      conditional: (values: PlanGeneratorFormData) => values.goal === "Training for a Race",
+      conditional: (values: PlanGeneratorFormData) => values.goal === TrainingGoals.RACE_TRAINING,
     },
     { id: "trainingPreferences", label: "Training Preferences" },
   ];
@@ -176,6 +180,33 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
             <p className="text-muted-foreground">
               Let's create a personalized training plan that matches your goals and preferences.
             </p>
+          </div>
+        );
+
+      case "goal":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="goal"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Training Goal</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your goal" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={TrainingGoals.RACE_TRAINING}>Training for a Race</SelectItem>
+                      <SelectItem value={TrainingGoals.GENERAL_FITNESS}>Improve General Health & Fitness</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         );
 
@@ -306,33 +337,6 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
                   <FormDescription>
                     {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        );
-
-      case "goal":
-        return (
-          <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="goal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Training Goal</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your goal" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Training for a Race">Training for a Race</SelectItem>
-                      <SelectItem value="Improve General Health & Fitness">Improve General Health & Fitness</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -619,7 +623,7 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
               {renderStepContent()}
             </ScrollArea>
 
-            <div className="flex justify-between items-center pt-4 mt-4 border-t bg-background">
+            <div className="sticky bottom-0 flex justify-between items-center pt-4 mt-4 border-t bg-background">
               <Button
                 type="button"
                 variant="outline"
@@ -646,5 +650,3 @@ function PlanGenerator({ existingPlan, onPreview }: PlanGeneratorProps) {
     </Dialog>
   );
 }
-
-export default PlanGenerator;
