@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { setupVite, serveStatic } from "./vite";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 
@@ -36,7 +36,7 @@ app.use((req, res, next) => {
     if (res.statusCode >= 400) {
       console.error(`[Error] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
     } else if (path.startsWith("/api")) {
-      log(`[API] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
+      console.log(`[API] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
     }
   });
 
@@ -44,31 +44,6 @@ app.use((req, res, next) => {
 });
 console.log("[Startup] Request logging middleware configured");
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-async function ensureDefaultUser() {
-  try {
-    console.log("[Startup] Checking for default user");
-    const user = await storage.getUser(1);
-    if (!user) {
-      console.log("[Startup] Creating default user...");
-      await storage.createUser({
-        email: "default@example.com",
-        password: "password",
-        connectedApps: [],
-        stravaTokens: null
-      });
-      console.log("[Startup] Default user created successfully");
-    } else {
-      console.log("[Startup] Default user already exists");
-    }
-  } catch (error) {
-    console.error("[Startup] Error ensuring default user:", error);
-  }
-}
 
 (async () => {
   try {
@@ -89,9 +64,6 @@ async function ensureDefaultUser() {
       res.status(status).json({ error: message });
     });
 
-    // Ensure we have a default user
-    await ensureDefaultUser();
-
     console.log("[Startup] Setting up Vite/Static serving");
     if (app.get("env") === "development") {
       await setupVite(app, server);
@@ -99,7 +71,7 @@ async function ensureDefaultUser() {
       serveStatic(app);
     }
 
-    const port = 5000;
+    const port = process.env.PORT || 5000;
     server.listen({
       port,
       host: "0.0.0.0",

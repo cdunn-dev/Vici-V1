@@ -3,13 +3,15 @@ import { createServer } from "http";
 import fetch from "node-fetch";
 import { storage } from "./storage";
 import { generateTrainingPlan } from "./services/training-plan-generator";
-import { userProfileUpdateSchema } from "@shared/schema";
+import { userProfileUpdateSchema, registerUserSchema } from "@shared/schema";
 import { getStravaAuthUrl, exchangeStravaCode, syncStravaActivities } from "./services/strava";
 import { db } from "./db";
 import { desc, eq } from "drizzle-orm";
 import { stravaActivities, workouts } from "@shared/schema";
 import multer from "multer";
 import path from "path";
+import { hashPassword } from "./auth";
+import passport from 'passport'; //Import passport
 
 // Configure multer for profile picture uploads
 const upload = multer({
@@ -33,6 +35,72 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express) {
+  // Authentication routes
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      if (!user) {
+        return res.status(401).json({ error: info?.message || "Invalid credentials" });
+      }
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error("Session error:", err);
+          return res.status(500).json({ error: "Failed to establish session" });
+        }
+        return res.json(user);
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/register", async (req, res) => {
+    try {
+      const existingUser = await storage.getUserByEmail(req.body.email);
+      if (existingUser) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      const result = registerUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.format()._errors.join(", ") });
+      }
+
+      const hashedPassword = await hashPassword(req.body.password);
+      const user = await storage.createUser({
+        ...result.data,
+        password: hashedPassword,
+        emailVerified: false,
+        verificationToken: null,
+        connectedApps: [],
+        stravaTokens: null,
+      });
+
+      // Log the user in after registration
+      req.logIn(user, (err) => {
+        if (err) {
+          console.error("Auto-login error:", err);
+          return res.status(500).json({ error: "Failed to establish session" });
+        }
+        return res.status(201).json(user);
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ error: "Failed to logout" });
+      }
+      res.json({ success: true });
+    });
+  });
+
   // Get current user
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) {
@@ -282,36 +350,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const existingUser = await storage.getUserByEmail(req.body.email);
-      if (existingUser) {
-        return res.status(400).json({ error: "Email already registered" });
-      }
-
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res.status(400).json({ error: result.error.format()._errors.join(", ") });
-      }
-
-      const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
-        emailVerified: false,
-        verificationToken: null,
-        connectedApps: [],
-        stravaTokens: null,
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(user);
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ error: "Failed to register user" });
-    }
-  });
 
   // Update user profile
   app.patch("/api/users/:id", async (req, res) => {
