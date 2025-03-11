@@ -15,17 +15,13 @@ const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
 
 // Get the correct domain based on environment
 function getAppDomain() {
-  // Check for REPL_SLUG and REPL_OWNER env variables which are present in Replit environment
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-    return `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
-
-  // Default to localhost for local development
-  return "localhost:5000";
+  return "http://localhost:5000";
 }
 
-// Use hardcoded Replit domain for the callback
-const REDIRECT_URI = `https://b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev/api/auth/strava/callback`;
+const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
 // Log configuration details for debugging
 console.log("\nStrava Configuration:");

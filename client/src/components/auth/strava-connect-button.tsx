@@ -12,29 +12,16 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
 
   const handleConnect = async () => {
     try {
-      const response = await fetch('/api/strava/auth');
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Strava auth error:', response.status, errorText);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to Strava. Please try again.",
-          variant: "destructive",
-        });
-        return;
+      const res = await fetch('/api/strava/auth');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to get auth URL');
       }
 
-      const data = await response.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        console.error("No Strava auth URL received");
-        toast({
-          title: "Connection Error",
-          description: "Invalid response from Strava. Please try again.",
-          variant: "destructive",
-        });
-      }
+      const { url } = await res.json();
+      console.log('Redirecting to Strava auth URL:', url);
+      window.location.href = url;
+
       if (onConnect) {
         onConnect();
       }

@@ -45,21 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-        credentials: 'include',
-      });
-
-      const data = await res.json();
+      const res = await apiRequest("POST", "/api/login", credentials);
       if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+        const error = await res.json();
+        throw new Error(error.error || "Login failed");
       }
-
-      return data;
+      return res.json();
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -79,26 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterData) => {
+      // Validate using the schema first
       const result = registerUserSchema.safeParse(data);
       if (!result.success) {
         throw new Error(result.error.format()._errors.join(", "));
       }
 
-      const res = await fetch('/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-        credentials: 'include',
-      });
-
-      const responseData = await res.json();
+      const res = await apiRequest("POST", "/api/register", data);
       if (!res.ok) {
-        throw new Error(responseData.error || "Registration failed");
+        const error = await res.json();
+        throw new Error(error.error || "Registration failed");
       }
-
-      return responseData;
+      return res.json();
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -118,14 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
+      const res = await apiRequest("POST", "/api/logout");
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Logout failed");
+        throw new Error("Logout failed");
       }
     },
     onSuccess: () => {
