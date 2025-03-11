@@ -58,8 +58,8 @@ import { useAuth } from "@/hooks/use-auth";
 
 const STEPS = [
   { id: "welcome", label: "Welcome" },
+  { id: "stravaConnect", label: "Connect Strava" },
   { id: "basicProfile", label: "Basic Profile" },
-  { id: "stravaConnect", label: "Strava Connect" },
   { id: "runningProfile", label: "Running Profile" },
   { id: "goal", label: "Training Goal" },
   {
@@ -187,6 +187,9 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
       } finally {
         setIsSubmitting(false);
       }
+    } else if (currentStep.id === "stravaConnect") {
+      // Skip option for Strava connection
+      setCurrentStepIndex((prev) => prev + 1);
     } else {
       const currentFields = getFieldsForStep(currentStep.id);
       const isValid = await form.trigger(currentFields as any);
@@ -222,7 +225,7 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
         ...previewData,
         userId: user.id,
         startDate: now.toISOString(),
-        endDate: previewData.targetRace ?
+        endDate: previewData.targetRace ? 
           new Date(previewData.targetRace.date).toISOString() :
           addWeeks(now, 12).toISOString(),
         weeklyPlans: previewData.weeklyPlans.map(week => ({
@@ -279,7 +282,7 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
       case "goal":
         return ["goal"];
       case "raceDetails":
-        return ["targetRace.distance", "targetRace.date", "targetRace.name"];
+        return ["targetRace.distance", "targetRace.date", "targetRace.name", "targetRace.previousBest", "targetRace.goalTime"];
       case "basicProfile":
         return ["age", "gender", "preferredDistanceUnit"];
       case "runningProfile":
@@ -297,7 +300,6 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
     }
   };
 
-  // Add the renderStepContent function
   const renderStepContent = (step: string) => {
     switch (step) {
       case "welcome":
@@ -307,6 +309,24 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
             <p className="text-muted-foreground">
               Let's create a personalized training plan that matches your goals and preferences.
             </p>
+          </div>
+        );
+
+      case "stravaConnect":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Connect Your Running Data</h2>
+            <p className="text-muted-foreground">
+              Connect with Strava to let us analyze your running history and create a more personalized plan.
+            </p>
+            <div className="flex flex-col items-center gap-4">
+              <Button variant="outline" className="w-full sm:w-auto">
+                Connect with Strava
+              </Button>
+              <Button variant="link" onClick={handleNext}>
+                Skip for now
+              </Button>
+            </div>
           </div>
         );
 
@@ -383,6 +403,67 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
           </div>
         );
 
+      case "runningProfile":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="runningExperience.level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Experience Level</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your experience level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(ExperienceLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="runningExperience.fitnessLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Fitness Level</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your current fitness level" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(FitnessLevels).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
       case "goal":
         return (
           <div className="space-y-6">
@@ -411,6 +492,106 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        );
+
+      case "raceDetails":
+        return (
+          <div className="space-y-6">
+            <FormField
+              control={form.control}
+              name="targetRace.name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter the name of your target race" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="targetRace.distance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Distance</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select race distance" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(RaceDistances).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="targetRace.date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Race Date</FormLabel>
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => field.onChange(date?.toISOString())}
+                    disabled={(date) => date < new Date()}
+                    className="rounded-md border"
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="targetRace.previousBest"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Previous Personal Best</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <TimeInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    error={!!form.formState.errors.targetRace?.previousBest}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="targetRace.goalTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal Time</FormLabel>
+                  <FormDescription>
+                    Enter your time in HH:MM:SS format
+                  </FormDescription>
+                  <TimeInput
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    error={!!form.formState.errors.targetRace?.goalTime}
+                  />
                   <FormMessage />
                 </FormItem>
               )}
@@ -469,6 +650,32 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
 
             <FormField
               control={form.control}
+              name="trainingPreferences.weeklyWorkouts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Weekly Quality Sessions: {workoutsValue}</FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[workoutsValue]}
+                      min={0}
+                      max={3}
+                      step={1}
+                      onValueChange={(value) => {
+                        setWorkoutsValue(value[0]);
+                        field.onChange(value[0]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Number of quality sessions like intervals or tempo runs
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="trainingPreferences.preferredLongRunDay"
               render={({ field }) => (
                 <FormItem>
@@ -487,6 +694,34 @@ const PlanGenerator = ({ existingPlan }: PlanGeneratorProps) => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trainingPreferences.coachingStyle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Desired Coaching Style</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select coaching style" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.entries(CoachingStyles).map(([key, value]) => (
+                        <SelectItem key={key} value={value}>
+                          {value}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {field.value && CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
