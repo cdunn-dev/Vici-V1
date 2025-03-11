@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,13 +52,14 @@ export default function PlanPreview({
   onAdjust,
   onBack,
   isSubmitting = false,
+  isDialog = false,
 }: PlanPreviewProps) {
   const [feedback, setFeedback] = useState("");
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date(planDetails.startDate));
 
   return (
-    <div className={isDialog ? "" : "absolute inset-0 flex flex-col bg-background"}>
+    <div className={`h-full flex flex-col ${isDialog ? "" : "absolute inset-0 bg-background"}`}>
       {isAdjusting ? (
         <div className="flex flex-col p-4">
           <Card className="shadow-md border-primary/20">
@@ -102,7 +102,7 @@ export default function PlanPreview({
           </div>
         </div>
       ) : (
-        <div className={`flex flex-col ${isDialog ? "" : "h-full"}`}>
+        <div className="flex flex-col flex-1">
           {/* Only show header/footer when not in dialog mode */}
           {!isDialog && (
             <div className="p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
@@ -124,7 +124,7 @@ export default function PlanPreview({
           )}
 
           {/* Content */}
-          <div className={`${isDialog ? "" : "flex-1 min-h-0 overflow-y-auto"}`}>
+          <div className="flex-1 overflow-y-auto">
             <div className="container mx-auto py-4 px-4 space-y-6">
               {/* Overview Card */}
               <Card className="shadow-md border-primary/20 bg-primary/5">

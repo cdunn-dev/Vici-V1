@@ -107,7 +107,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(trainingPlans.userId, userId));
 
       if (active !== undefined) {
-        query = query.where(eq(trainingPlans.isActive, active));
+        query = query.where(eq(trainingPlans.active, active));
       }
 
       return await query.orderBy(desc(trainingPlans.startDate));
@@ -118,11 +118,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTrainingPlan(id: number): Promise<TrainingPlan | undefined> {
-    const [plan] = await db
-      .select()
-      .from(trainingPlans)
-      .where(eq(trainingPlans.id, id));
-    return plan;
+    try {
+      const [plan] = await db
+        .select()
+        .from(trainingPlans)
+        .where(eq(trainingPlans.id, id));
+      return plan;
+    } catch (error) {
+      console.error('Error getting training plan:', error);
+      throw error;
+    }
   }
 
   async createTrainingPlan(plan: Omit<TrainingPlan, "id">): Promise<TrainingPlan> {
@@ -132,8 +137,8 @@ export class DatabaseStorage implements IStorage {
         .insert(trainingPlans)
         .values({
           ...plan,
-          startDate: new Date(plan.startDate).toISOString(),
-          endDate: new Date(plan.endDate).toISOString(),
+          startDate: new Date(plan.startDate),
+          endDate: new Date(plan.endDate),
         })
         .returning();
 
@@ -146,28 +151,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<TrainingPlan> {
-    const [plan] = await db
-      .update(trainingPlans)
-      .set(updates)
-      .where(eq(trainingPlans.id, id))
-      .returning();
+    try {
+      const [plan] = await db
+        .update(trainingPlans)
+        .set(updates)
+        .where(eq(trainingPlans.id, id))
+        .returning();
 
-    if (!plan) {
-      throw new Error("Training plan not found");
+      if (!plan) {
+        throw new Error("Training plan not found");
+      }
+
+      return plan;
+    } catch (error) {
+      console.error('Error updating training plan:', error);
+      throw error;
     }
-
-    return plan;
   }
 
   async archiveActiveTrainingPlans(userId: number): Promise<void> {
     try {
       await db
         .update(trainingPlans)
-        .set({ isActive: false })
+        .set({ active: false })
         .where(
           and(
             eq(trainingPlans.userId, userId),
-            eq(trainingPlans.isActive, true)
+            eq(trainingPlans.active, true)
           )
         );
     } catch (error) {
