@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -20,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { planGeneratorSchema, type PlanGeneratorFormData } from "./plan-generator-schema";
-import { Wand2, Loader2, ChevronRight, ChevronLeft, HelpCircle, Bug } from "lucide-react";
+import { Wand2, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,7 +33,6 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { format, addWeeks, nextMonday } from "date-fns";
 import ProgramOverview from "./program-overview";
@@ -87,8 +85,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const [previewData, setPreviewData] = useState<TrainingPlanWithWeeklyPlans | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth(); // Get user from auth context
-
+  const { user } = useAuth();
 
   // Independent slider states with initial values
   const [runningDaysValue, setRunningDaysValue] = useState(3);
@@ -99,7 +96,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
-      goal: undefined, // Let it be undefined initially
+      goal: undefined,
       startDate: new Date().toISOString(),
       age: undefined,
       gender: undefined,
@@ -115,7 +112,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         preferredLongRunDay: undefined,
         coachingStyle: undefined,
       },
-      targetRace: undefined, // Will be filled conditionally based on goal
+      targetRace: undefined,
     },
     mode: "onBlur",
   });
@@ -136,16 +133,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
     return () => subscription.unsubscribe();
   }, [form.watch]);
-
-  // Debug function to show form state
-  const showDebugInfo = () => {
-    console.log("Form Values:", form.getValues());
-    console.log("Form Errors:", form.formState.errors);
-    toast({
-      title: "Debug Info",
-      description: "Check console for form values and errors",
-    });
-  };
 
   // Get visible steps and progress
   const visibleSteps = STEPS.filter((step) => !step.conditional || step.conditional(form.getValues()));
@@ -180,7 +167,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       case "goal":
         return ["goal"];
       case "raceDetails":
-        return ["targetRace.distance", "targetRace.date", "targetRace.name"]; // Added race name
+        return ["targetRace.distance", "targetRace.date", "targetRace.name"];
       case "runningDays":
         return ["trainingPreferences.weeklyRunningDays"];
       case "mileage":
@@ -200,17 +187,13 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Update the handleNext function to properly handle date validation
   const handleNext = async () => {
     const isLastStep = currentStepIndex === visibleSteps.length - 2;
 
     if (isLastStep) {
-      // Validate all fields before preview
       const isValid = await form.trigger();
       if (!isValid) {
         const errors = form.formState.errors;
-        console.log("Form Errors:", errors); // Debug log
-
         const errorMessages = Object.entries(errors)
           .map(([key, error]) => {
             if (typeof error === 'object' && error !== null) {
@@ -236,28 +219,17 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       try {
         const formData = form.getValues();
 
-        // Handle dates and race information
+        // Handle dates
         formData.startDate = new Date(formData.startDate).toISOString();
 
         // Handle race-specific data
         if (formData.goal === TrainingGoals.FIRST_RACE || formData.goal === TrainingGoals.PERSONAL_BEST) {
           if (formData.targetRace) {
             formData.targetRace.date = new Date(formData.targetRace.date).toISOString();
-
-            // Handle custom distance
-            if (formData.targetRace.distance !== RaceDistances.OTHER) {
-              formData.targetRace.customDistance = {
-                value: 0,
-                unit: "miles",
-              };
-            }
           }
         } else {
-          // For non-race goals, ensure targetRace is undefined
           delete formData.targetRace;
         }
-
-        console.log("Generating training plan preview with data:", formData);
 
         const response = await fetch('/api/training-plans/preview', {
           method: 'POST',
@@ -272,7 +244,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
         }
 
         const previewData = await response.json();
-        console.log("Previewing plan:", previewData);
         setPreviewData(previewData);
         setCurrentStepIndex((prev) => prev + 1);
       } catch (error) {
@@ -293,7 +264,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     }
   };
 
-  // Handle back button click
   const handleBack = () => {
     if (currentStepIndex === visibleSteps.length - 1) {
       setPreviewData(null);
@@ -301,7 +271,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  // Update the handleApprovePlan function
   const handleApprovePlan = async () => {
     if (!previewData || !user?.id) {
       toast({
@@ -316,15 +285,23 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       setIsSubmitting(true);
       console.log("Saving plan with user ID:", user.id);
 
+      const planData = {
+        ...previewData,
+        userId: user.id,
+        startDate: new Date(previewData.startDate).toISOString(),
+        endDate: previewData.targetRace ? 
+          new Date(previewData.targetRace.date).toISOString() : 
+          addWeeks(new Date(previewData.startDate), 12).toISOString(),
+      };
+
+      console.log("Creating training plan:", planData);
+
       const response = await fetch('/api/training-plans/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...previewData,
-          userId: user.id,
-        }),
+        body: JSON.stringify(planData),
       });
 
       if (!response.ok) {
@@ -333,10 +310,6 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
       const savedPlan = await response.json();
       console.log("Plan saved successfully:", savedPlan);
-
-      if (onPreview) {
-        onPreview(savedPlan);
-      }
 
       setOpen(false);
       setCurrentStepIndex(0);
@@ -348,9 +321,9 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
       });
 
       // Refresh the training plans list
-      queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/training-plans"] });
 
-      // Redirect to training home
+      // Navigate to training home
       window.location.href = "/training";
     } catch (error) {
       console.error("Error saving plan:", error);
@@ -1023,7 +996,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="`space-y-8">
+            <form className="space-y-8">
               {renderStepContent(currentStep.id)}
 
               <div className="flex justify-between pt-4 border-t">
@@ -1039,7 +1012,8 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
 
                 {currentStepIndex === visibleSteps.length - 1 ? (
                   <Button
-                                        type="submit"
+                    type="button"
+                    onClick={handleApprovePlan}
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
@@ -1049,7 +1023,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                       </>
                     ) : (
                       <>
-                        Save Plan
+                        Approve Plan
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </>
                     )}
@@ -1060,7 +1034,7 @@ const PlanGenerator = ({ existingPlan, onPreview }: PlanGeneratorProps) => {
                     onClick={handleNext}
                     disabled={isSubmitting}
                   >
-                    {currentStep.id === "stravaConnect" ? "Skip" : "Next"}
+                                        {currentStep.id === "stravaConnect" ? "Skip" : "Next"}
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
                 )}
