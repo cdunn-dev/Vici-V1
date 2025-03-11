@@ -11,69 +11,81 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Loader2, ThumbsUp } from "lucide-react";
 
-interface ProgramOverviewProps {
-  plan: {
-    name: string;
-    goal: string;
-    goalDescription?: string;
-    startDate: string;
-    endDate: string;
-    weeklyMileage: number;
-    weeklyPlans: Array<{
-      week: number;
-      phase: string;
-      totalMileage: number;
-      workouts: Array<{
-        day: string;
-        type: string;
-        distance: number;
-        description: string;
-        completed: boolean;
-      }>;
-    }>;
-    targetRace?: {
-      distance: string;
-      date: string;
-      customDistance?: string;
-      previousBest?: string;
-      goalTime?: string;
-    } | null;
-    runningExperience: {
-      level: string;
-      fitnessLevel: string;
-    };
-    trainingPreferences: {
-      weeklyRunningDays: number;
-      maxWeeklyMileage: number;
-      weeklyWorkouts: number;
-      preferredLongRunDay: string;
-      coachingStyle: string;
-    };
-    is_active: boolean;
+// Define strict types for the component props
+interface Workout {
+  day: string;
+  type: string;
+  distance: number;
+  description: string;
+  completed: boolean;
+}
+
+interface WeeklyPlan {
+  week: number;
+  phase: string;
+  totalMileage: number;
+  workouts: Workout[];
+}
+
+interface TrainingPlan {
+  name: string;
+  goal: string;
+  goalDescription?: string;
+  startDate: string;
+  endDate: string;
+  weeklyMileage: number;
+  weeklyPlans: WeeklyPlan[];
+  targetRace?: {
+    distance: string;
+    date: string;
+    customDistance?: string;
+    previousBest?: string;
+    goalTime?: string;
+  } | null;
+  runningExperience: {
+    level: string;
+    fitnessLevel: string;
   };
+  trainingPreferences: {
+    weeklyRunningDays: number;
+    maxWeeklyMileage: number;
+    weeklyWorkouts: number;
+    preferredLongRunDay: string;
+    coachingStyle: string;
+  };
+  is_active: boolean;
+}
+
+interface ProgramOverviewProps {
+  plan: TrainingPlan;
   onApprove?: () => void;
   isSubmitting?: boolean;
 }
+
+// Helper functions for date formatting and calculations
+const formatDate = (dateString: string, formatStr: string = "MMM d"): string => {
+  try {
+    return format(parseISO(dateString), formatStr);
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Invalid date";
+  }
+};
+
+const calculateMetrics = (weeklyPlans: WeeklyPlan[]) => {
+  const totalWeeks = weeklyPlans.length;
+  const totalMileage = weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
+  const weeklyAverage = Math.round(totalMileage / totalWeeks);
+
+  return { totalWeeks, totalMileage, weeklyAverage };
+};
 
 export default function ProgramOverview({
   plan,
   onApprove,
   isSubmitting = false,
 }: ProgramOverviewProps) {
-  // Calculate metrics
-  const totalWeeks = plan.weeklyPlans.length;
-  const totalMileage = plan.weeklyPlans.reduce((sum, week) => sum + week.totalMileage, 0);
-  const weeklyAverage = Math.round(totalMileage / totalWeeks);
-
-  // Helper function to safely format dates
-  const formatDate = (dateString: string) => {
-    try {
-      return format(parseISO(dateString), "MMM d");
-    } catch (error) {
-      console.error("Date formatting error:", error);
-      return "Invalid date";
-    }
-  };
+  const { totalWeeks, totalMileage, weeklyAverage } = calculateMetrics(plan.weeklyPlans);
 
   return (
     <div className="space-y-6">
@@ -87,7 +99,7 @@ export default function ProgramOverview({
                 {plan.goal}
                 {plan.targetRace && (
                   <span className="block mt-1">
-                    {plan.targetRace.distance} - {format(parseISO(plan.targetRace.date), "MMMM d, yyyy")}
+                    {plan.targetRace.distance} - {formatDate(plan.targetRace.date, "MMMM d, yyyy")}
                   </span>
                 )}
               </p>
@@ -168,7 +180,7 @@ export default function ProgramOverview({
                           {workout.type}
                         </Badge>
                         <div className="font-medium">
-                          {format(parseISO(workout.day), "EEEE, MMM d")}
+                          {formatDate(workout.day, "EEEE, MMM d")}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {workout.description}
