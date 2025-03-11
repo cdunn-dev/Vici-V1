@@ -12,38 +12,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 console.log("[Startup] Body parsing middleware configured");
 
-// Request logging middleware with enhanced error tracking
+// Error handling middleware
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+// Request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  // Capture JSON responses
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  // Add error event handler
-  res.on('error', (error) => {
-    console.error(`[Error] Response error for ${req.method} ${path}:`, error);
-  });
-
   res.on("finish", () => {
     const duration = Date.now() - start;
-    const logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-    if (res.statusCode >= 400) {
-      console.error(`[Error] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
-    } else if (path.startsWith("/api")) {
-      console.log(`[API] ${logLine} :: ${JSON.stringify(capturedJsonResponse)}`);
-    }
+    console.log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
   });
-
   next();
 });
-console.log("[Startup] Request logging middleware configured");
-
 
 (async () => {
   try {
@@ -56,14 +39,6 @@ console.log("[Startup] Request logging middleware configured");
     console.log("[Startup] Registering routes");
     const server = await registerRoutes(app);
 
-    // Enhanced error handling middleware
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error("[Error] Unhandled error:", err);
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ error: message });
-    });
-
     console.log("[Startup] Setting up Vite/Static serving");
     if (app.get("env") === "development") {
       await setupVite(app, server);
@@ -75,20 +50,10 @@ console.log("[Startup] Request logging middleware configured");
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
     }, () => {
       console.log(`[Startup] Server listening on port ${port}`);
-      console.log(`[Startup] Server URL: http://0.0.0.0:${port}`);
-      console.log("[Startup] Environment:", app.get("env"));
     });
 
-    // Handle server errors
-    server.on('error', (error: any) => {
-      console.error('[Server Error]', error);
-      if (error.code === 'EADDRINUSE') {
-        console.error(`[Server Error] Port ${port} is already in use`);
-      }
-    });
   } catch (error) {
     console.error("[Startup] Fatal error during initialization:", error);
     process.exit(1);

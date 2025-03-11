@@ -1,6 +1,5 @@
 import {
   users,
-  trainingPlans,
   type User,
   type InsertUser,
   type TrainingPlan,
@@ -35,50 +34,83 @@ export class DatabaseStorage implements IStorage {
   public sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true,
-    });
+    try {
+      // Initialize PostgreSQL session store with proper configuration
+      this.sessionStore = new PostgresSessionStore({
+        pool,
+        tableName: 'session',
+        createTableIfMissing: true,
+        schemaName: 'public',
+        pruneSessionInterval: 43200, // 12 hours
+        errorLog: console.error.bind(console),
+      });
+      console.log("[Storage] Session store initialized successfully");
+    } catch (error) {
+      console.error("[Storage] Failed to initialize session store:", error);
+      throw error;
+    }
   }
 
+  // User operations
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email));
-    return user;
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+      return user;
+    } catch (error) {
+      console.error("[Storage] Error getting user by email:", error);
+      throw error;
+    }
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error("[Storage] Error getting user by id:", error);
+      throw error;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    try {
+      const [user] = await db
+        .insert(users)
+        .values(insertUser)
+        .returning();
+      return user;
+    } catch (error) {
+      console.error("[Storage] Error creating user:", error);
+      throw error;
+    }
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning();
+    try {
+      const [user] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
 
-    if (!user) {
-      throw new Error("User not found");
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      return user;
+    } catch (error) {
+      console.error("[Storage] Error updating user:", error);
+      throw error;
     }
-
-    return user;
   }
 
+  // Training plan operations
   async getTrainingPlans(userId: number, active?: boolean): Promise<TrainingPlan[]> {
     let query = db
       .select()
