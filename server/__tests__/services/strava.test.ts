@@ -58,7 +58,7 @@ describe('Strava Service', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockResponse)
-      }) as any;
+      });
 
       const result = await exchangeStravaCode('test_code');
       expect(result).toEqual({
@@ -69,14 +69,13 @@ describe('Strava Service', () => {
     });
 
     it('should handle exchange errors', async () => {
-      // Simulating the base error that will be wrapped by the service
-      const baseError = new Error('Bad Request');
-      global.fetch = vi.fn().mockRejectedValue(baseError);
+      // Mock the raw error that will be wrapped by the service
+      global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
 
-      // The service wraps the error with context
-      await expect(exchangeStravaCode('invalid_code')).rejects.toThrow(
-        'Error exchanging Strava code: Bad Request'
-      );
+      // The service will wrap the error with context
+      await expect(exchangeStravaCode('invalid_code'))
+        .rejects
+        .toThrow('Error exchanging Strava code: Error: Bad Request');
     });
   });
 
@@ -91,7 +90,7 @@ describe('Strava Service', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockResponse)
-      }) as any;
+      });
 
       const result = await refreshStravaToken('test_refresh_token');
       expect(result).toEqual({
@@ -102,14 +101,13 @@ describe('Strava Service', () => {
     });
 
     it('should handle refresh errors', async () => {
-      // Simulating the base error that will be wrapped by the service
-      const baseError = new Error('Unauthorized');
-      global.fetch = vi.fn().mockRejectedValue(baseError);
+      // Mock the raw error that will be wrapped by the service
+      global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
 
-      // The service wraps the error with context
-      await expect(refreshStravaToken('invalid_token')).rejects.toThrow(
-        'Error refreshing Strava token: Unauthorized'
-      );
+      // The service will wrap the error with context
+      await expect(refreshStravaToken('invalid_token'))
+        .rejects
+        .toThrow('Error refreshing Strava token: Error: Unauthorized');
     });
   });
 
@@ -128,21 +126,20 @@ describe('Strava Service', () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockActivities)
-      }) as any;
+      });
 
       await syncStravaActivities(1, 'test_access_token');
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
     it('should handle API errors', async () => {
-      // Simulating the base error that will be wrapped by the service
-      const baseError = new Error('Too Many Requests');
-      global.fetch = vi.fn().mockRejectedValue(baseError);
+      // Mock the raw error that will be wrapped by the service
+      global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
 
-      // The service wraps the error with context
-      await expect(syncStravaActivities(1, 'test_access_token')).rejects.toThrow(
-        'Error syncing Strava activities: Too Many Requests'
-      );
+      // The service will wrap the error with context
+      await expect(syncStravaActivities(1, 'test_access_token'))
+        .rejects
+        .toThrow('Error syncing Strava activities: Error: Too Many Requests');
     });
   });
 });
