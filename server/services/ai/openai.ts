@@ -10,6 +10,14 @@ import {
   AIServiceError,
 } from "./types";
 
+export async function generateTrainingPlan(preferences: TrainingPreferences): Promise<TrainingPlanResponse> {
+  const openaiService = new OpenAIService({ 
+    apiKey: process.env.OPENAI_API_KEY,
+    modelName: 'gpt-4o'
+  });
+  return await openaiService.generateTrainingPlan(preferences);
+}
+
 export class OpenAIService extends BaseAIService {
   private client: OpenAI;
 
@@ -28,7 +36,7 @@ export class OpenAIService extends BaseAIService {
   ): Promise<T> {
     try {
       const response = await this.client.chat.completions.create({
-        model: this.config.modelName || "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+        model: this.config.modelName || "gpt-4o", 
         messages: [
           {
             role: "system",
