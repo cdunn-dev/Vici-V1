@@ -22,16 +22,15 @@ describe('OpenAI Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Note: Use text-davinci-003 for testing - newer models may have different behavior
     openaiService = new OpenAIService({
       apiKey: 'test-key',
-      modelName: 'text-davinci-003',
+      modelName: 'gpt-4o',
       provider: 'openai'
     });
   });
 
   describe('makeRequest', () => {
-    it('should handle JSON parsing errors', async () => {
+    it('should handle invalid JSON responses', async () => {
       mockCompletionCreate.mockResolvedValueOnce({
         choices: [{
           message: {
@@ -40,10 +39,9 @@ describe('OpenAI Service', () => {
         }]
       });
 
-      // The service will wrap parsing errors with specific context
       await expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
         .rejects
-        .toThrow('OpenAI API error: Failed to parse response');
+        .toThrow('Failed to parse response');
     });
   });
 
@@ -66,22 +64,20 @@ describe('OpenAI Service', () => {
       }
     };
 
-    it('should handle generation errors', async () => {
-      // Mock the raw error that will be wrapped by the service
+    it('should handle generation errors', () => {
       mockCompletionCreate.mockRejectedValueOnce(
         new Error('Failed to generate training plan')
       );
 
-      // The service will wrap the error with context
-      await expect(openaiService.generateTrainingPlan(mockUserPreferences))
+      return expect(openaiService.generateTrainingPlan(mockUserPreferences))
         .rejects
-        .toThrow('OpenAI API error: Failed to generate training plan');
+        .toThrow('Failed to generate training plan');
     });
   });
 
   describe('analyzeWorkout', () => {
     const mockWorkout = {
-      type: 'Tempo Run',
+      type: 'Recovery Run',
       distance: 8,
       description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown',
       date: new Date('2025-03-15'),
@@ -117,29 +113,27 @@ describe('OpenAI Service', () => {
   });
 
   describe('generateAdjustments', () => {
-    const mockFeedback = 'Need more recovery time';
+    const mockFeedback = "Need more recovery time";
     const mockCurrentPlan = {
       weeklyPlans: [{
         week: 1,
         phase: 'Base Building',
         workouts: [{
-          type: 'Tempo Run',
+          type: 'Recovery Run',
           distance: 5,
-          description: 'Tempo run'
+          description: 'Easy run'
         }]
       }]
     };
 
-    it('should handle adjustment errors', async () => {
-      // Mock the raw error that will be wrapped by the service
+    it('should handle adjustment errors', () => {
       mockCompletionCreate.mockRejectedValueOnce(
         new Error('Failed to generate adjustments')
       );
 
-      // The service will wrap the error with context
-      await expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
+      return expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
         .rejects
-        .toThrow('OpenAI API error: Failed to generate adjustments');
+        .toThrow('Failed to generate adjustments');
     });
   });
 });
