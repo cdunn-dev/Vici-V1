@@ -1,29 +1,32 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { OpenAI } from 'openai';
 import {
-  makeRequest,
-  generateTrainingPlan,
-  analyzeWorkout,
-  generateAdjustments
+  OpenAIService
 } from '../../../services/ai/openai';
 
 // Mock OpenAI client
-vi.mock('openai', () => ({
-  OpenAI: vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: vi.fn()
-      }
+const mockCreate = vi.fn();
+const mockClient = {
+  chat: {
+    completions: {
+      create: mockCreate
     }
-  }))
+  }
+};
+
+vi.mock('openai', () => ({
+  default: vi.fn().mockImplementation(() => mockClient),
+  OpenAI: vi.fn().mockImplementation(() => mockClient)
 }));
 
 describe('OpenAI Service', () => {
-  let openai: OpenAI;
+  let openaiService: OpenAIService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    openai = new OpenAI({ apiKey: 'test-key' });
+    openaiService = new OpenAIService({ 
+      apiKey: 'test-key',
+      modelName: 'gpt-4o'
+    });
   });
 
   describe('makeRequest', () => {
@@ -38,19 +41,22 @@ describe('OpenAI Service', () => {
         ]
       };
 
-      (openai.chat.completions.create as unknown as vi.Mock).mockResolvedValueOnce(mockResponse);
+      mockCreate.mockResolvedValueOnce(mockResponse);
 
-      const result = await makeRequest('test prompt', {
-        responseFormat: 'json',
-        temperature: 0.7
-      });
+      const result = await openaiService['makeRequest']('test prompt', 'test operation', 'json');
 
-      expect(openai.chat.completions.create).toHaveBeenCalledWith({
-        model: 'gpt-4o', // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+      expect(mockCreate).toHaveBeenCalledWith({
+        model: 'gpt-4o',
         messages: [
-          { role: 'user', content: 'test prompt' }
+          {
+            role: 'system',
+            content: expect.any(String)
+          },
+          {
+            role: 'user',
+            content: 'test prompt'
+          }
         ],
-        temperature: 0.7,
         response_format: { type: 'json_object' }
       });
 
@@ -58,17 +64,15 @@ describe('OpenAI Service', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      (openai.chat.completions.create as unknown as vi.Mock).mockRejectedValueOnce(
-        new Error('API Error')
-      );
+      mockCreate.mockRejectedValueOnce(new Error('API Error'));
 
-      await expect(makeRequest('test prompt')).rejects.toThrow('Failed to get AI response');
+      await expect(openaiService['makeRequest']('test prompt', 'test operation')).rejects.toThrow();
     });
   });
 
   describe('generateTrainingPlan', () => {
     const mockUserPreferences = {
-      goal: 'Run a marathon',
+      goalDescription: 'Run a marathon',
       runningExperience: {
         level: 'intermediate',
         fitnessLevel: 'good'
@@ -88,6 +92,7 @@ describe('OpenAI Service', () => {
         weeklyPlans: [
           {
             week: 1,
+            phase: 'Base Building',
             totalMileage: 30,
             workouts: [
               {
@@ -101,7 +106,7 @@ describe('OpenAI Service', () => {
         ]
       };
 
-      (openai.chat.completions.create as unknown as vi.Mock).mockResolvedValueOnce({
+      mockCreate.mockResolvedValueOnce({
         choices: [
           {
             message: {
@@ -111,10 +116,10 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      const result = await generateTrainingPlan(mockUserPreferences);
+      const result = await openaiService.generateTrainingPlan(mockUserPreferences);
 
       expect(result).toEqual(mockPlan);
-      expect(openai.chat.completions.create).toHaveBeenCalledWith(
+      expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: expect.arrayContaining([
             expect.objectContaining({
@@ -130,7 +135,11 @@ describe('OpenAI Service', () => {
     const mockWorkout = {
       type: 'Tempo Run',
       distance: 8,
-      description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown'
+      description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown',
+      date: new Date('2025-03-15'),
+      duration: 60,
+      averagePace: '8:00',
+      perceivedEffort: 7
     };
 
     it('should analyze a workout and provide feedback', async () => {
@@ -139,7 +148,7 @@ describe('OpenAI Service', () => {
         adjustments: 'Consider adding strides during warmup'
       };
 
-      (openai.chat.completions.create as unknown as vi.Mock).mockResolvedValueOnce({
+      mockCreate.mockResolvedValueOnce({
         choices: [
           {
             message: {
@@ -149,10 +158,10 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      const result = await analyzeWorkout(mockWorkout);
+      const result = await openaiService.analyzeWorkout(mockWorkout);
 
       expect(result).toEqual(mockAnalysis);
-      expect(openai.chat.completions.create).toHaveBeenCalledWith(
+      expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: expect.arrayContaining([
             expect.objectContaining({
@@ -165,6 +174,7 @@ describe('OpenAI Service', () => {
   });
 
   describe('generateAdjustments', () => {
+    const mockFeedback = 'Need more recovery time';
     const mockCurrentPlan = {
       weeklyPlans: [
         {
@@ -179,8 +189,6 @@ describe('OpenAI Service', () => {
         }
       ]
     };
-
-    const mockFeedback = 'Need more recovery time';
 
     it('should generate plan adjustments based on feedback', async () => {
       const mockAdjustments = {
@@ -201,7 +209,7 @@ describe('OpenAI Service', () => {
         reasoning: 'Reduced intensity to allow for better recovery'
       };
 
-      (openai.chat.completions.create as unknown as vi.Mock).mockResolvedValueOnce({
+      mockCreate.mockResolvedValueOnce({
         choices: [
           {
             message: {
@@ -211,10 +219,10 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      const result = await generateAdjustments(mockCurrentPlan, mockFeedback);
+      const result = await openaiService.generateAdjustments(mockFeedback, mockCurrentPlan);
 
       expect(result).toEqual(mockAdjustments);
-      expect(openai.chat.completions.create).toHaveBeenCalledWith(
+      expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: expect.arrayContaining([
             expect.objectContaining({

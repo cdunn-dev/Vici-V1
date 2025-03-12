@@ -1,5 +1,3 @@
-import axios from "axios";
-import { storage } from "../storage";
 import { db } from "../db";
 import { eq, desc } from "drizzle-orm";
 import { stravaActivities } from "@shared/schema";
@@ -9,8 +7,16 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
-const STRAVA_CLIENT_ID = process.env.VITE_STRAVA_CLIENT_ID;
-const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
+export interface StravaAuthOptions {
+  scope?: string[];
+  state?: string;
+}
+
+export interface StravaTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
 
 // Get the correct domain based on environment
 function getAppDomain() {
@@ -27,89 +33,91 @@ console.log("\nStrava Configuration:");
 console.log("====================");
 console.log("Website URL:", getAppDomain());
 console.log("Callback URL:", REDIRECT_URI);
-console.log("Client ID configured:", STRAVA_CLIENT_ID ? "Yes" : "No");
-console.log("Client Secret configured:", STRAVA_CLIENT_SECRET ? "Yes" : "No");
+console.log("Client ID configured:", process.env.STRAVA_CLIENT_ID ? "Yes" : "No");
+console.log("Client Secret configured:", process.env.STRAVA_CLIENT_SECRET ? "Yes" : "No");
 console.log("====================\n");
 
-export interface StravaTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
-
-export function getStravaAuthUrl(userId: string): string {
-  if (!STRAVA_CLIENT_ID) {
+export function getStravaAuthUrl(options: StravaAuthOptions): string {
+  if (!process.env.STRAVA_CLIENT_ID) {
     throw new Error("STRAVA_CLIENT_ID is not configured");
   }
 
   const params = new URLSearchParams({
-    client_id: STRAVA_CLIENT_ID,
+    client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "activity:read_all",  // Updated scope based on documentation
-    state: userId,
+    scope: options.scope?.join(',') || "activity:read_all",
+    state: options.state || "",
     approval_prompt: "auto"
   });
 
-  const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
-  console.log("Generated Strava Auth URL:", authUrl);
-  return authUrl;
+  return `${STRAVA_AUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
-    if (!STRAVA_CLIENT_ID || !STRAVA_CLIENT_SECRET) {
-      console.error("Strava credentials missing:", { 
-        clientIdPresent: !!STRAVA_CLIENT_ID, 
-        clientSecretPresent: !!STRAVA_CLIENT_SECRET 
-      });
+    if (!process.env.STRAVA_CLIENT_ID || !process.env.STRAVA_CLIENT_SECRET) {
       throw new Error("Strava credentials not properly configured");
     }
 
-    const payload = {
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      code,
-      grant_type: "authorization_code"
-    };
-
-    console.log("Exchanging code with payload:", {
-      ...payload,
-      client_secret: "[REDACTED]",
-      code: code.substring(0, 5) + "..."
+    const response = await fetch(STRAVA_TOKEN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        code,
+        grant_type: "authorization_code"
+      }),
     });
 
-    const response = await axios.post(STRAVA_TOKEN_URL, payload);
+    if (!response.ok) {
+      throw new Error(`Failed to exchange code: ${response.statusText}`);
+    }
 
-    console.log("Successfully received Strava tokens");
+    const data = await response.json();
 
     return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      expiresAt: response.data.expires_at,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: data.expires_at,
     };
   } catch (error: any) {
-    console.error("Error exchanging Strava code:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.message || "Failed to exchange Strava code");
+    console.error("Error exchanging Strava code:", error);
+    throw new Error(error.message || "Failed to exchange Strava code");
   }
 }
 
 export async function refreshStravaToken(refreshToken: string): Promise<StravaTokens> {
   try {
-    const response = await axios.post(STRAVA_TOKEN_URL, {
-      client_id: STRAVA_CLIENT_ID,
-      client_secret: STRAVA_CLIENT_SECRET,
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
+    const response = await fetch(STRAVA_TOKEN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.STRAVA_CLIENT_ID,
+        client_secret: process.env.STRAVA_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Failed to refresh token: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
     return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      expiresAt: response.data.expires_at,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: data.expires_at,
     };
   } catch (error: any) {
-    console.error("Error refreshing Strava token:", error.response?.data || error.message);
+    console.error("Error refreshing Strava token:", error);
     throw error;
   }
 }
@@ -131,49 +139,54 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       params.append("after", after.toString());
     }
 
-    const response = await axios.get(
+    const response = await fetch(
       `${STRAVA_API_BASE}/athlete/activities?${params.toString()}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
     );
 
-    // Process and save new activities
-    for (const activity of response.data) {
-      const newActivity: InsertStravaActivity = {
-        userId,
-        stravaId: activity.id.toString(),
-        name: activity.name,
-        type: activity.type,
-        startDate: new Date(activity.start_date).toISOString(),
-        distance: activity.distance,
-        movingTime: activity.moving_time,
-        elapsedTime: activity.elapsed_time,
-        totalElevationGain: activity.total_elevation_gain,
-        averageSpeed: activity.average_speed,
-        maxSpeed: activity.max_speed,
-        averageHeartrate: activity.average_heartrate,
-        maxHeartrate: activity.max_heartrate,
-        startLatitude: activity.start_latitude?.toString(),
-        startLongitude: activity.start_longitude?.toString(),
-        map: activity.map?.summary_polyline ? {
-          summaryPolyline: activity.map.summary_polyline,
-          resourceState: activity.map.resource_state
-        } : undefined,
-      };
+    if (!response.ok) {
+      throw new Error(`Failed to fetch activities: ${response.statusText}`);
+    }
 
-      // Insert the activity, ignore if it already exists
+    const activities = await response.json();
+
+    // Process and save new activities
+    for (const activity of activities) {
       try {
+        const newActivity: InsertStravaActivity = {
+          userId,
+          stravaId: activity.id.toString(),
+          name: activity.name,
+          type: activity.type,
+          startDate: new Date(activity.start_date).toISOString(),
+          distance: activity.distance,
+          movingTime: activity.moving_time,
+          elapsedTime: activity.elapsed_time,
+          totalElevationGain: activity.total_elevation_gain,
+          averageSpeed: activity.average_speed,
+          maxSpeed: activity.max_speed,
+          averageHeartrate: activity.average_heartrate,
+          maxHeartrate: activity.max_heartrate,
+          startLatitude: activity.start_latitude?.toString(),
+          startLongitude: activity.start_longitude?.toString(),
+          map: activity.map?.summary_polyline ? {
+            summaryPolyline: activity.map.summary_polyline,
+            resourceState: activity.map.resource_state
+          } : null,
+        };
+
         await db.insert(stravaActivities).values(newActivity);
         console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
-        console.log(`Activity ${activity.id} already exists, skipping`);
+        console.log(`Activity ${activity.id} already exists or failed to insert`);
       }
     }
 
-    console.log(`Synced ${response.data.length} activities for user ${userId}`);
+    console.log(`Synced ${activities.length} activities for user ${userId}`);
   } catch (error: any) {
-    console.error("Error syncing Strava activities:", error.response?.data || error.message);
+    console.error("Error syncing Strava activities:", error);
     throw error;
   }
 }

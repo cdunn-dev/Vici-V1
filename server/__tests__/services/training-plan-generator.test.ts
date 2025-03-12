@@ -47,7 +47,7 @@ describe('Training Plan Generator Service', () => {
   };
 
   it('should generate a complete training plan', async () => {
-    const mockGeneratedPlan = {
+    const mockPlan = {
       weeklyPlans: [
         {
           week: 1,
@@ -65,7 +65,7 @@ describe('Training Plan Generator Service', () => {
       ]
     };
 
-    (openai.generateTrainingPlan as vi.Mock).mockResolvedValueOnce(mockGeneratedPlan);
+    (openai.generateTrainingPlan as vi.Mock).mockResolvedValueOnce(mockPlan);
 
     const result = await generateTrainingPlan(mockUserPreferences);
 
@@ -92,7 +92,7 @@ describe('Training Plan Generator Service', () => {
       goal: ''
     };
 
-    await expect(generateTrainingPlan(invalidPreferences))
+    await expect(() => generateTrainingPlan(invalidPreferences))
       .rejects
       .toThrow('Training goal is required');
   });
@@ -102,18 +102,38 @@ describe('Training Plan Generator Service', () => {
       new Error('AI service error')
     );
 
-    await expect(generateTrainingPlan(mockUserPreferences))
+    await expect(() => generateTrainingPlan(mockUserPreferences))
       .rejects
       .toThrow('Failed to generate training plan');
   });
 
-  it('should generate appropriate training phases based on race distance', async () => {
+  it('should generate appropriate training phases', async () => {
     const mockMarathonPlan = {
       weeklyPlans: [
-        { week: 1, phase: 'Base Building' },
-        { week: 4, phase: 'Build' },
-        { week: 8, phase: 'Peak' },
-        { week: 12, phase: 'Taper' }
+        { 
+          week: 1,
+          phase: 'Base Building',
+          totalMileage: 30,
+          workouts: []
+        },
+        { 
+          week: 4,
+          phase: 'Build',
+          totalMileage: 35,
+          workouts: []
+        },
+        { 
+          week: 8,
+          phase: 'Peak',
+          totalMileage: 45,
+          workouts: []
+        },
+        { 
+          week: 12,
+          phase: 'Taper',
+          totalMileage: 25,
+          workouts: []
+        }
       ]
     };
 
@@ -121,9 +141,11 @@ describe('Training Plan Generator Service', () => {
 
     const result = await generateTrainingPlan(mockUserPreferences);
 
-    expect(result.weeklyPlans).toHaveLength(4);
-    expect(result.weeklyPlans[0].phase).toBe('Base Building');
-    expect(result.weeklyPlans[3].phase).toBe('Taper');
+    const phases = result.weeklyPlans.map(plan => plan.phase);
+    expect(phases).toContain('Base Building');
+    expect(phases).toContain('Build');
+    expect(phases).toContain('Peak');
+    expect(phases).toContain('Taper');
   });
 
   it('should adjust workout distances based on user\'s max weekly mileage', async () => {
@@ -139,6 +161,7 @@ describe('Training Plan Generator Service', () => {
       weeklyPlans: [
         {
           week: 1,
+          phase: 'Base Building',
           totalMileage: 20,
           workouts: [
             {

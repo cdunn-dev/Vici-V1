@@ -28,7 +28,7 @@ export class OpenAIService extends BaseAIService {
   ): Promise<T> {
     try {
       const response = await this.client.chat.completions.create({
-        model: this.config.modelName || "gpt-4-turbo",
+        model: this.config.modelName || "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
         messages: [
           {
             role: "system",
@@ -106,5 +106,44 @@ export class OpenAIService extends BaseAIService {
         "generateAdjustments",
       );
     }, "generate adjustments");
+  }
+
+  private getTrainingPlanPrompt(preferences: TrainingPreferences): string {
+    return `
+      Create a personalized running training plan based on these preferences:
+      ${JSON.stringify(preferences, null, 2)}
+
+      Return your response in this JSON format:
+      {
+        "weeklyPlans": [
+          {
+            "week": number,
+            "phase": string,
+            "totalMileage": number,
+            "workouts": [
+              {
+                "day": "YYYY-MM-DD",
+                "type": string,
+                "distance": number,
+                "description": string
+              }
+            ]
+          }
+        ]
+      }
+    `;
+  }
+
+  private getWorkoutAnalysisPrompt(workout: WorkoutData): string {
+    return `
+      Analyze this workout and provide feedback:
+      ${JSON.stringify(workout, null, 2)}
+
+      Return your response in this JSON format:
+      {
+        "feedback": "string with detailed analysis",
+        "adjustments": "string with suggested improvements"
+      }
+    `;
   }
 }
