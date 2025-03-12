@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock config before any imports
+// Mock config
 vi.mock('../../config', () => ({
   default: {
     STRAVA_CLIENT_ID: 'test_client_id',
@@ -11,8 +11,9 @@ vi.mock('../../config', () => ({
 
 // Mock database operations
 vi.mock('../../db', () => {
-  const mockChain = {
-    execute: vi.fn().mockResolvedValue([{ id: 1, stravaId: '123' }]),
+  const mockActivities = [{ id: 1, stravaId: '123' }];
+  const mockQueryChain = {
+    execute: vi.fn().mockResolvedValue(mockActivities),
     limit: function() { return this; },
     orderBy: function() { return this; },
     where: function() { return this; },
@@ -21,10 +22,10 @@ vi.mock('../../db', () => {
 
   return {
     db: {
-      select: vi.fn().mockReturnValue(mockChain),
+      select: vi.fn().mockReturnValue(mockQueryChain),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([{ id: 1 }])
+          returning: vi.fn().mockResolvedValue(mockActivities)
         })
       })
     }
@@ -33,7 +34,7 @@ vi.mock('../../db', () => {
 
 import { getStravaAuthUrl, exchangeStravaCode, refreshStravaToken, syncStravaActivities } from '../../services/strava';
 import { db } from '../../db';
-import { activities as stravaActivities } from '../../schema/strava.js';
+import { activities as stravaActivities } from '../../schema/strava';
 
 describe('Strava Service', () => {
   beforeEach(() => {
@@ -107,7 +108,7 @@ describe('Strava Service', () => {
         json: () => Promise.resolve(mockRefreshResponse)
       }) as unknown as typeof fetch;
 
-      const result = await refreshStravaToken('old_refresh_token');
+      const result = await refreshStravaToken('test_refresh_token');
       expect(result).toEqual({
         accessToken: mockRefreshResponse.access_token,
         refreshToken: mockRefreshResponse.refresh_token,
