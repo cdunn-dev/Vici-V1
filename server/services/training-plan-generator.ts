@@ -1,4 +1,3 @@
-import type { WeeklyPlan, TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { generateTrainingPlan as generateAIPlan } from './ai/openai';
 
 export async function generateTrainingPlan(preferences: {
@@ -26,20 +25,27 @@ export async function generateTrainingPlan(preferences: {
     previousBest?: string;
     goalTime?: string;
   };
-}): Promise<TrainingPlanWithWeeklyPlans> {
+}) {
   // Validate required fields
   if (!preferences.goal) {
+    console.error('Training plan generation failed: missing goal');
     throw new Error('Training goal is required');
   }
 
   try {
+    console.log('Generating training plan with preferences:', JSON.stringify(preferences, null, 2));
+
     // Get AI-generated plan
     const aiResponse = await generateAIPlan(preferences);
+    console.log('Received AI response:', JSON.stringify(aiResponse, null, 2));
+
     if (!aiResponse || !aiResponse.weeklyPlans) {
+      console.error('Invalid AI response:', aiResponse);
       throw new Error('Invalid plan generated');
     }
 
-    return {
+    // Transform AI response into final plan
+    const plan = {
       id: 0, // Will be assigned by database
       userId: 0, // Will be assigned by database
       active: true, // New plans are active by default
@@ -57,6 +63,10 @@ export async function generateTrainingPlan(preferences: {
         }))
       }))
     };
+
+    console.log('Generated final plan:', JSON.stringify(plan, null, 2));
+    return plan;
+
   } catch (error) {
     console.error('Error generating training plan:', error);
     throw new Error('Failed to generate training plan');

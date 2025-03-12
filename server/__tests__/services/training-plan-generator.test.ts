@@ -1,18 +1,20 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { generateTrainingPlan } from '../../services/training-plan-generator';
+import { vi } from 'vitest';
 
-// Mock OpenAI service
-const mockAIService = {
+// Mock setup must be before other imports
+vi.mock('../../services/ai/openai', () => ({
   generateTrainingPlan: vi.fn()
-};
+}));
 
-vi.mock('../../services/ai/openai', () => {
-  return {
-    generateTrainingPlan: mockAIService.generateTrainingPlan
-  };
-});
+// Import remaining dependencies after mock setup
+import { describe, it, expect, beforeEach } from 'vitest';
+import { generateTrainingPlan } from '../../services/training-plan-generator';
+import type { TrainingPlanResponse } from '../../services/ai/types';
+import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import { generateTrainingPlan as mockGenerateAIPlan } from '../../services/ai/openai';
 
 describe('Training Plan Generator Service', () => {
+  const mockGenerateTrainingPlan = mockGenerateAIPlan as unknown as ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,7 +42,7 @@ describe('Training Plan Generator Service', () => {
   };
 
   it('should generate a complete training plan', async () => {
-    const mockAIResponse = {
+    const mockAIResponse: TrainingPlanResponse = {
       weeklyPlans: [
         {
           week: 1,
@@ -58,13 +60,13 @@ describe('Training Plan Generator Service', () => {
       ]
     };
 
-    mockAIService.generateTrainingPlan.mockResolvedValue(mockAIResponse);
+    mockGenerateTrainingPlan.mockResolvedValueOnce(mockAIResponse);
 
     const result = await generateTrainingPlan(mockUserPreferences);
 
-    expect(mockAIService.generateTrainingPlan).toHaveBeenCalledWith(mockUserPreferences);
+    expect(mockGenerateTrainingPlan).toHaveBeenCalledWith(mockUserPreferences);
 
-    expect(result).toMatchObject({
+    expect(result).toEqual({
       id: 0,
       userId: 0,
       active: true,
@@ -75,20 +77,20 @@ describe('Training Plan Generator Service', () => {
       runningExperience: mockUserPreferences.runningExperience,
       trainingPreferences: mockUserPreferences.trainingPreferences,
       weeklyPlans: [
-        expect.objectContaining({
+        {
           week: 1,
           phase: 'Base Building',
           totalMileage: 30,
           workouts: [
-            expect.objectContaining({
+            {
               day: '2025-03-15',
               type: 'Easy Run',
               distance: 5,
               description: 'Easy-paced run',
               completed: false
-            })
+            }
           ]
-        })
+        }
       ]
     });
   });
@@ -102,10 +104,12 @@ describe('Training Plan Generator Service', () => {
     await expect(generateTrainingPlan(invalidPreferences))
       .rejects
       .toThrow('Training goal is required');
+
+    expect(mockGenerateTrainingPlan).not.toHaveBeenCalled();
   });
 
   it('should handle AI service errors gracefully', async () => {
-    mockAIService.generateTrainingPlan.mockRejectedValue(new Error('AI service error'));
+    mockGenerateTrainingPlan.mockRejectedValueOnce(new Error('AI service error'));
 
     await expect(generateTrainingPlan(mockUserPreferences))
       .rejects
@@ -113,13 +117,20 @@ describe('Training Plan Generator Service', () => {
   });
 
   it('should generate appropriate training phases', async () => {
-    const mockAIResponse = {
+    const mockAIResponse: TrainingPlanResponse = {
       weeklyPlans: [
         {
           week: 1,
           phase: 'Base Building',
           totalMileage: 30,
-          workouts: []
+          workouts: [
+            {
+              day: '2025-03-15',
+              type: 'Easy Run',
+              distance: 5,
+              description: 'Easy-paced run'
+            }
+          ]
         },
         {
           week: 4,
@@ -142,14 +153,15 @@ describe('Training Plan Generator Service', () => {
       ]
     };
 
-    mockAIService.generateTrainingPlan.mockResolvedValue(mockAIResponse);
+    mockGenerateTrainingPlan.mockResolvedValueOnce(mockAIResponse);
 
     const result = await generateTrainingPlan(mockUserPreferences);
 
-    const phases = result.weeklyPlans.map(week => week.phase);
-    expect(phases).toEqual(
-      expect.arrayContaining(['Base Building', 'Build', 'Peak', 'Taper'])
-    );
+    const phases = new Set(result.weeklyPlans.map(week => week.phase));
+    expect(phases.has('Base Building')).toBe(true);
+    expect(phases.has('Build')).toBe(true);
+    expect(phases.has('Peak')).toBe(true);
+    expect(phases.has('Taper')).toBe(true);
   });
 
   it('should adjust workout distances based on user\'s max weekly mileage', async () => {
@@ -161,7 +173,7 @@ describe('Training Plan Generator Service', () => {
       }
     };
 
-    const mockAIResponse = {
+    const mockAIResponse: TrainingPlanResponse = {
       weeklyPlans: [
         {
           week: 1,
@@ -179,7 +191,7 @@ describe('Training Plan Generator Service', () => {
       ]
     };
 
-    mockAIService.generateTrainingPlan.mockResolvedValue(mockAIResponse);
+    mockGenerateTrainingPlan.mockResolvedValueOnce(mockAIResponse);
 
     const result = await generateTrainingPlan(lowMileagePreferences);
 

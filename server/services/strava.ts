@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 import { stravaActivities } from "@shared/schema";
 import type { InsertStravaActivity } from "@shared/schema";
@@ -18,7 +18,6 @@ export interface StravaTokens {
   expiresAt: number;
 }
 
-// Get the correct domain based on environment
 function getAppDomain() {
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
     return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
@@ -28,16 +27,7 @@ function getAppDomain() {
 
 const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
-// Log configuration details for debugging
-console.log("\nStrava Configuration:");
-console.log("====================");
-console.log("Website URL:", getAppDomain());
-console.log("Callback URL:", REDIRECT_URI);
-console.log("Client ID configured:", process.env.STRAVA_CLIENT_ID ? "Yes" : "No");
-console.log("Client Secret configured:", process.env.STRAVA_CLIENT_SECRET ? "Yes" : "No");
-console.log("====================\n");
-
-export function getStravaAuthUrl(options: StravaAuthOptions): string {
+export function getStravaAuthUrl(options: StravaAuthOptions = {}): string {
   if (!process.env.STRAVA_CLIENT_ID) {
     throw new Error("STRAVA_CLIENT_ID is not configured");
   }
@@ -177,7 +167,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           } : null,
         };
 
-        await db.insert(stravaActivities).values(newActivity);
+        await db.insert(stravaActivities).values(newActivity).execute();
         console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
         console.log(`Activity ${activity.id} already exists or failed to insert`);
