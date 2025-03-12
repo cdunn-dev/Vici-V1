@@ -2,16 +2,34 @@ import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import PlanPreview from '@/components/training/plan-preview';
 import { renderWithProviders } from '../test-utils';
-import { validTrainingPlan } from '../fixtures/training-plan';
+import { 
+  validTrainingPlan,
+  planWithEndDateBeforeStartDate,
+  planWithoutWorkouts,
+  planWithNegativeDistance,
+  planWithInvalidDates
+} from '../fixtures/training-plan';
 import { vi } from 'vitest';
+import { useToast } from '@/hooks/use-toast';
+
+// Mock the useToast hook
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn(() => ({
+    toast: vi.fn(),
+  })),
+}));
 
 describe('PlanPreview', () => {
   const mockOnConfirm = vi.fn();
   const mockOnAdjust = vi.fn();
   const mockOnBack = vi.fn();
+  const mockToast = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (useToast as jest.Mock).mockImplementation(() => ({
+      toast: mockToast,
+    }));
   });
 
   const renderComponent = (props: any) => {
@@ -41,37 +59,66 @@ describe('PlanPreview', () => {
     expect(timelineSection).toHaveTextContent('June 15, 2025');
   });
 
-  it('validates plan before confirmation', async () => {
-    const invalidPlan = {
-      ...validTrainingPlan,
-      goal: '',  // Invalid: empty goal
-      targetRace: validTrainingPlan.targetRace || undefined
+  describe('Plan Validation', () => {
+    const testValidationError = async (plan: any, expectedError: string) => {
+      renderComponent({
+        planDetails: plan,
+        onConfirm: mockOnConfirm,
+        onAdjust: mockOnAdjust,
+        onBack: mockOnBack
+      });
+
+      // Try to confirm the plan
+      const confirmButton = screen.getByTestId('approve-plan-button');
+      fireEvent.click(confirmButton);
+
+      // Verify that the toast was called with the correct error message
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Validation Error',
+          description: expectedError,
+          variant: 'destructive'
+        })
+      );
+
+      // Confirm shouldn't be called with invalid data
+      expect(mockOnConfirm).not.toHaveBeenCalled();
     };
 
-    renderComponent({
-      planDetails: invalidPlan,
-      onConfirm: mockOnConfirm,
-      onAdjust: mockOnAdjust,
-      onBack: mockOnBack
+    it('validates empty goals', async () => {
+      await testValidationError(
+        { ...validTrainingPlan, goal: '' },
+        'Training goal is required and cannot be empty'
+      );
     });
 
-    // Try to confirm the plan
-    const confirmButton = screen.getByTestId('approve-plan-button');
-    fireEvent.click(confirmButton);
+    it('validates date order', async () => {
+      await testValidationError(
+        planWithEndDateBeforeStartDate,
+        'End date must be after start date'
+      );
+    });
 
-    // Wait for the validation error toast with title
-    await waitFor(
-      () => {
-        expect(screen.getByText('Validation Error')).toBeInTheDocument();
-      },
-      { 
-        timeout: 5000, // Increase timeout to ensure toast has time to appear
-        interval: 100 // Check more frequently
-      }
-    );
+    it('validates required workouts', async () => {
+      await testValidationError(
+        planWithoutWorkouts,
+        'Week 1 must have at least one workout'
+      );
+    });
 
-    // Double check that the validation prevented the confirm action
-    expect(mockOnConfirm).not.toHaveBeenCalled();
+    it('validates workout distances', async () => {
+      await testValidationError(
+        planWithNegativeDistance,
+        'Workout distance must be positive'
+      );
+    });
+
+    it('validates date formats', async () => {
+      await testValidationError(
+        planWithInvalidDates,
+        'Invalid start date format: invalid-date'
+      );
+    });
   });
 
   it('allows plan confirmation when valid', async () => {
