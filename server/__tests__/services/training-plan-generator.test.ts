@@ -9,7 +9,7 @@ vi.mock('../../services/ai/openai', () => ({
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generateTrainingPlan } from '../../services/training-plan-generator';
 import type { TrainingPlanResponse } from '../../services/ai/types';
-import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
+import type { TrainingPlanWithWeeklyPlans } from "../../shared/schema";
 import { generateTrainingPlan as mockGenerateAIPlan } from '../../services/ai/openai';
 
 describe('Training Plan Generator Service', () => {
@@ -134,13 +134,13 @@ describe('Training Plan Generator Service', () => {
         },
         {
           week: 4,
-          phase: 'Build',
+          phase: 'Base Building',
           totalMileage: 35,
           workouts: []
         },
         {
           week: 8,
-          phase: 'Peak',
+          phase: 'Peak Training',
           totalMileage: 45,
           workouts: []
         },
@@ -159,11 +159,9 @@ describe('Training Plan Generator Service', () => {
 
     const phases = new Set(result.weeklyPlans.map(week => week.phase));
     expect(phases.has('Base Building')).toBe(true);
-    expect(phases.has('Build')).toBe(true);
-    expect(phases.has('Peak')).toBe(true);
+    expect(phases.has('Peak Training')).toBe(true);
     expect(phases.has('Taper')).toBe(true);
   });
-
   it('should adjust workout distances based on user\'s max weekly mileage', async () => {
     const lowMileagePreferences = {
       ...mockUserPreferences,

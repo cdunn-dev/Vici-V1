@@ -9,7 +9,7 @@ vi.mock('../../config', () => ({
   }
 }));
 
-// Mock database operations with inline functions
+// Mock database operations
 vi.mock('../../db', () => {
   const mockExecute = vi.fn().mockResolvedValue(undefined);
   const mockValues = vi.fn().mockReturnValue({ execute: mockExecute });
@@ -31,7 +31,6 @@ vi.mock('../../db', () => {
   };
 });
 
-// Import remaining dependencies after mock setup
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getStravaAuthUrl,
@@ -43,7 +42,7 @@ import {
 } from '../../services/strava';
 import { db } from '../../db';
 import { eq } from 'drizzle-orm';
-import { stravaActivities } from '@shared/schema';
+import { activities as stravaActivities } from '../../schema/strava';
 
 // Mock environment variables
 process.env.STRAVA_CLIENT_ID = 'test_client_id';

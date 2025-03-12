@@ -1,6 +1,8 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import {
-  OpenAIService
+  OpenAIService,
+  type AIServiceConfig,
+  type WorkoutType
 } from '../../../services/ai/openai';
 
 // Mock OpenAI client
@@ -23,10 +25,12 @@ describe('OpenAI Service', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    openaiService = new OpenAIService({ 
+    const config: AIServiceConfig = {
       apiKey: 'test-key',
-      modelName: 'gpt-4o'
-    });
+      modelName: 'gpt-4o',
+      provider: 'openai'
+    };
+    openaiService = new OpenAIService(config);
   });
 
   describe('makeRequest', () => {
@@ -133,7 +137,7 @@ describe('OpenAI Service', () => {
 
   describe('analyzeWorkout', () => {
     const mockWorkout = {
-      type: 'Tempo Run',
+      type: 'Tempo Run' as WorkoutType,
       distance: 8,
       description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown',
       date: new Date('2025-03-15'),
