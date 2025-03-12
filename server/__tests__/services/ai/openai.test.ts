@@ -41,14 +41,16 @@ describe('OpenAI Service', () => {
 
       await expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
         .rejects
-        .toThrow('Failed to parse response');
+        .toMatchObject({
+          message: expect.stringContaining('OpenAI API error: Failed to parse response')
+        });
     });
   });
 
   describe('generateTrainingPlan', () => {
     const mockUserPreferences = {
       goal: "Complete a marathon",
-      goalDescription: "First-time marathoner",
+      goalDescription: "First-time marathoner aiming to finish strong",
       startDate: "2025-03-15",
       endDate: "2025-06-15",
       runningExperience: {
@@ -64,14 +66,14 @@ describe('OpenAI Service', () => {
       }
     };
 
-    it('should handle generation errors', () => {
-      mockCompletionCreate.mockRejectedValueOnce(
-        new Error('Failed to generate training plan')
-      );
+    it('should handle generation errors', async () => {
+      mockCompletionCreate.mockRejectedValueOnce('Failed to generate training plan');
 
-      return expect(openaiService.generateTrainingPlan(mockUserPreferences))
+      await expect(openaiService.generateTrainingPlan(mockUserPreferences))
         .rejects
-        .toThrow('Failed to generate training plan');
+        .toMatchObject({
+          message: expect.stringContaining('OpenAI API error: Failed to generate training plan')
+        });
     });
   });
 
@@ -126,14 +128,14 @@ describe('OpenAI Service', () => {
       }]
     };
 
-    it('should handle adjustment errors', () => {
-      mockCompletionCreate.mockRejectedValueOnce(
-        new Error('Failed to generate adjustments')
-      );
+    it('should handle adjustment errors', async () => {
+      mockCompletionCreate.mockRejectedValueOnce('Failed to generate adjustments');
 
-      return expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
+      await expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
         .rejects
-        .toThrow('Failed to generate adjustments');
+        .toMatchObject({
+          message: expect.stringContaining('OpenAI API error: Failed to generate adjustments')
+        });
     });
   });
 });

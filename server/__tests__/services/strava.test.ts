@@ -21,8 +21,8 @@ vi.mock('../../db', () => ({
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { getStravaAuthUrl, exchangeStravaCode, refreshStravaToken, syncStravaActivities } from '../../services/strava';
-import { db } from '../../db';
 import { activities as stravaActivities } from '../../schema/strava';
+import { db } from '../../db';
 
 describe('Strava Service', () => {
   beforeEach(() => {
@@ -60,12 +60,14 @@ describe('Strava Service', () => {
       });
     });
 
-    it('should handle exchange errors', () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
+    it('should handle exchange errors', async () => {
+      global.fetch = vi.fn().mockRejectedValue('Bad Request');
 
-      return expect(exchangeStravaCode('invalid_code'))
+      await expect(exchangeStravaCode('invalid_code'))
         .rejects
-        .toThrow('Bad Request');
+        .toMatchObject({
+          message: expect.stringContaining('Error exchanging Strava code')
+        });
     });
   });
 
@@ -89,12 +91,14 @@ describe('Strava Service', () => {
       });
     });
 
-    it('should handle refresh errors', () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
+    it('should handle refresh errors', async () => {
+      global.fetch = vi.fn().mockRejectedValue('Unauthorized');
 
-      return expect(refreshStravaToken('invalid_token'))
+      await expect(refreshStravaToken('invalid_token'))
         .rejects
-        .toThrow('Unauthorized');
+        .toMatchObject({
+          message: expect.stringContaining('Error refreshing Strava token')
+        });
     });
   });
 
@@ -119,12 +123,14 @@ describe('Strava Service', () => {
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
-    it('should handle API errors', () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
+    it('should handle API errors', async () => {
+      global.fetch = vi.fn().mockRejectedValue('Too Many Requests');
 
-      return expect(syncStravaActivities(1, 'test_access_token'))
+      await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
-        .toThrow('Too Many Requests');
+        .toMatchObject({
+          message: expect.stringContaining('Error syncing Strava activities')
+        });
     });
   });
 });
