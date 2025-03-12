@@ -7,7 +7,9 @@ import {
   planWithEndDateBeforeStartDate,
   planWithoutWorkouts,
   planWithNegativeDistance,
-  planWithInvalidDates
+  planWithInvalidDates,
+  emptyPlan,
+  partialPlan
 } from '../fixtures/training-plan';
 import { vi } from 'vitest';
 import { useToast } from '@/hooks/use-toast';
@@ -184,5 +186,63 @@ describe('PlanPreview', () => {
     fireEvent.click(submitButton);
 
     expect(mockOnAdjust).toHaveBeenCalledWith('Please reduce the intensity');
+  });
+
+  describe('Edge Cases and Error Handling', () => {
+    it('handles undefined plan data gracefully', () => {
+      // Testing with undefined plan should not throw
+      expect(() => {
+        renderComponent({
+          planDetails: undefined,
+          onConfirm: mockOnConfirm,
+          onAdjust: mockOnAdjust,
+          onBack: mockOnBack
+        });
+      }).not.toThrow();
+
+      // Should show a fallback message
+      expect(screen.getByText(/no plan data available/i)).toBeInTheDocument();
+    });
+
+    it('handles partial plan data without crashing', () => {
+      // Should render with minimal required fields
+      renderComponent({
+        planDetails: partialPlan,
+        onConfirm: mockOnConfirm,
+        onAdjust: mockOnAdjust,
+        onBack: mockOnBack
+      });
+
+      // Basic info should still be shown
+      expect(screen.getByTestId('training-goal')).toHaveTextContent(partialPlan.goal || '');
+      expect(screen.getByTestId('program-timeline')).toBeInTheDocument();
+    });
+
+    it('handles empty weekly plans array', () => {
+      renderComponent({
+        planDetails: {
+          ...validTrainingPlan,
+          weeklyPlans: []
+        },
+        onConfirm: mockOnConfirm,
+        onAdjust: mockOnAdjust,
+        onBack: mockOnBack
+      });
+
+      // Should show empty state message
+      expect(screen.getByText(/no workouts planned yet/i)).toBeInTheDocument();
+    });
+
+    it('handles missing weekly plans property', () => {
+      renderComponent({
+        planDetails: emptyPlan,
+        onConfirm: mockOnConfirm,
+        onAdjust: mockOnAdjust,
+        onBack: mockOnBack
+      });
+
+      // Should show empty state message
+      expect(screen.getByText(/no workouts planned yet/i)).toBeInTheDocument();
+    });
   });
 });

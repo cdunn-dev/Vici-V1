@@ -116,3 +116,26 @@ export const planWithNegativeDistance: MockTrainingPlan = {
     }]
   }]
 };
+
+export const emptyPlan: Partial<MockTrainingPlan> = {
+  name: "Empty Plan",
+  goal: "Test Goal",
+  startDate: "2025-03-15",
+  endDate: "2025-06-15"
+  // Deliberately missing weeklyPlans and other fields
+};
+
+export const partialPlan: Partial<MockTrainingPlan> = {
+  name: "Partial Plan",
+  goal: "Test Goal",
+  startDate: "2025-03-15",
+  endDate: "2025-06-15",
+  weeklyPlans: [], // Empty array
+  trainingPreferences: {
+    weeklyRunningDays: 3,
+    maxWeeklyMileage: 15,
+    weeklyWorkouts: 1,
+    preferredLongRunDay: "Sunday",
+    coachingStyle: "Moderate"
+  }
+};
