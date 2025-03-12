@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { storage } from '../../storage';
 import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { type User } from '../../db/schema';
+import { users } from '../../db/schema';
 
 const scryptAsync = promisify(scrypt);
 
@@ -46,7 +46,7 @@ describe('Authentication Service', () => {
   });
 
   describe('User Authentication', () => {
-    const mockUser: User = {
+    const mockUser = {
       id: 1,
       email: 'test@example.com',
       password: 'hashedPassword.salt',
@@ -57,26 +57,26 @@ describe('Authentication Service', () => {
 
     it('should authenticate valid credentials', async () => {
       vi.mocked(storage.getUserByEmail).mockResolvedValue(mockUser);
-
       const result = await storage.getUserByEmail('test@example.com');
       expect(result).toEqual(mockUser);
     });
 
     it('should reject invalid credentials', async () => {
       vi.mocked(storage.getUserByEmail).mockResolvedValue(undefined);
-
       const result = await storage.getUserByEmail('wrong@example.com');
       expect(result).toBeUndefined();
     });
   });
 
   describe('User Registration', () => {
-    const newUser = {
-      email: 'new@example.com',
-      password: 'password123'
-    };
+    const generateUniqueEmail = () => `test${Date.now()}@example.com`;
 
     it('should create new users successfully', async () => {
+      const newUser = {
+        email: generateUniqueEmail(),
+        password: 'password123'
+      };
+
       vi.mocked(storage.getUserByEmail).mockResolvedValue(undefined);
       vi.mocked(storage.createUser).mockResolvedValue({
         id: 1,
@@ -90,24 +90,30 @@ describe('Authentication Service', () => {
       const result = await storage.createUser(newUser);
       expect(result).toHaveProperty('id');
       expect(result.email).toBe(newUser.email);
+      expect(result.emailVerified).toBe(false);
     });
 
     it('should prevent duplicate emails', async () => {
+      const existingUser = {
+        email: generateUniqueEmail(),
+        password: 'password123'
+      };
+
       vi.mocked(storage.getUserByEmail).mockResolvedValue({
         id: 1,
-        email: newUser.email,
-        password: 'existingHash',
+        email: existingUser.email,
+        password: 'hashedPassword',
         emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date()
       });
 
-      await expect(storage.createUser(newUser)).rejects.toThrow();
+      await expect(storage.createUser(existingUser)).rejects.toThrow();
     });
   });
 
   describe('Session Management', () => {
-    const mockUser: User = {
+    const mockUser = {
       id: 1,
       email: 'test@example.com',
       password: 'hashedPassword',
@@ -118,14 +124,12 @@ describe('Authentication Service', () => {
 
     it('should retrieve user by id', async () => {
       vi.mocked(storage.getUser).mockResolvedValue(mockUser);
-
       const result = await storage.getUser(1);
       expect(result).toEqual(mockUser);
     });
 
     it('should handle non-existent user ids', async () => {
       vi.mocked(storage.getUser).mockResolvedValue(undefined);
-
       const result = await storage.getUser(999);
       expect(result).toBeUndefined();
     });
