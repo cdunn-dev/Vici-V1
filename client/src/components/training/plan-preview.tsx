@@ -80,7 +80,13 @@ export default function PlanPreview({
       toast({
         title: "Validation Error",
         description: error instanceof Error ? error.message : "Failed to validate training plan",
-        variant: "destructive"
+        variant: "destructive",
+        duration: 3000,
+        data: {
+          "data-testid": "validation-error-toast",
+          "data-test-title": "Validation Error",
+          "data-test-description": error instanceof Error ? error.message : "Failed to validate training plan"
+        }
       });
     }
   };

@@ -2,6 +2,7 @@ import React, { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '@/hooks/use-auth';
+import { ToastProvider } from '@/components/ui/toast';
 import { vi } from 'vitest';
 
 // Create a wrapper with QueryClient for testing hooks and components
@@ -12,11 +13,6 @@ export function createTestQueryClient() {
         retry: false,
       },
     },
-    logger: {
-      log: console.log,
-      warn: console.warn,
-      error: () => {},
-    }
   });
 }
 
@@ -25,7 +21,9 @@ export function createWrapper() {
   const queryClient = createTestQueryClient();
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <ToastProvider>
+        {children}
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -35,18 +33,20 @@ export function createAuthWrapper(mockUser = null) {
   const queryClient = createTestQueryClient();
   return ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider
-        value={{
-          user: mockUser,
-          isLoading: false,
-          error: null,
-          loginMutation: { mutate: vi.fn(), isPending: false } as any,
-          logoutMutation: { mutate: vi.fn(), isPending: false } as any,
-          registerMutation: { mutate: vi.fn(), isPending: false } as any,
-        }}
-      >
-        {children}
-      </AuthContext.Provider>
+      <ToastProvider>
+        <AuthContext.Provider
+          value={{
+            user: mockUser,
+            isLoading: false,
+            error: null,
+            loginMutation: { mutate: vi.fn(), isPending: false } as any,
+            logoutMutation: { mutate: vi.fn(), isPending: false } as any,
+            registerMutation: { mutate: vi.fn(), isPending: false } as any,
+          }}
+        >
+          {children}
+        </AuthContext.Provider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

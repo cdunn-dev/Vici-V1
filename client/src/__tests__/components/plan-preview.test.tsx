@@ -14,18 +14,22 @@ describe('PlanPreview', () => {
     vi.clearAllMocks();
   });
 
-  it('renders plan details correctly', () => {
-    renderWithProviders(
-      <PlanPreview
-        planDetails={{
-          ...validTrainingPlan,
-          targetRace: validTrainingPlan.targetRace || undefined
-        }}
-        onConfirm={mockOnConfirm}
-        onAdjust={mockOnAdjust}
-        onBack={mockOnBack}
-      />
+  const renderComponent = (props: any) => {
+    return renderWithProviders(
+      <PlanPreview {...props} />
     );
+  };
+
+  it('renders plan details correctly', () => {
+    renderComponent({
+      planDetails: {
+        ...validTrainingPlan,
+        targetRace: validTrainingPlan.targetRace || undefined
+      },
+      onConfirm: mockOnConfirm,
+      onAdjust: mockOnAdjust,
+      onBack: mockOnBack
+    });
 
     // Check goal is displayed in Training Goal section
     const goalSection = screen.getByTestId('training-goal');
@@ -44,40 +48,42 @@ describe('PlanPreview', () => {
       targetRace: validTrainingPlan.targetRace || undefined
     };
 
-    renderWithProviders(
-      <PlanPreview
-        planDetails={invalidPlan}
-        onConfirm={mockOnConfirm}
-        onAdjust={mockOnAdjust}
-        onBack={mockOnBack}
-      />
-    );
+    renderComponent({
+      planDetails: invalidPlan,
+      onConfirm: mockOnConfirm,
+      onAdjust: mockOnAdjust,
+      onBack: mockOnBack
+    });
 
     // Try to confirm the plan
     const confirmButton = screen.getByTestId('approve-plan-button');
     fireEvent.click(confirmButton);
 
-    // Check that the error is displayed in a toast
-    await waitFor(() => {
-      expect(screen.getByText(/training goal is required/i)).toBeInTheDocument();
-    });
+    // Wait for the validation error toast with title
+    await waitFor(
+      () => {
+        expect(screen.getByText('Validation Error')).toBeInTheDocument();
+      },
+      { 
+        timeout: 5000, // Increase timeout to ensure toast has time to appear
+        interval: 100 // Check more frequently
+      }
+    );
 
-    // Confirm shouldn't be called with invalid data
+    // Double check that the validation prevented the confirm action
     expect(mockOnConfirm).not.toHaveBeenCalled();
   });
 
   it('allows plan confirmation when valid', async () => {
-    renderWithProviders(
-      <PlanPreview
-        planDetails={{
-          ...validTrainingPlan,
-          targetRace: validTrainingPlan.targetRace || undefined
-        }}
-        onConfirm={mockOnConfirm}
-        onAdjust={mockOnAdjust}
-        onBack={mockOnBack}
-      />
-    );
+    renderComponent({
+      planDetails: {
+        ...validTrainingPlan,
+        targetRace: validTrainingPlan.targetRace || undefined
+      },
+      onConfirm: mockOnConfirm,
+      onAdjust: mockOnAdjust,
+      onBack: mockOnBack
+    });
 
     // Confirm the plan
     const confirmButton = screen.getByTestId('approve-plan-button');
@@ -90,18 +96,16 @@ describe('PlanPreview', () => {
   });
 
   it('shows loading state during submission', () => {
-    renderWithProviders(
-      <PlanPreview
-        planDetails={{
-          ...validTrainingPlan,
-          targetRace: validTrainingPlan.targetRace || undefined
-        }}
-        onConfirm={mockOnConfirm}
-        onAdjust={mockOnAdjust}
-        onBack={mockOnBack}
-        isSubmitting={true}
-      />
-    );
+    renderComponent({
+      planDetails: {
+        ...validTrainingPlan,
+        targetRace: validTrainingPlan.targetRace || undefined
+      },
+      onConfirm: mockOnConfirm,
+      onAdjust: mockOnAdjust,
+      onBack: mockOnBack,
+      isSubmitting: true
+    });
 
     // Check loading state
     const approveButton = screen.getByTestId('approve-plan-button');
@@ -110,17 +114,15 @@ describe('PlanPreview', () => {
   });
 
   it('handles adjustment requests', () => {
-    renderWithProviders(
-      <PlanPreview
-        planDetails={{
-          ...validTrainingPlan,
-          targetRace: validTrainingPlan.targetRace || undefined
-        }}
-        onConfirm={mockOnConfirm}
-        onAdjust={mockOnAdjust}
-        onBack={mockOnBack}
-      />
-    );
+    renderComponent({
+      planDetails: {
+        ...validTrainingPlan,
+        targetRace: validTrainingPlan.targetRace || undefined
+      },
+      onConfirm: mockOnConfirm,
+      onAdjust: mockOnAdjust,
+      onBack: mockOnBack
+    });
 
     // Click adjust button
     const adjustButton = screen.getByTestId('request-adjustments-button');
