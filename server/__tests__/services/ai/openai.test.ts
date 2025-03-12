@@ -1,19 +1,22 @@
 import { vi } from 'vitest';
 
-// Mock OpenAI module before any imports
+// Mock completion function
 const mockCompletionCreate = vi.fn();
 
+// Mock OpenAI module
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: mockCompletionCreate
-      }
+  default: class {
+    constructor() {
+      this.chat = {
+        completions: {
+          create: mockCompletionCreate
+        }
+      };
     }
-  }))
+  }
 }));
 
-// Import remaining dependencies after mock setup
+// Import remaining dependencies
 import { describe, it, expect, beforeEach } from 'vitest';
 import { OpenAIService } from '../../../services/ai/openai';
 
@@ -24,7 +27,8 @@ describe('OpenAI Service', () => {
     vi.clearAllMocks();
     openaiService = new OpenAIService({
       apiKey: 'test-key',
-      modelName: 'gpt-4o'
+      modelName: 'gpt-4o',
+      provider: 'openai'
     });
   });
 
@@ -38,16 +42,15 @@ describe('OpenAI Service', () => {
         }]
       });
 
-      await expect(
-        openaiService['makeRequest']('test prompt', 'test operation', 'json')
-      ).rejects.toThrow(/Failed to parse/);
+      await expect(async () => {
+        await openaiService['makeRequest']('test prompt', 'test operation', 'json')
+      }).rejects.toThrow(/Failed to parse/);
     });
   });
 
   describe('generateTrainingPlan', () => {
     const mockUserPreferences = {
       goal: "Complete a marathon",
-      goalDescription: "First-time marathoner aiming to finish strong",
       startDate: "2025-03-15",
       endDate: "2025-06-15",
       runningExperience: {
@@ -63,14 +66,12 @@ describe('OpenAI Service', () => {
       }
     };
 
-    it('should handle invalid plan generation response', async () => {
-      mockCompletionCreate.mockRejectedValueOnce(
-        new Error('Invalid training plan generated')
-      );
+    it('should handle generation errors', async () => {
+      mockCompletionCreate.mockRejectedValueOnce(new Error('Failed to generate'));
 
-      await expect(
-        openaiService.generateTrainingPlan(mockUserPreferences)
-      ).rejects.toThrow(/Invalid training plan/);
+      await expect(async () => {
+        await openaiService.generateTrainingPlan(mockUserPreferences)
+      }).rejects.toThrow(/Failed to generate/);
     });
   });
 
@@ -112,7 +113,7 @@ describe('OpenAI Service', () => {
   });
 
   describe('generateAdjustments', () => {
-    const mockFeedback = 'Need more recovery time between hard workouts';
+    const mockFeedback = 'Need more recovery time';
     const mockCurrentPlan = {
       weeklyPlans: [{
         week: 1,
@@ -125,14 +126,12 @@ describe('OpenAI Service', () => {
       }]
     };
 
-    it('should handle invalid adjustment response', async () => {
-      mockCompletionCreate.mockRejectedValueOnce(
-        new Error('Invalid plan adjustments generated')
-      );
+    it('should handle adjustment errors', async () => {
+      mockCompletionCreate.mockRejectedValueOnce(new Error('Failed to adjust'));
 
-      await expect(
-        openaiService.generateAdjustments(mockFeedback, mockCurrentPlan)
-      ).rejects.toThrow(/Invalid plan adjustments/);
+      await expect(async () => {
+        await openaiService.generateAdjustments(mockFeedback, mockCurrentPlan)
+      }).rejects.toThrow(/Failed to adjust/);
     });
   });
 });

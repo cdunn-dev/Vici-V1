@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock config before any imports
+// Mock config before imports
 vi.mock('../../config', () => ({
   default: {
     STRAVA_CLIENT_ID: 'test_client_id',
@@ -92,7 +92,7 @@ describe('Strava Service', () => {
     });
 
     it('should handle exchange errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to exchange code: Bad Request'));
+      global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
 
       await expect(exchangeStravaCode('invalid_code'))
         .rejects
@@ -122,7 +122,7 @@ describe('Strava Service', () => {
     });
 
     it('should handle refresh errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to refresh token: Unauthorized'));
+      global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
 
       await expect(refreshStravaToken('invalid_token'))
         .rejects
@@ -163,7 +163,7 @@ describe('Strava Service', () => {
     });
 
     it('should handle API errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to fetch activities: Too Many Requests'));
+      global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
 
       await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
