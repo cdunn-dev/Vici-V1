@@ -1,5 +1,4 @@
 import { format, parseISO } from "date-fns";
-import { ErrorMessages } from "./error-utils";
 
 /**
  * Formats a date string into a display format
@@ -31,13 +30,13 @@ export const formatDate = (dateString: string, formatStr: string = "MMM d, yyyy"
  */
 export const formatDateForApi = (dateString: string): string => {
   if (!dateString || typeof dateString !== 'string') {
-    throw new Error(ErrorMessages.INVALID_DATE);
+    throw new Error("Invalid date input");
   }
 
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      throw new Error(ErrorMessages.INVALID_DATE);
+      throw new Error("Invalid date format");
     }
     return date.toISOString().split('T')[0];
   } catch (error) {

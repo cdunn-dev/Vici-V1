@@ -27,12 +27,14 @@ describe('PlanPreview', () => {
       />
     );
 
-    // Check goal is displayed
-    expect(screen.getByText(validTrainingPlan.goal)).toBeInTheDocument();
+    // Check goal is displayed in Training Goal section
+    const goalSection = screen.getByTestId('training-goal');
+    expect(goalSection).toHaveTextContent(validTrainingPlan.goal);
 
-    // Check dates are displayed
-    expect(screen.getByText(/March 15, 2025/)).toBeInTheDocument();
-    expect(screen.getByText(/June 15, 2025/)).toBeInTheDocument();
+    // Check dates are displayed in Program Timeline section
+    const timelineSection = screen.getByTestId('program-timeline');
+    expect(timelineSection).toHaveTextContent('March 15, 2025');
+    expect(timelineSection).toHaveTextContent('June 15, 2025');
   });
 
   it('validates plan before confirmation', async () => {
@@ -52,12 +54,12 @@ describe('PlanPreview', () => {
     );
 
     // Try to confirm the plan
-    const confirmButton = screen.getByText(/Approve Training Plan/i);
+    const confirmButton = screen.getByTestId('approve-plan-button');
     fireEvent.click(confirmButton);
 
     // Check that the error is displayed in a toast
     await waitFor(() => {
-      expect(screen.getByText(/Training goal is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/training goal is required/i)).toBeInTheDocument();
     });
 
     // Confirm shouldn't be called with invalid data
@@ -78,7 +80,7 @@ describe('PlanPreview', () => {
     );
 
     // Confirm the plan
-    const confirmButton = screen.getByText(/Approve Training Plan/i);
+    const confirmButton = screen.getByTestId('approve-plan-button');
     fireEvent.click(confirmButton);
 
     // Should call onConfirm
@@ -102,8 +104,9 @@ describe('PlanPreview', () => {
     );
 
     // Check loading state
-    expect(screen.getByText(/Creating Plan/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Creating Plan/i })).toBeDisabled();
+    const approveButton = screen.getByTestId('approve-plan-button');
+    expect(approveButton).toHaveTextContent(/creating plan/i);
+    expect(approveButton).toBeDisabled();
   });
 
   it('handles adjustment requests', () => {
@@ -120,7 +123,7 @@ describe('PlanPreview', () => {
     );
 
     // Click adjust button
-    const adjustButton = screen.getByText(/Request Adjustments/i);
+    const adjustButton = screen.getByTestId('request-adjustments-button');
     fireEvent.click(adjustButton);
 
     // Enter feedback
@@ -128,7 +131,7 @@ describe('PlanPreview', () => {
     fireEvent.change(feedbackInput, { target: { value: 'Please reduce the intensity' } });
 
     // Submit adjustment
-    const submitButton = screen.getByText(/Submit Adjustments/i);
+    const submitButton = screen.getByRole('button', { name: /submit adjustments/i });
     fireEvent.click(submitButton);
 
     expect(mockOnAdjust).toHaveBeenCalledWith('Please reduce the intensity');

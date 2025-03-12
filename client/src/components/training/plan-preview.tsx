@@ -194,6 +194,7 @@ export default function PlanPreview({
                   variant="outline"
                   onClick={() => setIsAdjusting(true)}
                   className="gap-2"
+                  data-testid="request-adjustments-button"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Request Adjustments
@@ -211,7 +212,7 @@ export default function PlanPreview({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Goal and Timeline Information */}
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-primary">
+                      <div className="flex items-center gap-2 text-primary" data-testid="training-goal">
                         <Target className="h-5 w-5" />
                         <div className="font-medium">
                           Training Goal
@@ -223,7 +224,7 @@ export default function PlanPreview({
                       </div>
 
                       {serializablePlan.targetRace && (
-                        <div className="flex items-center gap-2 text-primary">
+                        <div className="flex items-center gap-2 text-primary" data-testid="target-race">
                           <Medal className="h-5 w-5" />
                           <div className="font-medium">
                             Target Race
@@ -240,7 +241,7 @@ export default function PlanPreview({
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-primary">
+                      <div className="flex items-center gap-2 text-primary" data-testid="program-timeline">
                         <CalendarClock className="h-5 w-5" />
                         <div className="font-medium">
                           Program Timeline
@@ -314,6 +315,7 @@ export default function PlanPreview({
                   size="lg"
                   disabled={isSubmitting}
                   className="gap-2 bg-primary hover:bg-primary/90 text-lg px-8 py-6"
+                  data-testid="approve-plan-button"
                 >
                   {isSubmitting ? (
                     <>
