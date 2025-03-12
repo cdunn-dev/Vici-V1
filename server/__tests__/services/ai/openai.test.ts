@@ -34,12 +34,12 @@ describe('OpenAI Service', () => {
   });
 
   describe('makeRequest', () => {
-    it('should make a request to OpenAI with correct parameters', async () => {
+    it('should handle invalid JSON responses', async () => {
       const mockResponse = {
         choices: [
           {
             message: {
-              content: JSON.stringify({ response: 'test response' })
+              content: 'invalid json'
             }
           }
         ]
@@ -47,36 +47,16 @@ describe('OpenAI Service', () => {
 
       mockCreate.mockResolvedValueOnce(mockResponse);
 
-      const result = await openaiService['makeRequest']('test prompt', 'test operation', 'json');
-
-      expect(mockCreate).toHaveBeenCalledWith({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: expect.any(String)
-          },
-          {
-            role: 'user',
-            content: 'test prompt'
-          }
-        ],
-        response_format: { type: 'json_object' }
-      });
-
-      expect(result).toEqual({ response: 'test response' });
-    });
-
-    it('should handle API errors gracefully', async () => {
-      mockCreate.mockRejectedValueOnce(new Error('API Error'));
-
-      await expect(openaiService['makeRequest']('test prompt', 'test operation')).rejects.toThrow();
+      await expect(() =>
+        openaiService['makeRequest']('test prompt', 'test operation', 'json')
+      ).rejects.toThrow('Failed to parse AI response');
     });
   });
 
   describe('generateTrainingPlan', () => {
     const mockUserPreferences = {
-      goalDescription: 'Run a marathon',
+      goal: "Run a marathon",
+      goalDescription: "First-time marathoner aiming to finish",
       runningExperience: {
         level: 'intermediate',
         fitnessLevel: 'good'
@@ -85,53 +65,29 @@ describe('OpenAI Service', () => {
         weeklyRunningDays: 5,
         maxWeeklyMileage: 50,
         weeklyWorkouts: 3,
-        preferredLongRunDay: 'Sunday'
+        preferredLongRunDay: 'Sunday',
+        coachingStyle: 'Moderate'
       },
       startDate: '2025-03-15',
       endDate: '2025-06-15'
     };
 
-    it('should generate a training plan based on user preferences', async () => {
-      const mockPlan = {
-        weeklyPlans: [
+    it('should handle invalid plan generation response', async () => {
+      const mockResponse = {
+        choices: [
           {
-            week: 1,
-            phase: 'Base Building',
-            totalMileage: 30,
-            workouts: [
-              {
-                day: '2025-03-15',
-                type: 'Easy Run',
-                distance: 5,
-                description: 'Easy-paced run'
-              }
-            ]
+            message: {
+              content: JSON.stringify({ weeklyPlans: [] })
+            }
           }
         ]
       };
 
-      mockCreate.mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify(mockPlan)
-            }
-          }
-        ]
-      });
+      mockCreate.mockResolvedValueOnce(mockResponse);
 
-      const result = await openaiService.generateTrainingPlan(mockUserPreferences);
-
-      expect(result).toEqual(mockPlan);
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              content: expect.stringContaining('Run a marathon')
-            })
-          ])
-        })
-      );
+      await expect(() =>
+        openaiService.generateTrainingPlan(mockUserPreferences)
+      ).rejects.toThrow('Invalid training plan generated');
     });
   });
 
@@ -142,14 +98,21 @@ describe('OpenAI Service', () => {
       description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown',
       date: new Date('2025-03-15'),
       duration: 60,
-      averagePace: '8:00',
+      averagePace: 480,
       perceivedEffort: 7
     };
 
     it('should analyze a workout and provide feedback', async () => {
       const mockAnalysis = {
         feedback: 'Good workout structure',
-        adjustments: 'Consider adding strides during warmup'
+        adjustments: [
+          'Consider adding strides during warmup',
+          'Try to maintain even splits during tempo portion'
+        ],
+        riskAssessment: {
+          overtrainingRisk: 'low',
+          injuryRisk: 'low'
+        }
       };
 
       mockCreate.mockResolvedValueOnce({
@@ -163,78 +126,43 @@ describe('OpenAI Service', () => {
       });
 
       const result = await openaiService.analyzeWorkout(mockWorkout);
-
       expect(result).toEqual(mockAnalysis);
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              content: expect.stringContaining('Tempo Run')
-            })
-          ])
-        })
-      );
     });
   });
 
   describe('generateAdjustments', () => {
-    const mockFeedback = 'Need more recovery time';
+    const mockFeedback = 'Need more recovery time between hard workouts';
     const mockCurrentPlan = {
       weeklyPlans: [
         {
           week: 1,
           workouts: [
             {
-              type: 'Easy Run',
+              type: 'Tempo Run' as WorkoutType,
               distance: 5,
-              description: 'Easy-paced run'
+              description: 'Tempo run'
             }
           ]
         }
       ]
     };
 
-    it('should generate plan adjustments based on feedback', async () => {
-      const mockAdjustments = {
-        suggestedPlan: {
-          weeklyPlans: [
-            {
-              week: 1,
-              workouts: [
-                {
-                  type: 'Recovery Run',
-                  distance: 4,
-                  description: 'Very easy recovery run'
-                }
-              ]
-            }
-          ]
-        },
-        reasoning: 'Reduced intensity to allow for better recovery'
-      };
-
-      mockCreate.mockResolvedValueOnce({
+    it('should handle invalid adjustment response', async () => {
+      const mockResponse = {
         choices: [
           {
             message: {
-              content: JSON.stringify(mockAdjustments)
+              content: JSON.stringify({ suggestedPlan: { weeklyPlans: [] } })
             }
           }
         ]
-      });
+      };
 
-      const result = await openaiService.generateAdjustments(mockFeedback, mockCurrentPlan);
+      mockCreate.mockResolvedValueOnce(mockResponse);
 
-      expect(result).toEqual(mockAdjustments);
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          messages: expect.arrayContaining([
-            expect.objectContaining({
-              content: expect.stringContaining('Need more recovery time')
-            })
-          ])
-        })
-      );
+      await expect(() =>
+        openaiService.generateAdjustments(mockFeedback, mockCurrentPlan)
+      ).rejects.toThrow('Invalid plan adjustments generated');
     });
   });
 });

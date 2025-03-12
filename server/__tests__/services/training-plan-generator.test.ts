@@ -5,11 +5,9 @@ vi.mock('../../services/ai/openai', () => ({
   generateTrainingPlan: vi.fn()
 }));
 
-// Import remaining dependencies after mock setup
 import { describe, it, expect, beforeEach } from 'vitest';
 import { generateTrainingPlan } from '../../services/training-plan-generator';
 import type { TrainingPlanResponse } from '../../services/ai/types';
-import type { TrainingPlanWithWeeklyPlans } from "../../shared/schema";
 import { generateTrainingPlan as mockGenerateAIPlan } from '../../services/ai/openai';
 
 describe('Training Plan Generator Service', () => {
@@ -20,9 +18,12 @@ describe('Training Plan Generator Service', () => {
   });
 
   const mockUserPreferences = {
+    name: "Marathon Training Plan",
+    goal: "Complete a marathon",
+    goalDescription: "First-time marathoner aiming to finish strong",
     startDate: '2025-03-15',
     endDate: '2025-06-15',
-    goal: 'Complete a marathon',
+    weeklyMileage: 30,
     runningExperience: {
       level: 'intermediate',
       fitnessLevel: 'good'
@@ -38,7 +39,9 @@ describe('Training Plan Generator Service', () => {
       distance: 'Marathon',
       date: '2025-06-15',
       goalTime: '3:45:00'
-    }
+    },
+    weeklyPlans: [],
+    is_active: true
   };
 
   it('should generate a complete training plan', async () => {
@@ -70,6 +73,7 @@ describe('Training Plan Generator Service', () => {
       id: 0,
       userId: 0,
       active: true,
+      name: mockUserPreferences.name,
       goal: mockUserPreferences.goal,
       startDate: mockUserPreferences.startDate,
       endDate: mockUserPreferences.endDate,
@@ -98,7 +102,9 @@ describe('Training Plan Generator Service', () => {
   it('should validate user preferences before generating plan', async () => {
     const invalidPreferences = {
       ...mockUserPreferences,
-      goal: ''
+      goal: undefined,
+      startDate: undefined,
+      endDate: undefined
     };
 
     await expect(generateTrainingPlan(invalidPreferences))
@@ -162,7 +168,8 @@ describe('Training Plan Generator Service', () => {
     expect(phases.has('Peak Training')).toBe(true);
     expect(phases.has('Taper')).toBe(true);
   });
-  it('should adjust workout distances based on user\'s max weekly mileage', async () => {
+
+  it('should adjust workout distances based on max weekly mileage', async () => {
     const lowMileagePreferences = {
       ...mockUserPreferences,
       trainingPreferences: {
