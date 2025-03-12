@@ -11,21 +11,13 @@ vi.mock('../../config', () => ({
 
 // Mock database operations
 vi.mock('../../db', () => {
-  const mockExecute = vi.fn().mockResolvedValue(undefined);
-  const mockValues = vi.fn().mockReturnValue({ execute: mockExecute });
+  const mockValues = vi.fn().mockReturnValue({
+    returning: vi.fn().mockResolvedValue([{ id: 1 }])
+  });
   const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
 
   return {
     db: {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          where: vi.fn(() => ({
-            orderBy: vi.fn(() => ({
-              limit: vi.fn(() => [])
-            }))
-          }))
-        }))
-      })),
       insert: mockInsert
     }
   };
@@ -41,7 +33,6 @@ import {
   type StravaTokens
 } from '../../services/strava';
 import { db } from '../../db';
-import { eq } from 'drizzle-orm';
 import { activities as stravaActivities } from '../../schema/strava.js';
 
 // Mock environment variables
@@ -160,28 +151,26 @@ describe('Strava Service', () => {
   });
 
   describe('syncStravaActivities', () => {
-    const mockActivities = [
-      {
-        id: 1234567890,
-        name: 'Morning Run',
-        type: 'Run',
-        start_date: '2025-03-11T08:00:00Z',
-        distance: 5000,
-        moving_time: 1800,
-        elapsed_time: 1800,
-        total_elevation_gain: 50,
-        average_speed: 2.78,
-        max_speed: 3.5,
-        average_heartrate: null,
-        max_heartrate: null,
-        start_latitude: '40.7128',
-        start_longitude: '-74.0060',
-        map: {
-          summary_polyline: 'test_polyline',
-          resource_state: 2
-        }
+    const mockActivities = [{
+      id: 1234567890,
+      name: 'Morning Run',
+      type: 'Run',
+      start_date: '2025-03-11T08:00:00Z',
+      distance: 5000.0,
+      moving_time: 1800,
+      elapsed_time: 1800,
+      total_elevation_gain: 50.0,
+      average_speed: 2.78,
+      max_speed: 3.5,
+      average_heartrate: 150.0,
+      max_heartrate: 175.0,
+      start_latitude: '40.7128',
+      start_longitude: '-74.0060',
+      map: {
+        summary_polyline: 'test_polyline',
+        resource_state: 2
       }
-    ];
+    }];
 
     it('should fetch and store activities', async () => {
       global.fetch = vi.fn().mockResolvedValue({
@@ -191,7 +180,12 @@ describe('Strava Service', () => {
 
       await syncStravaActivities(1, 'test_access_token');
 
+      // Verify the correct table and data are used
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
+
+      // Verify that values were passed correctly
+      const insertValues = vi.mocked(db.insert).mock.calls[0][0];
+      expect(insertValues).toBe(stravaActivities);
     });
 
     it('should handle API errors', async () => {
