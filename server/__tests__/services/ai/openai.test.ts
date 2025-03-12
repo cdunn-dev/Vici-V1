@@ -1,27 +1,33 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+// Import vi first since we need it for the mocks
+import { vi } from 'vitest';
 
-// Mock OpenAI module
-vi.mock('openai', () => {
-  return {
-    __esModule: true,
-    default: function MockOpenAI() {
-      return {
-        chat: {
-          completions: {
-            create: vi.fn()
-          }
-        }
-      };
-    }
-  };
-});
+// Mock completion function at top level
+const mockCreateCompletion = vi.fn();
 
+// Mock OpenAI class at top level
+class MockOpenAI {
+  constructor() {
+    this.chat = {
+      completions: {
+        create: mockCreateCompletion
+      }
+    };
+  }
+}
+
+// Mock OpenAI module before any imports
+vi.mock('openai', () => ({
+  __esModule: true,
+  default: MockOpenAI,
+  OpenAI: MockOpenAI
+}));
+
+// Import remaining dependencies after mocks
+import { describe, it, expect, beforeEach } from 'vitest';
 import { OpenAIService } from '../../../services/ai/openai';
-import OpenAI from 'openai';
 
 describe('OpenAI Service', () => {
   let openaiService: OpenAIService;
-  let mockCreateCompletion: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,10 +36,6 @@ describe('OpenAI Service', () => {
       modelName: 'gpt-4o',
       provider: 'openai'
     });
-
-    // Get reference to the mock function
-    const openaiInstance = new OpenAI({ apiKey: 'test-key' });
-    mockCreateCompletion = openaiInstance.chat.completions.create as ReturnType<typeof vi.fn>;
   });
 
   describe('makeRequest', () => {
@@ -54,8 +56,8 @@ describe('OpenAI Service', () => {
 
   describe('generateTrainingPlan', () => {
     const mockUserPreferences = {
-      goal: "Run a marathon",
-      goalDescription: "First-time marathoner aiming to finish",
+      goal: "Complete a marathon",
+      goalDescription: "First-time marathoner aiming to finish strong",
       startDate: '2025-03-15',
       endDate: '2025-06-15',
       runningExperience: {
@@ -92,7 +94,7 @@ describe('OpenAI Service', () => {
       perceivedEffort: 7
     };
 
-    it('should analyze a workout and provide feedback', async () => {
+    it('should analyze workout and provide feedback', async () => {
       const mockAnalysis = {
         feedback: 'Good workout structure',
         adjustments: [
@@ -123,9 +125,9 @@ describe('OpenAI Service', () => {
     const mockCurrentPlan = {
       weeklyPlans: [{
         week: 1,
-        phase: 'Base Building' as const,
+        phase: 'Base Building',
         workouts: [{
-          type: 'Tempo Run' as const,
+          type: 'Tempo Run',
           distance: 5,
           description: 'Tempo run'
         }]
