@@ -85,6 +85,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const onSubmit = async (values: PlanGeneratorFormData) => {
     try {
       setIsSubmitting(true);
+
+      // Log submission values for debugging
       console.log('Form submission started with values:', {
         goal: values.goal,
         startDate: values.startDate,
@@ -99,17 +101,17 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         ? new Date(values.targetRace.date)
         : addWeeks(startDate, 12);
 
-      // Create preview data
+      // Create preview data with all required fields
       const previewData = {
-        ...values,
+        goal: values.goal,
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+        endDate: endDate.toISOString(),
+        runningExperience: values.runningExperience,
+        trainingPreferences: values.trainingPreferences,
+        targetRace: values.targetRace
       };
 
-      console.log('Transformed preview data:', {
-        originalValues: values,
-        transformedData: previewData
-      });
+      console.log('Sending preview request with data:', previewData);
 
       // Generate preview plan
       const response = await fetch('/api/training-plans/preview', {
