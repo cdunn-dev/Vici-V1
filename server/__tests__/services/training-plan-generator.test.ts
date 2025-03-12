@@ -100,6 +100,11 @@ describe('Training Plan Generator Service', () => {
   });
 
   it('should validate user preferences before generating plan', async () => {
+    // Prevent the AI generation function from being called
+    vi.spyOn(mockGenerateTrainingPlan, 'mockImplementation').mockImplementation(() => {
+      throw new Error('AI generation should not be called during validation');
+    });
+
     const invalidPreferences = {
       ...mockUserPreferences,
       goal: undefined,
@@ -107,9 +112,9 @@ describe('Training Plan Generator Service', () => {
       endDate: undefined
     };
 
-    await expect(generateTrainingPlan(invalidPreferences))
-      .rejects
-      .toThrow('Training goal is required');
+    await expect(
+      generateTrainingPlan(invalidPreferences)
+    ).rejects.toThrow('Training goal is required');
 
     expect(mockGenerateTrainingPlan).not.toHaveBeenCalled();
   });
@@ -129,14 +134,7 @@ describe('Training Plan Generator Service', () => {
           week: 1,
           phase: 'Base Building',
           totalMileage: 30,
-          workouts: [
-            {
-              day: '2025-03-15',
-              type: 'Easy Run',
-              distance: 5,
-              description: 'Easy-paced run'
-            }
-          ]
+          workouts: []
         },
         {
           week: 4,

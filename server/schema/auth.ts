@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { users } from "../schema";
+import { users } from "../db/schema";
 
 export const userSchema = z.object({
   id: z.number(),

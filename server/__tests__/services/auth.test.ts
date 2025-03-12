@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { storage } from '../../storage';
 import { scrypt, randomBytes, timingSafeEqual } from 'crypto';
 import { promisify } from 'util';
-import { type User } from '../../schema/auth';
+import { type User } from '../../db/schema';
 
 const scryptAsync = promisify(scrypt);
 
@@ -50,6 +50,7 @@ describe('Authentication Service', () => {
       id: 1,
       email: 'test@example.com',
       password: 'hashedPassword.salt',
+      emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -81,6 +82,7 @@ describe('Authentication Service', () => {
         id: 1,
         email: newUser.email,
         password: expect.any(String),
+        emailVerified: false,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date)
       });
@@ -95,6 +97,7 @@ describe('Authentication Service', () => {
         id: 1,
         email: newUser.email,
         password: 'existingHash',
+        emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -108,6 +111,7 @@ describe('Authentication Service', () => {
       id: 1,
       email: 'test@example.com',
       password: 'hashedPassword',
+      emailVerified: false,
       createdAt: new Date(),
       updatedAt: new Date()
     };
