@@ -1,29 +1,27 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock the OpenAI module
+// Mock OpenAI module
 vi.mock('openai', () => {
-  const mockCompletionCreate = vi.fn();
-
-  class MockOpenAI {
-    chat = {
-      completions: {
-        create: mockCompletionCreate
-      }
-    };
-  }
-
   return {
     __esModule: true,
-    default: MockOpenAI,
-    OpenAI: MockOpenAI
+    default: function MockOpenAI() {
+      return {
+        chat: {
+          completions: {
+            create: vi.fn()
+          }
+        }
+      };
+    }
   };
 });
 
 import { OpenAIService } from '../../../services/ai/openai';
+import OpenAI from 'openai';
 
 describe('OpenAI Service', () => {
   let openaiService: OpenAIService;
-  let mockCompletionCreate: ReturnType<typeof vi.fn>;
+  let mockCreateCompletion: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -32,17 +30,15 @@ describe('OpenAI Service', () => {
       modelName: 'gpt-4o',
       provider: 'openai'
     });
-    // Get reference to the mocked function
-    mockCompletionCreate = vi.mocked(new (vi.mocked(require('openai').OpenAI)()).chat.completions.create);
-  });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+    // Get reference to the mock function
+    const openaiInstance = new OpenAI({ apiKey: 'test-key' });
+    mockCreateCompletion = openaiInstance.chat.completions.create as ReturnType<typeof vi.fn>;
   });
 
   describe('makeRequest', () => {
     it('should handle invalid JSON responses', async () => {
-      mockCompletionCreate.mockResolvedValueOnce({
+      mockCreateCompletion.mockResolvedValueOnce({
         choices: [{
           message: {
             content: 'invalid json'
@@ -77,7 +73,7 @@ describe('OpenAI Service', () => {
 
     it('should handle invalid plan generation response', async () => {
       const errorMessage = 'Invalid training plan generated';
-      mockCompletionCreate.mockRejectedValueOnce(new Error(errorMessage));
+      mockCreateCompletion.mockRejectedValueOnce(new Error(errorMessage));
 
       await expect(
         openaiService.generateTrainingPlan(mockUserPreferences)
@@ -87,7 +83,7 @@ describe('OpenAI Service', () => {
 
   describe('analyzeWorkout', () => {
     const mockWorkout = {
-      type: 'Tempo Run' as const,
+      type: 'Tempo Run',
       distance: 8,
       description: '2 mile warmup, 4 miles at tempo pace, 2 mile cooldown',
       date: new Date('2025-03-15'),
@@ -109,7 +105,7 @@ describe('OpenAI Service', () => {
         }
       };
 
-      mockCompletionCreate.mockResolvedValueOnce({
+      mockCreateCompletion.mockResolvedValueOnce({
         choices: [{
           message: {
             content: JSON.stringify(mockAnalysis)
@@ -138,7 +134,7 @@ describe('OpenAI Service', () => {
 
     it('should handle invalid adjustment response', async () => {
       const errorMessage = 'Invalid plan adjustments generated';
-      mockCompletionCreate.mockRejectedValueOnce(new Error(errorMessage));
+      mockCreateCompletion.mockRejectedValueOnce(new Error(errorMessage));
 
       await expect(
         openaiService.generateAdjustments(mockFeedback, mockCurrentPlan)

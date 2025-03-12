@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-// Mock config before imports
+// Mock config
 vi.mock('../../config', () => ({
   default: {
     STRAVA_CLIENT_ID: 'test_client_id',
@@ -11,34 +11,28 @@ vi.mock('../../config', () => ({
 
 // Mock database operations
 vi.mock('../../db', () => {
-  // Create a simple chain builder that always resolves to an array
-  const createMockChain = (result: any[] = [], shouldError = false) => ({
+  const mockDbResponse = vi.fn().mockResolvedValue([]);
+
+  const createChain = () => ({
     from: () => ({
       where: () => ({
         orderBy: () => ({
           limit: () => ({
-            execute: async () => {
-              if (shouldError) {
-                throw new Error('Database error');
-              }
-              return result;
-            }
+            execute: mockDbResponse
           })
         })
       })
     })
   });
 
-  // Mock insert operation
-  const mockInsertValues = vi.fn().mockReturnValue({
-    returning: vi.fn().mockResolvedValue([{ id: 1 }])
-  });
-  const mockInsert = vi.fn().mockReturnValue({ values: mockInsertValues });
-
   return {
     db: {
-      select: vi.fn(() => createMockChain([])),
-      insert: mockInsert
+      select: vi.fn(() => createChain()),
+      insert: vi.fn(() => ({
+        values: vi.fn(() => ({
+          returning: vi.fn().mockResolvedValue([{ id: 1 }])
+        }))
+      }))
     }
   };
 });
@@ -47,14 +41,11 @@ import {
   getStravaAuthUrl,
   exchangeStravaCode,
   refreshStravaToken,
-  syncStravaActivities,
-  type StravaAuthOptions,
-  type StravaTokens
+  syncStravaActivities
 } from '../../services/strava';
 import { db } from '../../db';
 import { activities as stravaActivities } from '../../schema/strava.js';
 
-// Mock environment variables
 process.env.STRAVA_CLIENT_ID = 'test_client_id';
 process.env.STRAVA_CLIENT_SECRET = 'test_client_secret';
 
@@ -77,7 +68,7 @@ describe('Strava Service', () => {
     });
 
     it('should generate URL with custom scope and state', () => {
-      const options: StravaAuthOptions = {
+      const options = {
         scope: ['read', 'activity:write'],
         state: 'custom-state'
       };
@@ -90,7 +81,7 @@ describe('Strava Service', () => {
   });
 
   describe('exchangeStravaCode', () => {
-    const mockTokenResponse: StravaTokens = {
+    const mockTokenResponse = {
       accessToken: 'test_access_token',
       refreshToken: 'test_refresh_token',
       expiresAt: Date.now() + 21600,
@@ -124,7 +115,7 @@ describe('Strava Service', () => {
   });
 
   describe('refreshStravaToken', () => {
-    const mockRefreshResponse: StravaTokens = {
+    const mockRefreshResponse = {
       accessToken: 'new_access_token',
       refreshToken: 'new_refresh_token',
       expiresAt: Date.now() + 21600,
@@ -180,6 +171,7 @@ describe('Strava Service', () => {
     }];
 
     it('should fetch and store activities', async () => {
+      // Mock successful API response
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockActivities)
@@ -187,11 +179,11 @@ describe('Strava Service', () => {
 
       await syncStravaActivities(1, 'test_access_token');
 
-      // Verify db.insert was called with correct table
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
     it('should handle API errors', async () => {
+      // Mock API error response
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 429,
