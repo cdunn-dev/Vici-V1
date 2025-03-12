@@ -1,5 +1,4 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { OpenAIService } from '../../../services/ai/openai';
 
 // Mock OpenAI client
 const mockCreate = vi.fn();
@@ -12,9 +11,10 @@ const mockClient = {
 };
 
 vi.mock('openai', () => ({
-  default: vi.fn().mockImplementation(() => mockClient),
   OpenAI: vi.fn().mockImplementation(() => mockClient)
 }));
+
+import { OpenAIService } from '../../../services/ai/openai';
 
 describe('OpenAI Service', () => {
   let openaiService: OpenAIService;
@@ -40,7 +40,7 @@ describe('OpenAI Service', () => {
         ]
       });
 
-      await expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
+      await expect(() => openaiService['makeRequest']('test prompt', 'test operation', 'json'))
         .rejects
         .toThrow('Failed to parse AI response');
     });
@@ -68,9 +68,8 @@ describe('OpenAI Service', () => {
     it('should handle invalid plan generation response', async () => {
       mockCreate.mockRejectedValueOnce(new Error('Invalid training plan generated'));
 
-      await expect(openaiService.generateTrainingPlan(mockUserPreferences))
-        .rejects
-        .toThrow('Invalid training plan generated');
+      await expect(() => openaiService.generateTrainingPlan(mockUserPreferences))
+        .rejects.toThrow('Invalid training plan generated');
     });
   });
 
@@ -133,7 +132,7 @@ describe('OpenAI Service', () => {
     it('should handle invalid adjustment response', async () => {
       mockCreate.mockRejectedValueOnce(new Error('Invalid plan adjustments generated'));
 
-      await expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
+      await expect(() => openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
         .rejects
         .toThrow('Invalid plan adjustments generated');
     });
