@@ -15,7 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { validatePlanData } from "@/lib/training-plan-utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
-
 interface PlanPreviewProps {
   planDetails: {
     goal: string;
@@ -40,7 +39,7 @@ interface PlanPreviewProps {
       preferredLongRunDay: string;
       coachingStyle: string;
     };
-    weeklyPlans: Array<{
+    weeklyPlans?: Array<{
       week: number;
       phase: string;
       totalMileage: number;
@@ -91,15 +90,15 @@ export default function PlanPreview({
     }
   };
 
-  // Create a serializable version of the plan data
+  // Create a serializable version of the plan data with proper null checks
   const serializablePlan = {
-    name: `Training Plan - ${planDetails.goal}`,
-    goal: planDetails.goal,
-    goalDescription: planDetails.goalDescription || "",
-    startDate: new Date(planDetails.startDate).toISOString().split('T')[0],
-    endDate: new Date(planDetails.endDate).toISOString().split('T')[0],
-    weeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
-    weeklyPlans: planDetails.weeklyPlans.map(week => ({
+    name: planDetails?.name || `Training Plan - ${planDetails?.goal || 'Untitled'}`,
+    goal: planDetails?.goal || '',
+    goalDescription: planDetails?.goalDescription || "",
+    startDate: planDetails?.startDate ? new Date(planDetails.startDate).toISOString().split('T')[0] : '',
+    endDate: planDetails?.endDate ? new Date(planDetails.endDate).toISOString().split('T')[0] : '',
+    weeklyMileage: planDetails?.trainingPreferences?.maxWeeklyMileage || 0,
+    weeklyPlans: (planDetails?.weeklyPlans || []).map(week => ({
       week: week.week,
       phase: week.phase,
       totalMileage: week.totalMileage,
@@ -111,7 +110,7 @@ export default function PlanPreview({
         completed: false
       }))
     })),
-    targetRace: planDetails.targetRace ? {
+    targetRace: planDetails?.targetRace ? {
       distance: planDetails.targetRace.distance,
       date: new Date(planDetails.targetRace.date).toISOString().split('T')[0],
       customDistance: planDetails.targetRace.customDistance,
@@ -119,15 +118,15 @@ export default function PlanPreview({
       goalTime: planDetails.targetRace.goalTime
     } : null,
     runningExperience: {
-      level: planDetails.runningExperience.level,
-      fitnessLevel: planDetails.runningExperience.fitnessLevel
+      level: planDetails?.runningExperience?.level || 'Beginner',
+      fitnessLevel: planDetails?.runningExperience?.fitnessLevel || 'Novice'
     },
     trainingPreferences: {
-      weeklyRunningDays: planDetails.trainingPreferences.weeklyRunningDays,
-      maxWeeklyMileage: planDetails.trainingPreferences.maxWeeklyMileage,
-      weeklyWorkouts: planDetails.trainingPreferences.weeklyWorkouts,
-      preferredLongRunDay: planDetails.trainingPreferences.preferredLongRunDay,
-      coachingStyle: planDetails.trainingPreferences.coachingStyle
+      weeklyRunningDays: planDetails?.trainingPreferences?.weeklyRunningDays || 3,
+      maxWeeklyMileage: planDetails?.trainingPreferences?.maxWeeklyMileage || 0,
+      weeklyWorkouts: planDetails?.trainingPreferences?.weeklyWorkouts || 0,
+      preferredLongRunDay: planDetails?.trainingPreferences?.preferredLongRunDay || 'Sunday',
+      coachingStyle: planDetails?.trainingPreferences?.coachingStyle || 'Moderate'
     },
     is_active: true
   };
@@ -145,9 +144,13 @@ export default function PlanPreview({
 
   if (!planDetails) {
     return (
-      <div className="p-4 text-center text-muted-foreground">
-        No plan data available
-      </div>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+          <div className="p-4 text-center text-muted-foreground">
+            No plan data available
+          </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
