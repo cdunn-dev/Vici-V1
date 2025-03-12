@@ -11,19 +11,38 @@ vi.mock('../../config', () => ({
 
 // Mock database operations
 vi.mock('../../db', () => {
-  const mockValues = vi.fn().mockReturnValue({
+  // Create a simple chain builder that always resolves to an array
+  const createMockChain = (result: any[] = [], shouldError = false) => ({
+    from: () => ({
+      where: () => ({
+        orderBy: () => ({
+          limit: () => ({
+            execute: async () => {
+              if (shouldError) {
+                throw new Error('Database error');
+              }
+              return result;
+            }
+          })
+        })
+      })
+    })
+  });
+
+  // Mock insert operation
+  const mockInsertValues = vi.fn().mockReturnValue({
     returning: vi.fn().mockResolvedValue([{ id: 1 }])
   });
-  const mockInsert = vi.fn().mockReturnValue({ values: mockValues });
+  const mockInsert = vi.fn().mockReturnValue({ values: mockInsertValues });
 
   return {
     db: {
+      select: vi.fn(() => createMockChain([])),
       insert: mockInsert
     }
   };
 });
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   getStravaAuthUrl,
   exchangeStravaCode,
@@ -40,20 +59,8 @@ process.env.STRAVA_CLIENT_ID = 'test_client_id';
 process.env.STRAVA_CLIENT_SECRET = 'test_client_secret';
 
 describe('Strava Service', () => {
-  const originalConsoleError = console.error;
-  const originalConsoleLog = console.log;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    // Silence console during tests
-    console.error = vi.fn();
-    console.log = vi.fn();
-  });
-
-  afterEach(() => {
-    // Restore console after tests
-    console.error = originalConsoleError;
-    console.log = originalConsoleLog;
   });
 
   describe('getStravaAuthUrl', () => {
@@ -180,12 +187,8 @@ describe('Strava Service', () => {
 
       await syncStravaActivities(1, 'test_access_token');
 
-      // Verify the correct table and data are used
+      // Verify db.insert was called with correct table
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
-
-      // Verify that values were passed correctly
-      const insertValues = vi.mocked(db.insert).mock.calls[0][0];
-      expect(insertValues).toBe(stravaActivities);
     });
 
     it('should handle API errors', async () => {
