@@ -16,11 +16,11 @@ import { validatePlanData } from "@/lib/training-plan-utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 interface PlanPreviewProps {
-  planDetails: {
-    goal: string;
+  planDetails?: {
+    goal?: string;
     goalDescription?: string;
-    startDate: string;
-    endDate: string;
+    startDate?: string;
+    endDate?: string;
     targetRace?: {
       distance: string;
       customDistance?: string;
@@ -28,11 +28,11 @@ interface PlanPreviewProps {
       previousBest?: string;
       goalTime?: string;
     };
-    runningExperience: {
+    runningExperience?: {
       level: string;
       fitnessLevel: string;
     };
-    trainingPreferences: {
+    trainingPreferences?: {
       weeklyRunningDays: number;
       maxWeeklyMileage: number;
       weeklyWorkouts: number;
@@ -77,6 +77,15 @@ export default function PlanPreview({
 
   // Handler for confirming the plan
   const handleConfirm = () => {
+    if (!planDetails) {
+      toast({
+        title: "Validation Error",
+        description: "No plan details available",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       validatePlanData(serializablePlan);
       onConfirm();
@@ -90,49 +99,9 @@ export default function PlanPreview({
     }
   };
 
-  // Create a serializable version of the plan data with proper null checks
-  const serializablePlan = {
-    name: planDetails?.name || `Training Plan - ${planDetails?.goal || 'Untitled'}`,
-    goal: planDetails?.goal || '',
-    goalDescription: planDetails?.goalDescription || "",
-    startDate: planDetails?.startDate ? new Date(planDetails.startDate).toISOString().split('T')[0] : '',
-    endDate: planDetails?.endDate ? new Date(planDetails.endDate).toISOString().split('T')[0] : '',
-    weeklyMileage: planDetails?.trainingPreferences?.maxWeeklyMileage || 0,
-    weeklyPlans: (planDetails?.weeklyPlans || []).map(week => ({
-      week: week.week,
-      phase: week.phase,
-      totalMileage: week.totalMileage,
-      workouts: week.workouts.map(workout => ({
-        day: new Date(workout.day).toISOString().split('T')[0],
-        type: workout.type,
-        distance: workout.distance,
-        description: workout.description,
-        completed: false
-      }))
-    })),
-    targetRace: planDetails?.targetRace ? {
-      distance: planDetails.targetRace.distance,
-      date: new Date(planDetails.targetRace.date).toISOString().split('T')[0],
-      customDistance: planDetails.targetRace.customDistance,
-      previousBest: planDetails.targetRace.previousBest,
-      goalTime: planDetails.targetRace.goalTime
-    } : null,
-    runningExperience: {
-      level: planDetails?.runningExperience?.level || 'Beginner',
-      fitnessLevel: planDetails?.runningExperience?.fitnessLevel || 'Novice'
-    },
-    trainingPreferences: {
-      weeklyRunningDays: planDetails?.trainingPreferences?.weeklyRunningDays || 3,
-      maxWeeklyMileage: planDetails?.trainingPreferences?.maxWeeklyMileage || 0,
-      weeklyWorkouts: planDetails?.trainingPreferences?.weeklyWorkouts || 0,
-      preferredLongRunDay: planDetails?.trainingPreferences?.preferredLongRunDay || 'Sunday',
-      coachingStyle: planDetails?.trainingPreferences?.coachingStyle || 'Moderate'
-    },
-    is_active: true
-  };
-
   // Helper function to safely format dates for display
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Not set";
     try {
       const date = parseISO(dateString);
       return format(date, "MMMM d, yyyy");
@@ -142,7 +111,49 @@ export default function PlanPreview({
     }
   };
 
-  if (!planDetails) {
+  // Create a serializable version of the plan data with proper null checks
+  const serializablePlan = planDetails ? {
+    name: `Training Plan - ${planDetails.goal || 'Untitled'}`,
+    goal: planDetails.goal || '',
+    goalDescription: planDetails.goalDescription || "",
+    startDate: planDetails.startDate || new Date().toISOString().split('T')[0],
+    endDate: planDetails.endDate || '',
+    weeklyMileage: planDetails.trainingPreferences?.maxWeeklyMileage || 0,
+    weeklyPlans: (planDetails.weeklyPlans || []).map(week => ({
+      week: week.week,
+      phase: week.phase,
+      totalMileage: week.totalMileage,
+      workouts: week.workouts.map(workout => ({
+        day: workout.day,
+        type: workout.type,
+        distance: workout.distance,
+        description: workout.description,
+        completed: false
+      }))
+    })),
+    targetRace: planDetails.targetRace ? {
+      distance: planDetails.targetRace.distance,
+      date: planDetails.targetRace.date,
+      customDistance: planDetails.targetRace.customDistance,
+      previousBest: planDetails.targetRace.previousBest,
+      goalTime: planDetails.targetRace.goalTime
+    } : null,
+    runningExperience: {
+      level: planDetails.runningExperience?.level || 'Beginner',
+      fitnessLevel: planDetails.runningExperience?.fitnessLevel || 'Novice'
+    },
+    trainingPreferences: {
+      weeklyRunningDays: planDetails.trainingPreferences?.weeklyRunningDays || 3,
+      maxWeeklyMileage: planDetails.trainingPreferences?.maxWeeklyMileage || 0,
+      weeklyWorkouts: planDetails.trainingPreferences?.weeklyWorkouts || 0,
+      preferredLongRunDay: planDetails.trainingPreferences?.preferredLongRunDay || 'Sunday',
+      coachingStyle: planDetails.trainingPreferences?.coachingStyle || 'Moderate'
+    },
+    is_active: true
+  } : null;
+
+  // Render empty state if no plan details are available
+  if (!planDetails || !serializablePlan) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
@@ -239,13 +250,13 @@ export default function PlanPreview({
                           <div className="font-medium">
                             Training Goal
                             <div className="text-sm text-muted-foreground">
-                              {serializablePlan.goal}
-                              <div className="text-xs mt-1">{serializablePlan.goalDescription}</div>
+                              {serializablePlan?.goal}
+                              <div className="text-xs mt-1">{serializablePlan?.goalDescription}</div>
                             </div>
                           </div>
                         </div>
 
-                        {serializablePlan.targetRace && (
+                        {serializablePlan?.targetRace && (
                           <div className="flex items-center gap-2 text-primary" data-testid="target-race">
                             <Medal className="h-5 w-5" />
                             <div className="font-medium">
@@ -268,7 +279,7 @@ export default function PlanPreview({
                           <div className="font-medium">
                             Program Timeline
                             <div className="text-sm text-muted-foreground">
-                              {formatDate(serializablePlan.startDate)} - {formatDate(serializablePlan.endDate)}
+                              {formatDate(serializablePlan?.startDate)} - {formatDate(serializablePlan?.endDate)}
                             </div>
                           </div>
                         </div>
@@ -281,9 +292,9 @@ export default function PlanPreview({
                           <div className="font-medium">
                             Experience Level
                             <div className="text-sm text-muted-foreground">
-                              {serializablePlan.runningExperience.level} Runner
+                              {serializablePlan?.runningExperience?.level} Runner
                               <div className="text-xs mt-1">
-                                Fitness Level: {serializablePlan.runningExperience.fitnessLevel}
+                                Fitness Level: {serializablePlan?.runningExperience?.fitnessLevel}
                               </div>
                             </div>
                           </div>
@@ -294,9 +305,9 @@ export default function PlanPreview({
                           <div className="font-medium">
                             Weekly Schedule
                             <div className="text-sm text-muted-foreground">
-                              {serializablePlan.trainingPreferences.weeklyRunningDays} running days per week
+                              {serializablePlan?.trainingPreferences?.weeklyRunningDays} running days per week
                               <div className="text-xs mt-1">
-                                Long runs on {serializablePlan.trainingPreferences.preferredLongRunDay}s
+                                Long runs on {serializablePlan?.trainingPreferences?.preferredLongRunDay}s
                               </div>
                             </div>
                           </div>
@@ -307,9 +318,9 @@ export default function PlanPreview({
                           <div className="font-medium">
                             Training Volume
                             <div className="text-sm text-muted-foreground">
-                              Up to {serializablePlan.trainingPreferences.maxWeeklyMileage} miles per week
+                              Up to {serializablePlan?.trainingPreferences?.maxWeeklyMileage} miles per week
                               <div className="text-xs mt-1">
-                                {serializablePlan.trainingPreferences.weeklyWorkouts} quality workouts per week
+                                {serializablePlan?.trainingPreferences?.weeklyWorkouts} quality workouts per week
                               </div>
                             </div>
                           </div>
