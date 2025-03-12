@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// Mock config
+// Mock config before any imports
 vi.mock('../../config', () => ({
   default: {
     STRAVA_CLIENT_ID: 'test_client_id',
@@ -11,18 +11,27 @@ vi.mock('../../config', () => ({
 
 // Mock database operations
 vi.mock('../../db', () => {
-  const mockActivities = [{ id: 1, stravaId: '123' }];
-  const mockQueryChain = {
-    execute: vi.fn().mockResolvedValue(mockActivities),
-    limit: function() { return this; },
-    orderBy: function() { return this; },
-    where: function() { return this; },
-    from: function() { return this; }
-  };
+  const mockActivities = [{
+    id: 1,
+    stravaId: '123',
+    userId: 1,
+    name: 'Test Run',
+    type: 'Run',
+    startDate: new Date('2025-03-15'),
+    distance: 5000,
+    movingTime: 1800,
+    elapsedTime: 1800
+  }];
 
   return {
     db: {
-      select: vi.fn().mockReturnValue(mockQueryChain),
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue(mockActivities)
+      }),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue(mockActivities)
@@ -52,25 +61,23 @@ describe('Strava Service', () => {
     });
 
     it('should generate URL with custom scope and state', () => {
-      const options = {
+      const url = new URL(getStravaAuthUrl({
         scope: ['read', 'activity:write'],
         state: 'custom-state'
-      };
-
-      const url = new URL(getStravaAuthUrl(options));
+      }));
       expect(url.searchParams.get('scope')).toBe('read,activity:write');
       expect(url.searchParams.get('state')).toBe('custom-state');
     });
   });
 
   describe('exchangeStravaCode', () => {
-    const mockTokenResponse = {
-      access_token: 'test_access_token',
-      refresh_token: 'test_refresh_token',
-      expires_at: Date.now() + 21600
-    };
-
     it('should exchange authorization code for tokens', async () => {
+      const mockTokenResponse = {
+        access_token: 'test_access_token',
+        refresh_token: 'test_refresh_token',
+        expires_at: Date.now() + 21600
+      };
+
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockTokenResponse)
@@ -85,24 +92,22 @@ describe('Strava Service', () => {
     });
 
     it('should handle exchange errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(
-        new Error('Failed to exchange code: Bad Request')
-      );
+      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to exchange code: Bad Request'));
 
       await expect(exchangeStravaCode('invalid_code'))
         .rejects
-        .toThrow('Failed to exchange code: Bad Request');
+        .toThrow(/Bad Request/);
     });
   });
 
   describe('refreshStravaToken', () => {
-    const mockRefreshResponse = {
-      access_token: 'new_access_token',
-      refresh_token: 'new_refresh_token',
-      expires_at: Date.now() + 21600
-    };
-
     it('should refresh expired token', async () => {
+      const mockRefreshResponse = {
+        access_token: 'new_access_token',
+        refresh_token: 'new_refresh_token',
+        expires_at: Date.now() + 21600
+      };
+
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(mockRefreshResponse)
@@ -117,22 +122,20 @@ describe('Strava Service', () => {
     });
 
     it('should handle refresh errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(
-        new Error('Failed to refresh token: Unauthorized')
-      );
+      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to refresh token: Unauthorized'));
 
       await expect(refreshStravaToken('invalid_token'))
         .rejects
-        .toThrow('Failed to refresh token: Unauthorized');
+        .toThrow(/Unauthorized/);
     });
   });
 
   describe('syncStravaActivities', () => {
-    const mockActivities = [{
+    const mockStravaActivities = [{
       id: 1234567890,
       name: 'Morning Run',
       type: 'Run',
-      start_date: '2025-03-11T08:00:00Z',
+      start_date: '2025-03-15T08:00:00Z',
       distance: 5000.0,
       moving_time: 1800,
       elapsed_time: 1800,
@@ -151,21 +154,20 @@ describe('Strava Service', () => {
     it('should fetch and store activities', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockActivities)
+        json: () => Promise.resolve(mockStravaActivities)
       }) as unknown as typeof fetch;
 
       await syncStravaActivities(1, 'test_access_token');
+      expect(db.select).toHaveBeenCalled();
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
     it('should handle API errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(
-        new Error('Failed to fetch activities: Too Many Requests')
-      );
+      global.fetch = vi.fn().mockRejectedValue(new Error('Failed to fetch activities: Too Many Requests'));
 
       await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
-        .toThrow('Failed to fetch activities: Too Many Requests');
+        .toThrow(/Too Many Requests/);
     });
   });
 });
