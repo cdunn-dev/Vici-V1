@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "../db";
 import { eq, desc } from "drizzle-orm";
 import { stravaActivities } from "@shared/schema";
 import type { InsertStravaActivity } from "@shared/schema";
@@ -74,9 +74,9 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
       refreshToken: data.refresh_token,
       expiresAt: data.expires_at,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error exchanging Strava code:", error);
-    throw new Error(error.message || "Failed to exchange Strava code");
+    throw error instanceof Error ? error : new Error("Failed to exchange Strava code");
   }
 }
 
@@ -106,9 +106,9 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
       refreshToken: data.refresh_token,
       expiresAt: data.expires_at,
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error refreshing Strava token:", error);
-    throw error;
+    throw error instanceof Error ? error : new Error("Failed to refresh Strava token");
   }
 }
 
@@ -145,12 +145,14 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     // Process and save new activities
     for (const activity of activities) {
       try {
+        const startDate = new Date(activity.start_date);
+
         const newActivity: InsertStravaActivity = {
           userId,
           stravaId: activity.id.toString(),
           name: activity.name,
           type: activity.type,
-          startDate: new Date(activity.start_date).toISOString(),
+          startDate: startDate.toISOString(),
           distance: activity.distance,
           movingTime: activity.moving_time,
           elapsedTime: activity.elapsed_time,
@@ -170,13 +172,21 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         await db.insert(stravaActivities).values(newActivity).execute();
         console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
-        console.log(`Activity ${activity.id} already exists or failed to insert`);
+        // Log but don't fail if a single activity insert fails
+        if (error instanceof Error) {
+          console.error(`Failed to insert activity ${activity.id}:`, error.message);
+        } else {
+          console.error(`Failed to insert activity ${activity.id}`);
+        }
       }
     }
 
     console.log(`Synced ${activities.length} activities for user ${userId}`);
-  } catch (error: any) {
-    console.error("Error syncing Strava activities:", error);
-    throw error;
+  } catch (error) {
+    // Re-throw any unexpected errors with proper error message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("An unexpected error occurred while syncing activities");
   }
 }
