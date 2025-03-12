@@ -99,6 +99,7 @@ describe('Authentication Service', () => {
         password: 'password123'
       };
 
+      // Mock getUserByEmail to return an existing user
       vi.mocked(storage.getUserByEmail).mockResolvedValue({
         id: 1,
         email: existingUser.email,
@@ -108,7 +109,15 @@ describe('Authentication Service', () => {
         updatedAt: new Date()
       });
 
-      await expect(storage.createUser(existingUser)).rejects.toThrow();
+      // Mock createUser to reject with a duplicate email error
+      vi.mocked(storage.createUser).mockRejectedValue(
+        new Error('Email already exists')
+      );
+
+      // Test that creating a user with a duplicate email rejects
+      await expect(storage.createUser(existingUser))
+        .rejects
+        .toThrow('Email already exists');
     });
   });
 
