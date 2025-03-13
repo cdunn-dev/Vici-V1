@@ -1,26 +1,24 @@
 import { vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { exchangeStravaCode, refreshStravaToken, syncStravaActivities, getStravaAuthUrl } from '../../services/strava';
+import { activities as stravaActivities } from '../../schema/strava';
+import { db } from '../../db';
 
 // Mock DB operations
 vi.mock('../../db', () => ({
   db: {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([{ id: 1 }])
+      execute: vi.fn().mockResolvedValue(undefined)
     }),
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      execute: vi.fn().mockResolvedValue([])
+      limit: vi.fn().mockResolvedValue([])
     })
   }
 }));
-
-import { describe, it, expect, beforeEach } from 'vitest';
-import { exchangeStravaCode, refreshStravaToken, syncStravaActivities, getStravaAuthUrl } from '../../services/strava';
-import { activities as stravaActivities } from '../../schema/strava';
-import { db } from '../../db';
 
 describe('Strava Service', () => {
   beforeEach(() => {
@@ -29,10 +27,18 @@ describe('Strava Service', () => {
 
   describe('getStravaAuthUrl', () => {
     it('should generate correct authorization URL', () => {
-      const url = new URL(getStravaAuthUrl({}));
+      const url = new URL(getStravaAuthUrl('test-state'));
       expect(url.pathname).toBe('/oauth/authorize');
       expect(url.searchParams.get('response_type')).toBe('code');
       expect(url.searchParams.get('scope')).toBe('activity:read_all');
+      expect(url.searchParams.get('state')).toBe('test-state');
+    });
+
+    it('should throw error if client ID is not configured', () => {
+      const originalClientId = process.env.STRAVA_CLIENT_ID;
+      process.env.STRAVA_CLIENT_ID = '';
+      expect(() => getStravaAuthUrl('test-state')).toThrow('STRAVA_CLIENT_ID is not configured');
+      process.env.STRAVA_CLIENT_ID = originalClientId;
     });
   });
 
@@ -65,7 +71,7 @@ describe('Strava Service', () => {
 
       await expect(exchangeStravaCode('invalid_code'))
         .rejects
-        .toThrow('Failed to exchange code: Bad Request');
+        .toThrow('Failed to exchange code');
     });
   });
 
@@ -98,17 +104,17 @@ describe('Strava Service', () => {
 
       await expect(refreshStravaToken('invalid_token'))
         .rejects
-        .toThrow('Failed to refresh token: Unauthorized');
+        .toThrow('Failed to refresh token');
     });
   });
 
   describe('syncStravaActivities', () => {
-    const mockActivities = [{
+    const mockActivity = {
       id: 1234567890,
       name: 'Morning Run',
       type: 'Run',
       start_date: '2025-03-15T08:00:00Z',
-      distance: 5000.0,
+      distance: 5000,
       moving_time: 1800,
       elapsed_time: 1800,
       total_elevation_gain: 50,
@@ -121,12 +127,12 @@ describe('Strava Service', () => {
       map: {
         summary_polyline: 'test_polyline'
       }
-    }];
+    };
 
     it('should fetch and store activities successfully', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(mockActivities)
+        json: () => Promise.resolve([mockActivity])
       });
 
       await syncStravaActivities(1, 'test_access_token');
@@ -141,7 +147,7 @@ describe('Strava Service', () => {
 
       await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
-        .toThrow('Failed to fetch activities: Too Many Requests');
+        .toThrow('Failed to fetch activities');
     });
   });
 });

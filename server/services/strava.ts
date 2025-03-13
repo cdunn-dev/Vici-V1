@@ -7,6 +7,15 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
+// Standard error messages for consistent testing
+const ERRORS = {
+  EXCHANGE_CODE: "Failed to exchange code",
+  REFRESH_TOKEN: "Failed to refresh token",
+  FETCH_ACTIVITIES: "Failed to fetch activities",
+  CLIENT_ID_MISSING: "STRAVA_CLIENT_ID is not configured",
+  CLIENT_SECRET_MISSING: "STRAVA_CLIENT_SECRET is not configured",
+} as const;
+
 export interface StravaAuthOptions {
   scope?: string[];
   state?: string;
@@ -19,23 +28,19 @@ export interface StravaTokens {
 }
 
 function getAppDomain() {
-  // Ensure we're using HTTPS for Strava's security requirements
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
     return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
-  // For local development, use HTTP
   return "http://localhost:5000";
 }
 
-// Ensure the redirect URI matches exactly what's configured in Strava
 const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
 export function getStravaAuthUrl(state: string = ""): string {
   if (!process.env.STRAVA_CLIENT_ID) {
-    throw new Error("STRAVA_CLIENT_ID is not configured");
+    throw new Error(ERRORS.CLIENT_ID_MISSING);
   }
 
-  // Add explicit approval_prompt and scope parameters
   const params = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
@@ -45,21 +50,18 @@ export function getStravaAuthUrl(state: string = ""): string {
     approval_prompt: "auto"
   });
 
-  console.log("Generated Strava auth URL with redirect URI:", REDIRECT_URI);
   return `${STRAVA_AUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   try {
     if (!process.env.STRAVA_CLIENT_ID || !process.env.STRAVA_CLIENT_SECRET) {
-      throw new Error("Strava credentials not properly configured");
+      throw new Error(ERRORS.CLIENT_SECRET_MISSING);
     }
 
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: process.env.STRAVA_CLIENT_ID,
         client_secret: process.env.STRAVA_CLIENT_SECRET,
@@ -69,11 +71,10 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to exchange code: ${response.statusText}`);
+      throw new Error(ERRORS.EXCHANGE_CODE);
     }
 
     const data = await response.json();
-
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -81,7 +82,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error) {
     console.error("Error exchanging Strava code:", error);
-    throw error instanceof Error ? error : new Error("Failed to exchange code");
+    throw new Error(ERRORS.EXCHANGE_CODE);
   }
 }
 
@@ -89,9 +90,7 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
   try {
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: process.env.STRAVA_CLIENT_ID,
         client_secret: process.env.STRAVA_CLIENT_SECRET,
@@ -101,11 +100,10 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to refresh token: ${response.statusText}`);
+      throw new Error(ERRORS.REFRESH_TOKEN);
     }
 
     const data = await response.json();
-
     return {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -113,7 +111,7 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     };
   } catch (error) {
     console.error("Error refreshing Strava token:", error);
-    throw error instanceof Error ? error : new Error("Failed to refresh token");
+    throw new Error(ERRORS.REFRESH_TOKEN);
   }
 }
 
@@ -140,15 +138,17 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch activities: ${response.statusText}`);
+      throw new Error(ERRORS.FETCH_ACTIVITIES);
     }
 
     const activities = await response.json();
+    if (!Array.isArray(activities)) {
+      throw new Error(ERRORS.FETCH_ACTIVITIES);
+    }
 
     for (const activity of activities) {
       try {
         const startDate = new Date(activity.start_date);
-
         const newActivity: InsertStravaActivity = {
           userId,
           stravaId: activity.id.toString(),
@@ -169,15 +169,13 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         };
 
         await db.insert(stravaActivities).values(newActivity).execute();
-        console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
-        console.error(`Failed to insert activity ${activity.id}:`, error instanceof Error ? error.message : 'Unknown error');
+        console.error(`Failed to insert activity ${activity.id}:`, error);
+        // Continue with next activity
       }
     }
-
-    console.log(`Synced ${activities.length} activities for user ${userId}`);
   } catch (error) {
     console.error("Error syncing Strava activities:", error);
-    throw error instanceof Error ? error : new Error("Failed to fetch activities");
+    throw new Error(ERRORS.FETCH_ACTIVITIES);
   }
 }
