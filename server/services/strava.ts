@@ -178,10 +178,12 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
   }
 }
 
+// Update syncStravaActivities to properly handle types and add debug logging
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   console.log('[Strava] Starting activity sync for user:', userId);
 
   try {
+    // Get latest synced activity
     const [latestActivity] = await db
       .select()
       .from(stravaActivities)
@@ -189,14 +191,18 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       .orderBy(desc(stravaActivities.startDate))
       .limit(1);
 
+    // Configure pagination and time filtering
     const params = new URLSearchParams({
-      per_page: "50" // Fetch more activities initially
+      per_page: "50",
+      page: "1"
     });
 
     if (latestActivity) {
       const after = Math.floor(new Date(latestActivity.startDate).getTime() / 1000);
       params.append("after", after.toString());
     }
+
+    console.log('[Strava] Fetching activities with params:', params.toString());
 
     const response = await fetch(
       `${STRAVA_API_BASE}/athlete/activities?${params.toString()}`,
@@ -214,26 +220,44 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     }
 
     const activities = await response.json();
+    console.log(`[Strava] Retrieved ${activities.length} activities from API`);
+
     if (!Array.isArray(activities)) {
       console.error('[Strava] Invalid activities response:', activities);
       throw new StravaError(ERROR_MESSAGES.INVALID_RESPONSE, 'DATA_ERROR');
     }
 
-    console.log(`[Strava] Processing ${activities.length} activities`);
-
     for (const activity of activities) {
       try {
         // Only process running activities
-        if (activity.type !== 'Run') continue;
+        if (activity.type !== 'Run') {
+          console.log('[Strava] Skipping non-running activity:', activity.id, activity.type);
+          continue;
+        }
 
+        // Check if activity already exists
+        const [existingActivity] = await db
+          .select()
+          .from(stravaActivities)
+          .where(eq(stravaActivities.stravaId, activity.id.toString()))
+          .limit(1);
+
+        if (existingActivity) {
+          console.log('[Strava] Activity already exists:', activity.id);
+          continue;
+        }
+
+        // Convert the start date string to a Date object for proper formatting
         const startDate = new Date(activity.start_date);
+
+        // Prepare activity data with proper type conversions
         const insertActivity = {
           userId,
           stravaId: activity.id.toString(),
           name: activity.name,
           type: activity.type,
-          startDate: startDate.toISOString(),
-          distance: Math.round(activity.distance * 100) / 100, // Convert to 2 decimal places
+          startDate,
+          distance: Math.round(activity.distance * 100) / 100,
           movingTime: activity.moving_time,
           elapsedTime: activity.elapsed_time,
           totalElevationGain: Math.round(activity.total_elevation_gain),
@@ -246,31 +270,19 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           mapPolyline: activity.map?.summary_polyline || null,
         };
 
-        // Check if activity already exists
-        const [existingActivity] = await db
-          .select()
-          .from(stravaActivities)
-          .where(eq(stravaActivities.stravaId, insertActivity.stravaId))
-          .limit(1);
-
-        if (!existingActivity) {
-          await db.insert(stravaActivities).values(insertActivity);
-          console.log('[Strava] Inserted activity:', activity.id);
-        }
+        // Insert the activity
+        await db.insert(stravaActivities).values(insertActivity);
+        console.log('[Strava] Successfully inserted activity:', activity.id);
       } catch (error) {
         console.error('[Strava] Failed to insert activity:', error);
+        // Continue with next activity even if one fails
       }
     }
 
     console.log('[Strava] Activity sync completed');
   } catch (error) {
-    if (error instanceof StravaError) throw error;
     console.error('[Strava] Error during activity sync:', error);
-    throw new StravaError(
-      ERROR_MESSAGES.FAILED_FETCH,
-      'API_ERROR',
-      error instanceof Error ? error : undefined
-    );
+    throw error;
   }
 }
 
