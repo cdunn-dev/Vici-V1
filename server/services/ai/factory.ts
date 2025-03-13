@@ -1,4 +1,4 @@
-import { AIProvider, AIServiceConfig } from './types';
+import { AIProvider, AIServiceConfig, AIServiceError } from './types';
 import { OpenAIService } from './openai';
 import { GoogleAIService } from './google';
 
@@ -7,23 +7,60 @@ export class AIServiceFactory {
 
   static getService(config: AIServiceConfig): AIProvider {
     const key = `${config.provider}-${config.apiKey}`;
-    
+
     if (!this.instances.has(key)) {
-      const service = this.createService(config);
-      this.instances.set(key, service);
+      try {
+        const service = this.createService(config);
+        this.instances.set(key, service);
+      } catch (error) {
+        console.error(`[AIServiceFactory] Failed to create service for provider ${config.provider}:`, error);
+        throw new AIServiceError(
+          `Failed to initialize AI service: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          config.provider,
+          'initialization',
+          'CONFIGURATION',
+          error instanceof Error ? error : undefined
+        );
+      }
     }
 
-    return this.instances.get(key)!;
+    const service = this.instances.get(key);
+    if (!service) {
+      throw new AIServiceError(
+        'Failed to retrieve AI service instance',
+        config.provider,
+        'initialization',
+        'CONFIGURATION'
+      );
+    }
+
+    return service;
   }
 
   private static createService(config: AIServiceConfig): AIProvider {
+    if (!config.provider) {
+      throw new AIServiceError(
+        'AI provider must be specified',
+        'unknown',
+        'initialization',
+        'CONFIGURATION'
+      );
+    }
+
+    console.log(`[AIServiceFactory] Creating new service instance for provider: ${config.provider}`);
+
     switch (config.provider.toLowerCase()) {
       case 'openai':
         return new OpenAIService(config);
       case 'google':
         return new GoogleAIService(config);
       default:
-        throw new Error(`Unsupported AI provider: ${config.provider}`);
+        throw new AIServiceError(
+          `Unsupported AI provider: ${config.provider}`,
+          config.provider,
+          'initialization',
+          'CONFIGURATION'
+        );
     }
   }
 }

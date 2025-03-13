@@ -97,14 +97,84 @@ export interface AIServiceConfig {
   timeout?: number;
 }
 
+// AI Service Error Types
+export type AIErrorCode = 
+  | 'CONFIGURATION'
+  | 'AUTHENTICATION'
+  | 'RATE_LIMIT'
+  | 'API_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'INVALID_REQUEST'
+  | 'TIMEOUT'
+  | 'NETWORK'
+  | 'UNKNOWN';
+
+export interface AIErrorMetadata {
+  retryable: boolean;
+  suggestedAction?: string;
+}
+
+// Error metadata for different error types
+export const AI_ERROR_METADATA: Record<AIErrorCode, AIErrorMetadata> = {
+  CONFIGURATION: {
+    retryable: false,
+    suggestedAction: 'Check API configuration settings'
+  },
+  AUTHENTICATION: {
+    retryable: false,
+    suggestedAction: 'Verify API credentials'
+  },
+  RATE_LIMIT: {
+    retryable: true,
+    suggestedAction: 'Wait before retrying'
+  },
+  API_ERROR: {
+    retryable: true,
+    suggestedAction: 'Retry with exponential backoff'
+  },
+  INVALID_RESPONSE: {
+    retryable: true,
+    suggestedAction: 'Validate response format'
+  },
+  INVALID_REQUEST: {
+    retryable: false,
+    suggestedAction: 'Check request parameters'
+  },
+  TIMEOUT: {
+    retryable: true,
+    suggestedAction: 'Retry with increased timeout'
+  },
+  NETWORK: {
+    retryable: true,
+    suggestedAction: 'Check network connectivity'
+  },
+  UNKNOWN: {
+    retryable: false,
+    suggestedAction: 'Check error logs for details'
+  }
+};
+
 export class AIServiceError extends Error {
   constructor(
     message: string,
     public readonly provider: string,
     public readonly operation: string,
+    public readonly code: AIErrorCode = 'UNKNOWN',
     public readonly originalError?: Error
   ) {
     super(message);
     this.name = 'AIServiceError';
+  }
+
+  get metadata(): AIErrorMetadata {
+    return AI_ERROR_METADATA[this.code];
+  }
+
+  get isRetryable(): boolean {
+    return this.metadata.retryable;
+  }
+
+  get suggestedAction(): string | undefined {
+    return this.metadata.suggestedAction;
   }
 }
