@@ -20,13 +20,15 @@ function getAppDomain() {
   }
 
   // For development/preview, use Replit domain
-  const replId = process.env.REPL_ID;
-  if (!replId) {
-    console.log('[Strava Domain] No REPL_ID found, using localhost');
+  const replSlug = process.env.REPL_SLUG;
+  const replOwner = process.env.REPL_OWNER;
+
+  if (!replSlug || !replOwner) {
+    console.log('[Strava Domain] Missing Replit identifiers, using localhost');
     return 'localhost:5000';
   }
 
-  const domain = `${replId}.id.repl.co`;
+  const domain = `${replSlug}.${replOwner}.repl.co`;
   console.log('[Strava Domain] Using Replit domain:', domain);
   return domain;
 }
