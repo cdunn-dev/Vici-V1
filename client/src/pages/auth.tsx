@@ -16,8 +16,6 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
-import { StravaConnectButton } from "@/components/auth/strava-connect-button";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
@@ -38,18 +36,6 @@ export default function AuthPage() {
   const [location, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
   const { toast } = useToast();
-  const searchParams = new URLSearchParams(window.location.search);
-
-  useEffect(() => {
-    const error = searchParams.get("error");
-    if (error === "strava-auth-failed") {
-      toast({
-        title: "Strava Connection Failed",
-        description: "Unable to connect to Strava. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [searchParams, toast]);
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -87,7 +73,7 @@ export default function AuthPage() {
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
         <div className="relative z-20 flex items-center text-lg font-medium">
-          RunAI Coach
+          Vici
         </div>
         <div className="relative z-20 mt-auto">
           <blockquote className="space-y-2">
@@ -101,7 +87,7 @@ export default function AuthPage() {
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">
-              Welcome to RunAI Coach
+              Welcome to Vici
             </h1>
             <p className="text-sm text-muted-foreground">
               Get started with your personalized training journey
@@ -109,19 +95,6 @@ export default function AuthPage() {
           </div>
 
           <div className="grid gap-6">
-            <StravaConnectButton className="w-full" />
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
