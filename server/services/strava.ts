@@ -92,8 +92,9 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
 
     if (!response.ok) {
       console.error('[Strava] Token exchange failed:', response.status, response.statusText);
+      const errorData = await response.json().catch(() => ({})); // Try to get error details
       throw new StravaError(
-        `${ERROR_MESSAGES.FAILED_EXCHANGE}: ${response.statusText}`,
+        `${ERROR_MESSAGES.FAILED_EXCHANGE}: ${response.statusText} - ${JSON.stringify(errorData)}`,
         'AUTH_ERROR'
       );
     }

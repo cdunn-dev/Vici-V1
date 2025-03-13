@@ -34,12 +34,41 @@ describe('Strava Service', () => {
   });
 
   describe('getStravaAuthUrl', () => {
-    it('should generate correct authorization URL', () => {
+    it('should generate correct authorization URL with all required parameters', () => {
       const url = new URL(getStravaAuthUrl('test-state'));
+
+      // Check URL structure
+      expect(url.protocol).toBe('https:');
+      expect(url.hostname).toBe('www.strava.com');
       expect(url.pathname).toBe('/oauth/authorize');
-      expect(url.searchParams.get('response_type')).toBe('code');
-      expect(url.searchParams.get('scope')).toBe('activity:read_all');
-      expect(url.searchParams.get('state')).toBe('test-state');
+
+      // Check all required parameters
+      const params = url.searchParams;
+      expect(params.get('client_id')).toBe(process.env.STRAVA_CLIENT_ID);
+      expect(params.get('redirect_uri')).toContain('/api/auth/strava/callback');
+      expect(params.get('response_type')).toBe('code');
+      expect(params.get('scope')).toBe('read,activity:read_all,profile:read_all');
+      expect(params.get('state')).toBe('test-state');
+      expect(params.get('approval_prompt')).toBe('force');
+    });
+
+    it('should properly encode special characters in the state parameter', () => {
+      const specialState = 'test/state with spaces & special chars';
+      const url = new URL(getStravaAuthUrl(specialState));
+
+      // The encoded state should not contain raw special characters
+      const encodedState = url.searchParams.get('state');
+      expect(encodedState).not.toContain(' ');
+      expect(encodedState).not.toContain('&');
+      expect(encodedState).not.toContain('/');
+
+      // But when decoded should match original
+      expect(decodeURIComponent(encodedState!)).toBe(specialState);
+    });
+
+    it('should handle empty state parameter', () => {
+      const url = new URL(getStravaAuthUrl());
+      expect(url.searchParams.get('state')).toBe('');
     });
 
     it('should throw CONFIG_ERROR if client ID is not configured', () => {
@@ -58,7 +87,17 @@ describe('Strava Service', () => {
       })();
 
       expect(error.code).toBe('CONFIG_ERROR');
+      expect(error.message).toBe('Strava client ID is not configured');
+
       process.env.STRAVA_CLIENT_ID = originalClientId;
+    });
+
+    it('should use correct Replit domain in redirect URI', () => {
+      const url = new URL(getStravaAuthUrl('test-state'));
+      const redirectUri = url.searchParams.get('redirect_uri');
+
+      expect(redirectUri).toContain('b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev');
+      expect(redirectUri).toContain('/api/auth/strava/callback');
     });
   });
 
@@ -96,6 +135,55 @@ describe('Strava Service', () => {
         expect(error).toBeInstanceOf(StravaError);
         expect((error as StravaError).code).toBe('AUTH_ERROR');
         expect(error.message).toContain('Failed to exchange authorization code');
+      }
+    });
+
+    it('should throw CONFIG_ERROR when credentials are missing', async () => {
+      const originalClientId = process.env.STRAVA_CLIENT_ID;
+      const originalClientSecret = process.env.STRAVA_CLIENT_SECRET;
+      process.env.STRAVA_CLIENT_ID = '';
+      process.env.STRAVA_CLIENT_SECRET = '';
+
+      try {
+        await exchangeStravaCode('test_code');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('CONFIG_ERROR');
+        expect(error.message).toBe('Strava client secret is not configured');
+      }
+
+      process.env.STRAVA_CLIENT_ID = originalClientId;
+      process.env.STRAVA_CLIENT_SECRET = originalClientSecret;
+    });
+
+    it('should handle network errors appropriately', async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+
+      try {
+        await exchangeStravaCode('test_code');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('AUTH_ERROR');
+        expect(error.message).toBe('Failed to exchange authorization code');
+        expect((error as StravaError).originalError).toBeDefined();
+      }
+    });
+
+    it('should handle invalid JSON response', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.reject(new Error('Invalid JSON'))
+      });
+
+      try {
+        await exchangeStravaCode('test_code');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('AUTH_ERROR');
+        expect(error.message).toBe('Failed to exchange authorization code');
       }
     });
   });
