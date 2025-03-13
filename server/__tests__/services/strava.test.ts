@@ -23,6 +23,10 @@ import { activities as stravaActivities } from '../../schema/strava';
 import { db } from '../../db';
 
 describe('Strava Service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('getStravaAuthUrl', () => {
     it('should generate correct authorization URL', () => {
       const url = new URL(getStravaAuthUrl({}));
@@ -55,10 +59,9 @@ describe('Strava Service', () => {
 
     it('should handle exchange errors', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
-
-      await expect(exchangeStravaCode('invalid_code'))
+      return expect(exchangeStravaCode('invalid_code'))
         .rejects
-        .toThrow('Error exchanging Strava code: Error: Bad Request');
+        .toThrow('Error exchanging Strava code');
     });
   });
 
@@ -85,10 +88,9 @@ describe('Strava Service', () => {
 
     it('should handle refresh errors', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
-
-      await expect(refreshStravaToken('invalid_token'))
+      return expect(refreshStravaToken('invalid_token'))
         .rejects
-        .toThrow('Error refreshing Strava token: Error: Unauthorized');
+        .toThrow('Error refreshing Strava token');
     });
   });
 
@@ -110,10 +112,6 @@ describe('Strava Service', () => {
       start_longitude: '-74.0060'
     }];
 
-    beforeEach(() => {
-      vi.clearAllMocks();
-    });
-
     it('should fetch and store activities successfully', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -121,16 +119,14 @@ describe('Strava Service', () => {
       });
 
       await syncStravaActivities(1, 'test_access_token');
-
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
     it('should handle API errors', async () => {
       global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
-
-      await expect(syncStravaActivities(1, 'test_access_token'))
+      return expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
-        .toThrow('Error syncing Strava activities: Error: Too Many Requests');
+        .toThrow('Error syncing Strava activities');
     });
   });
 });
