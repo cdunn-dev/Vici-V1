@@ -15,15 +15,19 @@ const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 function getAppDomain() {
   // Use environment variable if set (for production)
   if (process.env.APP_DOMAIN) {
+    console.log('[Strava Domain] Using APP_DOMAIN:', process.env.APP_DOMAIN);
     return process.env.APP_DOMAIN;
   }
 
   // For development/preview, use Replit domain
-  const domain = process.env.REPL_SLUG && process.env.REPL_OWNER ?
-    `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` :
-    'workspace.dunnchrisr.repl.co';
+  const replId = process.env.REPL_ID;
+  if (!replId) {
+    console.log('[Strava Domain] No REPL_ID found, using localhost');
+    return 'localhost:5000';
+  }
 
-  console.log('[Strava] Using domain for OAuth:', domain);
+  const domain = `${replId}.id.repl.co`;
+  console.log('[Strava Domain] Using Replit domain:', domain);
   return domain;
 }
 
@@ -31,29 +35,25 @@ const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
 
 // Update getStravaAuthUrl to be more explicit with scopes and parameters
 export function getStravaAuthUrl(state: string = ""): string {
-  console.log('[Strava] Generating auth URL');
+  console.log('[Strava Auth] Generating auth URL');
 
   if (!process.env.STRAVA_CLIENT_ID) {
-    console.error('[Strava] Missing client ID');
+    console.error('[Strava Auth] Missing client ID');
     throw new StravaError(ERROR_MESSAGES.MISSING_CLIENT_ID, 'CONFIG_ERROR');
   }
 
-  // Log full auth URL for debugging
   const params = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: "read,activity:read_all,profile:read_all",
     state: state,
-    // Adding mobile parameter to specify web app type
-    mobile: "false",
-    // Adding approval_prompt back with auto value
     approval_prompt: "auto"
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
-  console.log('[Strava] Generated auth URL:', authUrl);
-  console.log('[Strava] Using redirect URI:', REDIRECT_URI);
+  console.log('[Strava Auth] Generated auth URL:', authUrl);
+  console.log('[Strava Auth] Using redirect URI:', REDIRECT_URI);
   return authUrl;
 }
 
