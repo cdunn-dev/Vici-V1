@@ -53,10 +53,10 @@ function getAppDomain() {
     'workspace.dunnchrisr.repl.co';
 
   console.log('[Strava] Using domain for OAuth:', domain);
-  return `https://${domain}`;
+  return domain;
 }
 
-const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
+const REDIRECT_URI = `https://${getAppDomain()}/api/auth/strava/callback`;
 
 // Update getStravaAuthUrl to be more explicit with scopes and parameters
 export function getStravaAuthUrl(state: string = ""): string {
@@ -74,7 +74,10 @@ export function getStravaAuthUrl(state: string = ""): string {
     response_type: "code",
     scope: "read,activity:read_all,profile:read_all",
     state: state,
-    // Remove approval_prompt to let Strava handle it normally
+    // Adding mobile parameter to specify web app type
+    mobile: "false",
+    // Adding approval_prompt back with auto value
+    approval_prompt: "auto"
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
