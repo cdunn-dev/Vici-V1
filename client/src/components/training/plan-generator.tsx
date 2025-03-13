@@ -265,7 +265,29 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                     </AlertDescription>
                   </Alert>
 
-                  <Button className="w-full" onClick={() => window.location.href = "/api/auth/strava"}>
+                  <Button className="w-full" onClick={async () => {
+                    try {
+                      const response = await fetch('/api/auth/strava');
+                      const data = await response.json();
+
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        toast({
+                          title: "Error",
+                          description: "Failed to get Strava authorization URL",
+                          variant: "destructive"
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error connecting to Strava:', error);
+                      toast({
+                        title: "Error",
+                        description: "Failed to connect to Strava",
+                        variant: "destructive"
+                      });
+                    }
+                  }}>
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Connect with Strava
                   </Button>

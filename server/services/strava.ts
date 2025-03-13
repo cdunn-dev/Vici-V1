@@ -11,35 +11,6 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
-// Error handling
-export class StravaError extends Error {
-  constructor(
-    message: string,
-    public readonly code: keyof typeof ERROR_CODES,
-    public readonly originalError?: Error
-  ) {
-    super(message);
-    this.name = 'StravaError';
-  }
-}
-
-const ERROR_CODES = {
-  CONFIG_ERROR: 'Configuration error',
-  AUTH_ERROR: 'Authentication error',
-  API_ERROR: 'API error',
-  DATA_ERROR: 'Data processing error'
-} as const;
-
-const ERROR_MESSAGES = {
-  MISSING_CLIENT_ID: 'Strava client ID is not configured',
-  MISSING_CLIENT_SECRET: 'Strava client secret is not configured',
-  FAILED_EXCHANGE: 'Failed to exchange authorization code',
-  FAILED_REFRESH: 'Failed to refresh access token',
-  FAILED_FETCH: 'Failed to fetch activities',
-  INVALID_RESPONSE: 'Invalid response from Strava API',
-  NOT_CONNECTED: 'Not connected to Strava'
-} as const;
-
 // Update getAppDomain to handle domain issues
 function getAppDomain() {
   // Use environment variable if set (for production)
@@ -85,6 +56,36 @@ export function getStravaAuthUrl(state: string = ""): string {
   console.log('[Strava] Using redirect URI:', REDIRECT_URI);
   return authUrl;
 }
+
+// Error handling
+export class StravaError extends Error {
+  constructor(
+    message: string,
+    public readonly code: keyof typeof ERROR_CODES,
+    public readonly originalError?: Error
+  ) {
+    super(message);
+    this.name = 'StravaError';
+  }
+}
+
+const ERROR_CODES = {
+  CONFIG_ERROR: 'Configuration error',
+  AUTH_ERROR: 'Authentication error',
+  API_ERROR: 'API error',
+  DATA_ERROR: 'Data processing error'
+} as const;
+
+const ERROR_MESSAGES = {
+  MISSING_CLIENT_ID: 'Strava client ID is not configured',
+  MISSING_CLIENT_SECRET: 'Strava client secret is not configured',
+  FAILED_EXCHANGE: 'Failed to exchange authorization code',
+  FAILED_REFRESH: 'Failed to refresh access token',
+  FAILED_FETCH: 'Failed to fetch activities',
+  INVALID_RESPONSE: 'Invalid response from Strava API',
+  NOT_CONNECTED: 'Not connected to Strava'
+} as const;
+
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
   console.log('[Strava] Exchanging authorization code');
