@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Info } from "lucide-react";
+import { Plus, Loader2, Info, ExternalLink } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
@@ -25,6 +25,7 @@ import * as z from "zod";
 import { useStravaProfile } from "@/hooks/use-strava-profile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import {
   RaceDistances,
@@ -40,7 +41,6 @@ import {
   DistanceUnits,
   TrainingGoals,
 } from "./plan-generator-constants";
-
 
 type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
@@ -194,6 +194,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
   const STEPS = [
+    { id: "connect-strava", label: "Connect Strava", 
+      conditional: () => !stravaProfile && !isLoadingStrava }, // Only show if not connected
     { id: "welcome", label: "Welcome" },
     { id: "basicProfile", label: "Basic Profile" },
     { id: "runningProfile", label: "Running Profile" },
@@ -232,6 +234,34 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   const renderStepContent = () => {
     switch (currentStep.id) {
+      case "connect-strava":
+        return (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Connect with Strava</CardTitle>
+                <CardDescription>
+                  Connecting your Strava account helps us create a more personalized training plan by:
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc pl-6 space-y-2">
+                  <li>Analyzing your current running patterns and volume</li>
+                  <li>Understanding your preferred running days and times</li>
+                  <li>Detecting your common workout types (easy runs, long runs, tempo, etc.)</li>
+                  <li>Using your preferred distance units (miles/kilometers)</li>
+                </ul>
+                <div className="mt-6">
+                  <Button className="w-full" onClick={() => window.location.href = "/api/auth/strava"}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Connect with Strava
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       case "welcome":
         return (
           <div className="space-y-6">
@@ -670,6 +700,8 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
   const getFieldsForStep = (step: string): string[] => {
     switch (step) {
+      case "connect-strava":
+        return [];
       case "welcome":
         return [];
       case "goal":
@@ -728,7 +760,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 Back
               </Button>
               <div className="flex-1" />
-              {!isLastStep ? (
+              {currentStep.id === "connect-strava" ? (
+                <Button type="button" variant="outline" onClick={handleNext}>
+                  Skip for now
+                </Button>
+              ) : !isLastStep ? (
                 <Button type="button" onClick={handleNext}>
                   Next
                 </Button>
