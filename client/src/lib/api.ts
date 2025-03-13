@@ -16,6 +16,7 @@ export async function apiRequest(
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include' // Important for auth cookies
   };
 
   if (data) {
@@ -25,8 +26,14 @@ export async function apiRequest(
   const response = await fetch(endpoint, options);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    // Attempt to parse error response
+    const error = await response.json().catch(() => ({
+      error: response.status === 401 ? 'Invalid email or password' : `HTTP error! status: ${response.status}`
+    }));
+
+    // Use consistent error message format
+    const errorMessage = error.error || error.message || `HTTP error! status: ${response.status}`;
+    throw new Error(errorMessage);
   }
 
   return response;
