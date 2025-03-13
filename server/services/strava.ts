@@ -221,7 +221,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     for (const activity of activities) {
       try {
         const startDate = new Date(activity.start_date);
-        const newActivity: InsertStravaActivity = {
+        const newActivity = {
           userId,
           stravaId: activity.id.toString(),
           name: activity.name,
@@ -240,7 +240,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           mapPolyline: activity.map?.summary_polyline || null,
         };
 
-        await db.insert(stravaActivities).values(newActivity).execute();
+        await db.insert(stravaActivities).values(newActivity);
         console.log('[Strava] Inserted activity:', activity.id);
       } catch (error) {
         console.error('[Strava] Failed to insert activity:', error);

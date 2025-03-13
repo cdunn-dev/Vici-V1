@@ -87,20 +87,27 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   // Update form when Strava data loads
   useEffect(() => {
     if (stravaProfile) {
+      console.log('Updating form with Strava profile:', stravaProfile);
+
+      // Update gender if available
       if (stravaProfile.gender) {
         form.setValue("gender", stravaProfile.gender);
       }
 
+      // Update distance preference
       if (stravaProfile.measurementPreference) {
         form.setValue("preferredDistanceUnit",
           stravaProfile.measurementPreference === "meters" ? "kilometers" : "miles"
         );
       }
 
+      // Update running experience if available
       if (stravaProfile.runningExperience?.level) {
         form.setValue("runningExperience.level", stravaProfile.runningExperience.level);
+        form.setValue("runningExperience.fitnessLevel", stravaProfile.runningExperience.level);
       }
 
+      // Update training preferences from Strava data
       const runDays = stravaProfile.runningExperience?.preferredRunDays?.length || 3;
       const mileage = stravaProfile.runningExperience?.weeklyMileage || 15;
       const workouts = stravaProfile.runningExperience?.commonWorkoutTypes?.length || 1;
@@ -113,6 +120,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       setRunningDaysValue(runDays);
       setMileageValue(mileage);
       setWorkoutsValue(workouts);
+
+      // If preferred run days includes Sunday, set it as long run day
+      if (stravaProfile.runningExperience?.preferredRunDays?.includes("sunday")) {
+        form.setValue("trainingPreferences.preferredLongRunDay", "Sunday");
+      }
     }
   }, [stravaProfile, form]);
 
@@ -271,7 +283,9 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
 
                   <Button className="w-full" onClick={async () => {
                     try {
-                      const response = await fetch('/api/auth/strava');
+                      // Include current step in return URL
+                      const returnPath = `/training?planGeneratorStep=${currentStepIndex}`;
+                      const response = await fetch(`/api/auth/strava?returnTo=${encodeURIComponent(returnPath)}`);
                       const data = await response.json();
 
                       if (data.url) {
@@ -763,6 +777,18 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         return [];
     }
   };
+
+  // Add step handling from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const step = params.get('planGeneratorStep');
+    if (step) {
+      setCurrentStepIndex(parseInt(step));
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

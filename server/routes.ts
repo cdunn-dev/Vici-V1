@@ -39,7 +39,7 @@ export async function registerRoutes(app: Express) {
   // Setup authentication routes and middleware
   setupAuth(app);
 
-  // Get Strava auth URL with enhanced logging
+  // Get Strava auth URL with state preservation
   app.get("/api/auth/strava", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -57,7 +57,10 @@ export async function registerRoutes(app: Express) {
         NODE_ENV: process.env.NODE_ENV
       });
 
-      const authUrl = getStravaAuthUrl(req.user.id.toString());
+      // Preserve current path for redirect after auth
+      const returnPath = req.query.returnTo ? encodeURIComponent(req.query.returnTo as string) : '';
+      const authUrl = getStravaAuthUrl(returnPath);
+
       console.log("[Strava Auth] Generated URL:", authUrl);
       res.json({ url: authUrl });
     } catch (error) {
@@ -66,7 +69,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Strava OAuth callback with enhanced logging
+  // Strava OAuth callback with state preservation
   app.get("/api/auth/strava/callback", async (req, res) => {
     try {
       console.log("[Strava Callback] Received callback with params:", {
@@ -108,12 +111,25 @@ export async function registerRoutes(app: Express) {
         try {
           await syncStravaActivities(req.user.id, tokens.accessToken);
           console.log("[Strava Callback] Successfully synced activities");
+
+          // Get running experience analysis
+          const stravaService = new StravaService(req.user.id);
+          const runningExperience = await stravaService.analyzeRunningExperience();
+          console.log("[Strava Callback] Running experience analysis:", runningExperience);
+
+          // Store running experience in user profile
+          await storage.updateUser(req.user.id, {
+            runningExperience: runningExperience
+          });
+
         } catch (syncError) {
           console.error("[Strava Callback] Error syncing activities:", syncError);
         }
       }
 
-      res.redirect("/training");
+      // Redirect back to training plan with preserved state
+      const returnPath = state ? decodeURIComponent(state) : '/training';
+      res.redirect(returnPath);
     } catch (error) {
       console.error("[Strava Callback] Error in OAuth callback:", error);
       res.redirect("/auth?error=strava-auth-failed");

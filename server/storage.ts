@@ -8,10 +8,9 @@ import {
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import createMemoryStore from "memorystore";
 
-const PostgresSessionStore = connectPg(session);
+const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
   // User operations
@@ -35,9 +34,9 @@ export class DatabaseStorage implements IStorage {
   public sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true,
+    // Switch to memory store temporarily to isolate database issues
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // Clear expired entries every 24h
     });
   }
 
@@ -82,6 +81,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
     try {
+      // Convert dates to proper format if present
+      if (userData.startDate) {
+        userData.startDate = new Date(userData.startDate);
+      }
+      if (userData.endDate) {
+        userData.endDate = new Date(userData.endDate);
+      }
+
       const [user] = await db
         .update(users)
         .set(userData)
@@ -107,7 +114,7 @@ export class DatabaseStorage implements IStorage {
         .where(eq(trainingPlans.userId, userId));
 
       if (active !== undefined) {
-        query = query.where(eq(trainingPlans.active, active));
+        query = query.where(and(eq(trainingPlans.active, active)));
       }
 
       return await query.orderBy(desc(trainingPlans.startDate));
@@ -152,6 +159,14 @@ export class DatabaseStorage implements IStorage {
 
   async updateTrainingPlan(id: number, updates: Partial<TrainingPlan>): Promise<TrainingPlan> {
     try {
+      // Convert dates to proper format if present
+      if (updates.startDate) {
+        updates.startDate = new Date(updates.startDate);
+      }
+      if (updates.endDate) {
+        updates.endDate = new Date(updates.endDate);
+      }
+
       const [plan] = await db
         .update(trainingPlans)
         .set(updates)
