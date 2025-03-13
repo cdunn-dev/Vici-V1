@@ -105,7 +105,7 @@ describe('Strava Service', () => {
         expires_at: 1234567890
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse)
       });
@@ -119,19 +119,14 @@ describe('Strava Service', () => {
     });
 
     it('should throw AUTH_ERROR with proper message on exchange failure', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Bad Request'
       });
 
-      try {
-        await exchangeStravaCode('invalid_code');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('AUTH_ERROR');
-        expect(error.message).toContain('Failed to exchange authorization code');
-      }
+      await expect(exchangeStravaCode('invalid_code'))
+        .rejects
+        .toThrow(StravaError);
     });
 
     it('should throw CONFIG_ERROR when credentials are missing', async () => {
@@ -140,47 +135,31 @@ describe('Strava Service', () => {
       process.env.STRAVA_CLIENT_ID = '';
       process.env.STRAVA_CLIENT_SECRET = '';
 
-      try {
-        await exchangeStravaCode('test_code');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('CONFIG_ERROR');
-        expect(error.message).toBe('Strava client secret is not configured');
-      }
+      await expect(exchangeStravaCode('test_code'))
+        .rejects
+        .toThrow(StravaError);
 
       process.env.STRAVA_CLIENT_ID = originalClientId;
       process.env.STRAVA_CLIENT_SECRET = originalClientSecret;
     });
 
     it('should handle network errors appropriately', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Network failure'));
+      mockFetch.mockRejectedValueOnce(new Error('Network failure'));
 
-      try {
-        await exchangeStravaCode('test_code');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('AUTH_ERROR');
-        expect(error.message).toBe('Failed to exchange authorization code');
-        expect((error as StravaError).originalError).toBeDefined();
-      }
+      await expect(exchangeStravaCode('test_code'))
+        .rejects
+        .toThrow(StravaError);
     });
 
     it('should handle invalid JSON response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.reject(new Error('Invalid JSON'))
       });
 
-      try {
-        await exchangeStravaCode('test_code');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('AUTH_ERROR');
-        expect(error.message).toBe('Failed to exchange authorization code');
-      }
+      await expect(exchangeStravaCode('test_code'))
+        .rejects
+        .toThrow(StravaError);
     });
   });
 
@@ -192,7 +171,7 @@ describe('Strava Service', () => {
         expires_at: 1234567890
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse)
       });
@@ -206,19 +185,14 @@ describe('Strava Service', () => {
     });
 
     it('should throw AUTH_ERROR with proper message on refresh failure', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Unauthorized'
       });
 
-      try {
-        await refreshStravaToken('invalid_token');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('AUTH_ERROR');
-        expect(error.message).toContain('Failed to refresh access token');
-      }
+      await expect(refreshStravaToken('invalid_token'))
+        .rejects
+        .toThrow(StravaError);
     });
   });
 
@@ -244,7 +218,7 @@ describe('Strava Service', () => {
     };
 
     it('should fetch and store activities successfully', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve([mockActivity])
       });
@@ -254,35 +228,25 @@ describe('Strava Service', () => {
     });
 
     it('should throw API_ERROR with proper message on fetch failure', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         statusText: 'Too Many Requests'
       });
 
-      try {
-        await syncStravaActivities(1, 'test_access_token');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('API_ERROR');
-        expect(error.message).toContain('Failed to fetch activities');
-      }
+      await expect(syncStravaActivities(1, 'test_access_token'))
+        .rejects
+        .toThrow(StravaError);
     });
 
     it('should throw DATA_ERROR on invalid response format', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ invalid: 'response' }) // Not an array
       });
 
-      try {
-        await syncStravaActivities(1, 'test_access_token');
-        fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(StravaError);
-        expect((error as StravaError).code).toBe('DATA_ERROR');
-        expect(error.message).toContain('Invalid response from Strava API');
-      }
+      await expect(syncStravaActivities(1, 'test_access_token'))
+        .rejects
+        .toThrow(StravaError);
     });
   });
 

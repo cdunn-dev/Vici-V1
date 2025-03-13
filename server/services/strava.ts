@@ -40,17 +40,6 @@ const ERROR_MESSAGES = {
   NOT_CONNECTED: 'Not connected to Strava'
 } as const;
 
-export interface StravaAuthOptions {
-  scope?: string[];
-  state?: string;
-}
-
-export interface StravaTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
-
 function getAppDomain() {
   const domain = 'b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev';
   console.log('[Strava] Using Replit domain:', domain);
@@ -249,6 +238,12 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       error instanceof Error ? error : undefined
     );
   }
+}
+
+export interface StravaTokens {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
 }
 
 export class StravaService {
