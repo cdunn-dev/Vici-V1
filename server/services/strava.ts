@@ -50,7 +50,7 @@ function getAppDomain() {
   // For development/preview, use Replit domain
   const domain = process.env.REPL_SLUG ?
     `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` :
-    'b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev';
+    'workspace.dunnchrisr.repl.co';
 
   console.log('[Strava] Using domain for OAuth:', domain);
   return `https://${domain}`;
