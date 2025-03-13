@@ -49,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await apiRequest("POST", "/api/login", credentials);
         return await res.json();
       } catch (error) {
-        // Log for debugging
         console.error("[Auth] Login failed:", error);
         throw error;
       }
