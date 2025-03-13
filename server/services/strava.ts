@@ -76,7 +76,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error) {
     console.error("Error exchanging Strava code:", error);
-    throw error instanceof Error ? error : new Error("Failed to exchange Strava code");
+    throw new Error(`Failed to exchange Strava code: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -108,13 +108,12 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     };
   } catch (error) {
     console.error("Error refreshing Strava token:", error);
-    throw error instanceof Error ? error : new Error("Failed to refresh Strava token");
+    throw new Error(`Failed to refresh Strava token: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   try {
-    // Get the latest activity in our database
     const [latestActivity] = await db
       .select()
       .from(stravaActivities)
@@ -122,7 +121,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       .orderBy(desc(stravaActivities.startDate))
       .limit(1);
 
-    // If we have activities, only fetch newer ones
     const params = new URLSearchParams();
     if (latestActivity) {
       const after = Math.floor(new Date(latestActivity.startDate).getTime() / 1000);
@@ -142,7 +140,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     const activities = await response.json();
 
-    // Process and save new activities
     for (const activity of activities) {
       try {
         const startDate = new Date(activity.start_date);
@@ -163,30 +160,19 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           maxHeartrate: activity.max_heartrate,
           startLatitude: activity.start_latitude?.toString(),
           startLongitude: activity.start_longitude?.toString(),
-          map: activity.map?.summary_polyline ? {
-            summaryPolyline: activity.map.summary_polyline,
-            resourceState: activity.map.resource_state
-          } : null,
+          mapPolyline: activity.map?.summary_polyline || null,
         };
 
         await db.insert(stravaActivities).values(newActivity).execute();
         console.log(`Inserted activity ${activity.id} for user ${userId}`);
       } catch (error) {
-        // Log but don't fail if a single activity insert fails
-        if (error instanceof Error) {
-          console.error(`Failed to insert activity ${activity.id}:`, error.message);
-        } else {
-          console.error(`Failed to insert activity ${activity.id}`);
-        }
+        console.error(`Failed to insert activity ${activity.id}:`, error instanceof Error ? error.message : 'Unknown error');
       }
     }
 
     console.log(`Synced ${activities.length} activities for user ${userId}`);
   } catch (error) {
-    // Re-throw any unexpected errors with proper error message
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error("An unexpected error occurred while syncing activities");
+    console.error("Error syncing Strava activities:", error);
+    throw new Error(`Failed to sync Strava activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

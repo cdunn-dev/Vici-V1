@@ -58,10 +58,13 @@ describe('Strava Service', () => {
     });
 
     it('should handle exchange errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
-      return expect(exchangeStravaCode('invalid_code'))
-        .rejects
-        .toThrow('Error exchanging Strava code');
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: 'Bad Request'
+      });
+
+      await expect(exchangeStravaCode('invalid_code')).rejects
+        .toThrow('Failed to exchange Strava code: Failed to exchange code: Bad Request');
     });
   });
 
@@ -87,10 +90,13 @@ describe('Strava Service', () => {
     });
 
     it('should handle refresh errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
-      return expect(refreshStravaToken('invalid_token'))
-        .rejects
-        .toThrow('Error refreshing Strava token');
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: 'Unauthorized'
+      });
+
+      await expect(refreshStravaToken('invalid_token')).rejects
+        .toThrow('Failed to refresh Strava token: Failed to refresh token: Unauthorized');
     });
   });
 
@@ -123,10 +129,13 @@ describe('Strava Service', () => {
     });
 
     it('should handle API errors', async () => {
-      global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
-      return expect(syncStravaActivities(1, 'test_access_token'))
-        .rejects
-        .toThrow('Error syncing Strava activities');
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: 'Too Many Requests'
+      });
+
+      await expect(syncStravaActivities(1, 'test_access_token')).rejects
+        .toThrow('Failed to sync Strava activities: Failed to fetch activities: Too Many Requests');
     });
   });
 });

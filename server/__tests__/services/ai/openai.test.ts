@@ -31,10 +31,11 @@ describe('OpenAI Service', () => {
 
   describe('makeRequest', () => {
     it('should handle invalid JSON responses', async () => {
-      mockCompletionCreate.mockRejectedValue(new Error('Failed to parse response'));
-      return expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
+      mockCompletionCreate.mockRejectedValue(new Error('Invalid JSON response'));
+
+      await expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
         .rejects
-        .toThrow('OpenAI API error');
+        .toThrow('OpenAI API error: Invalid JSON response');
     });
   });
 
@@ -57,10 +58,11 @@ describe('OpenAI Service', () => {
     };
 
     it('should handle generation errors', async () => {
-      mockCompletionCreate.mockRejectedValue(new Error('Failed to generate plan'));
-      return expect(openaiService.generateTrainingPlan(mockUserPreferences))
+      mockCompletionCreate.mockRejectedValue(new Error('Failed to generate training plan'));
+
+      await expect(openaiService.generateTrainingPlan(mockUserPreferences))
         .rejects
-        .toThrow('OpenAI API error');
+        .toThrow('OpenAI API error: Failed to generate training plan');
     });
   });
 
@@ -117,9 +119,10 @@ describe('OpenAI Service', () => {
 
     it('should handle adjustment errors', async () => {
       mockCompletionCreate.mockRejectedValue(new Error('Failed to generate adjustments'));
-      return expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
+
+      await expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
         .rejects
-        .toThrow('OpenAI API error');
+        .toThrow('OpenAI API error: Failed to generate adjustments');
     });
   });
 });
