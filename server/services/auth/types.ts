@@ -66,8 +66,8 @@ export class AuthError extends Error {
   public readonly userMessage: string;
 
   constructor(
-    message: string,
     public readonly code: AuthErrorCode,
+    message: string,
     public readonly details?: unknown
   ) {
     super(message);

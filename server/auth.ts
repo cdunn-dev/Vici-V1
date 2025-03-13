@@ -66,8 +66,8 @@ export function setupAuth(app: Express) {
         } catch (error) {
           console.error('[Auth] Login error:', error);
           return done(new AuthError(
-            ERROR_MESSAGES.DATABASE_ERROR,
             'DATABASE_ERROR',
+            ERROR_MESSAGES.DATABASE_ERROR,
             error
           ));
         }
@@ -82,16 +82,16 @@ export function setupAuth(app: Express) {
       const user = await storage.getUser(id);
       if (!user) {
         return done(new AuthError(
-          ERROR_MESSAGES.USER_NOT_FOUND,
-          'USER_NOT_FOUND'
+          'USER_NOT_FOUND',
+          ERROR_MESSAGES.USER_NOT_FOUND
         ));
       }
       done(null, user);
     } catch (error) {
       console.error('[Auth] Session error:', error);
       done(new AuthError(
-        ERROR_MESSAGES.SESSION_ERROR,
         'SESSION_ERROR',
+        ERROR_MESSAGES.SESSION_ERROR,
         error
       ));
     }
@@ -102,8 +102,8 @@ export function setupAuth(app: Express) {
       const registerResult = registerUserSchema.safeParse(req.body);
       if (!registerResult.success) {
         throw new AuthError(
-          ERROR_MESSAGES.VALIDATION_ERROR,
           'VALIDATION_ERROR',
+          ERROR_MESSAGES.VALIDATION_ERROR,
           registerResult.error
         );
       }
@@ -111,8 +111,8 @@ export function setupAuth(app: Express) {
       const existingUser = await storage.getUserByEmail(registerResult.data.email);
       if (existingUser) {
         throw new AuthError(
-          ERROR_MESSAGES.EMAIL_EXISTS,
-          'EMAIL_EXISTS'
+          'EMAIL_EXISTS',
+          ERROR_MESSAGES.EMAIL_EXISTS
         );
       }
 
@@ -138,8 +138,8 @@ export function setupAuth(app: Express) {
       req.login(user, (err) => {
         if (err) {
           throw new AuthError(
-            ERROR_MESSAGES.SESSION_ERROR,
             'SESSION_ERROR',
+            ERROR_MESSAGES.SESSION_ERROR,
             err
           );
         }
@@ -206,8 +206,8 @@ export function setupAuth(app: Express) {
       // Validate email
       if (!email || typeof email !== 'string') {
         throw new AuthError(
-          ERROR_MESSAGES.VALIDATION_ERROR,
-          'VALIDATION_ERROR'
+          'VALIDATION_ERROR',
+          ERROR_MESSAGES.VALIDATION_ERROR
         );
       }
 
@@ -246,8 +246,8 @@ export function setupAuth(app: Express) {
       // Validate password
       if (!password || typeof password !== 'string' || password.length < 8) {
         throw new AuthError(
-          ERROR_MESSAGES.PASSWORD_TOO_SHORT,
-          'VALIDATION_ERROR'
+          'VALIDATION_ERROR',
+          ERROR_MESSAGES.PASSWORD_TOO_SHORT
         );
       }
 
@@ -255,15 +255,15 @@ export function setupAuth(app: Express) {
       const resetInfo = await storage.getResetToken(token);
       if (!resetInfo) {
         throw new AuthError(
-          ERROR_MESSAGES.RESET_TOKEN_INVALID,
-          'RESET_TOKEN_INVALID'
+          'RESET_TOKEN_INVALID',
+          ERROR_MESSAGES.RESET_TOKEN_INVALID
         );
       }
 
       if (resetInfo.expires < new Date()) {
         throw new AuthError(
-          ERROR_MESSAGES.RESET_TOKEN_EXPIRED,
-          'RESET_TOKEN_EXPIRED'
+          'RESET_TOKEN_EXPIRED',
+          ERROR_MESSAGES.RESET_TOKEN_EXPIRED
         );
       }
 
