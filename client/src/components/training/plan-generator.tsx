@@ -251,7 +251,20 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   <li>Detecting your common workout types (easy runs, long runs, tempo, etc.)</li>
                   <li>Using your preferred distance units (miles/kilometers)</li>
                 </ul>
-                <div className="mt-6">
+
+                <div className="mt-6 space-y-4">
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      You'll be redirected to Strava to sign in. If you have two-factor authentication (2FA) enabled:
+                      <ul className="list-disc pl-6 mt-2">
+                        <li>You'll receive a verification code from Strava (not from us)</li>
+                        <li>Check your spam folder if you don't see the code</li>
+                        <li>The code is valid for a limited time</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+
                   <Button className="w-full" onClick={() => window.location.href = "/api/auth/strava"}>
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Connect with Strava
