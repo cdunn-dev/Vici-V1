@@ -25,7 +25,7 @@ import * as z from "zod";
 import { useStravaProfile } from "@/hooks/use-strava-profile";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 import {
   RaceDistances,
@@ -256,12 +256,16 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                   <Alert>
                     <Info className="h-4 w-4" />
                     <AlertDescription>
-                      You'll be redirected to Strava to sign in. If you have two-factor authentication (2FA) enabled:
+                      You'll be redirected to Strava to sign in.  If you have two-factor authentication (2FA) enabled:
                       <ul className="list-disc pl-6 mt-2">
                         <li>You'll receive a verification code from Strava (not from us)</li>
                         <li>Check your spam folder if you don't see the code</li>
                         <li>The code is valid for a limited time</li>
                       </ul>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Tip: For smoother authorization, you can log in to Strava first in another tab, then return here to connect.
+                        This will skip the verification code step entirely.
+                      </p>
                     </AlertDescription>
                   </Alert>
 
