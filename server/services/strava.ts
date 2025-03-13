@@ -37,13 +37,10 @@ const ERROR_MESSAGES = {
 } as const;
 
 function getAppDomain() {
-  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-    const domain = `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
-    console.log('[Strava] Using Replit domain:', domain);
-    return `https://${domain}`;
-  }
-  console.log('[Strava] Using localhost domain');
-  return "http://localhost:5000";
+  // Use the correct Replit domain format
+  const domain = 'b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev';
+  console.log('[Strava] Using Replit domain:', domain);
+  return `https://${domain}`;
 }
 
 const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;

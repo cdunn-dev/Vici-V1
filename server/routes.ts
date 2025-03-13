@@ -274,14 +274,14 @@ export async function registerRoutes(app: Express) {
         res.json(plan);
       } catch (dateError) {
         console.error("Date validation error:", dateError);
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Date validation failed",
           details: dateError instanceof Error ? dateError.message : "Unknown date error"
         });
       }
     } catch (error) {
       console.error("Error generating training plan:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to generate training plan",
         details: error instanceof Error ? error.message : "Unknown error"
       });
