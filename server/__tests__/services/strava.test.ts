@@ -1,6 +1,12 @@
 import { vi } from 'vitest';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { exchangeStravaCode, refreshStravaToken, syncStravaActivities, getStravaAuthUrl } from '../../services/strava';
+import { 
+  exchangeStravaCode, 
+  refreshStravaToken, 
+  syncStravaActivities, 
+  getStravaAuthUrl,
+  StravaError 
+} from '../../services/strava';
 import { activities as stravaActivities } from '../../schema/strava';
 import { db } from '../../db';
 
@@ -23,6 +29,8 @@ vi.mock('../../db', () => ({
 describe('Strava Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    console.error = vi.fn();
+    console.log = vi.fn();
   });
 
   describe('getStravaAuthUrl', () => {
@@ -34,10 +42,22 @@ describe('Strava Service', () => {
       expect(url.searchParams.get('state')).toBe('test-state');
     });
 
-    it('should throw error if client ID is not configured', () => {
+    it('should throw CONFIG_ERROR if client ID is not configured', () => {
       const originalClientId = process.env.STRAVA_CLIENT_ID;
       process.env.STRAVA_CLIENT_ID = '';
-      expect(() => getStravaAuthUrl('test-state')).toThrow('STRAVA_CLIENT_ID is not configured');
+
+      expect(() => getStravaAuthUrl('test-state'))
+        .toThrow(StravaError);
+
+      const error = (() => {
+        try {
+          getStravaAuthUrl('test-state');
+        } catch (e) {
+          return e as StravaError;
+        }
+      })();
+
+      expect(error.code).toBe('CONFIG_ERROR');
       process.env.STRAVA_CLIENT_ID = originalClientId;
     });
   });
@@ -63,15 +83,20 @@ describe('Strava Service', () => {
       });
     });
 
-    it('should handle exchange errors', async () => {
+    it('should throw AUTH_ERROR with proper message on exchange failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         statusText: 'Bad Request'
       });
 
-      await expect(exchangeStravaCode('invalid_code'))
-        .rejects
-        .toThrow('Failed to exchange code');
+      try {
+        await exchangeStravaCode('invalid_code');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('AUTH_ERROR');
+        expect(error.message).toContain('Failed to exchange authorization code');
+      }
     });
   });
 
@@ -96,15 +121,20 @@ describe('Strava Service', () => {
       });
     });
 
-    it('should handle refresh errors', async () => {
+    it('should throw AUTH_ERROR with proper message on refresh failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         statusText: 'Unauthorized'
       });
 
-      await expect(refreshStravaToken('invalid_token'))
-        .rejects
-        .toThrow('Failed to refresh token');
+      try {
+        await refreshStravaToken('invalid_token');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('AUTH_ERROR');
+        expect(error.message).toContain('Failed to refresh access token');
+      }
     });
   });
 
@@ -139,15 +169,36 @@ describe('Strava Service', () => {
       expect(db.insert).toHaveBeenCalledWith(stravaActivities);
     });
 
-    it('should handle API errors', async () => {
+    it('should throw API_ERROR with proper message on fetch failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
         statusText: 'Too Many Requests'
       });
 
-      await expect(syncStravaActivities(1, 'test_access_token'))
-        .rejects
-        .toThrow('Failed to fetch activities');
+      try {
+        await syncStravaActivities(1, 'test_access_token');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('API_ERROR');
+        expect(error.message).toContain('Failed to fetch activities');
+      }
+    });
+
+    it('should throw DATA_ERROR on invalid response format', async () => {
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ invalid: 'response' }) // Not an array
+      });
+
+      try {
+        await syncStravaActivities(1, 'test_access_token');
+        fail('Should have thrown an error');
+      } catch (error) {
+        expect(error).toBeInstanceOf(StravaError);
+        expect((error as StravaError).code).toBe('DATA_ERROR');
+        expect(error.message).toContain('Invalid response from Strava API');
+      }
     });
   });
 });

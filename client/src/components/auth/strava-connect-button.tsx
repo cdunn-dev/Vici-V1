@@ -26,25 +26,26 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
       }
 
       setIsConnecting(true);
+      console.log('[Strava] Starting connection flow for user:', user.id);
 
-      // Add state parameter for security
       const res = await fetch('/api/strava/auth', {
         credentials: 'include',
       });
 
       if (!res.ok) {
         const error = await res.json();
+        console.error('[Strava] Failed to get auth URL:', error);
         throw new Error(error.error || 'Failed to get Strava authorization URL');
       }
 
       const data = await res.json();
-      console.log('Redirecting to Strava auth URL:', data.url);
 
-      // Ensure we're using the proper URL from the server
       if (!data.url) {
+        console.error('[Strava] No authorization URL received');
         throw new Error('No authorization URL received from server');
       }
 
+      console.log('[Strava] Redirecting to authorization URL');
       // Use window.location.assign for more reliable redirect
       window.location.assign(data.url);
 
@@ -52,7 +53,7 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
         onConnect();
       }
     } catch (error) {
-      console.error('Error initiating Strava connection:', error);
+      console.error('[Strava] Connection error:', error);
       toast({
         title: "Connection Error",
         description: error instanceof Error ? error.message : "Failed to connect to Strava. Please try again later.",
