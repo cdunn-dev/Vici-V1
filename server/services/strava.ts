@@ -1,7 +1,7 @@
 import { ActivityProvider, ProviderCredentials, Activity, AthleteProfile } from './activity/types';
 import fetch from 'node-fetch';
 import { db } from "../db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { stravaActivities } from "@shared/schema";
 import type { InsertStravaActivity } from "@shared/schema";
 import { storage } from "../storage";
@@ -366,48 +366,49 @@ export class StravaService {
     }
   }
 
-  async analyzeRunningExperience(): Promise<{
-    level: string;
+  async analyzeRunningProfile(userId: number): Promise<{
     weeklyMileage: number;
     preferredRunDays: string[];
+    fitnessLevel: string;
     commonWorkoutTypes: string[];
   }> {
-    await this.refreshTokenIfNeeded();
-
     try {
-      // Get last 6 months of activities
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      // Get last 4 weeks of activities
+      const fourWeeksAgo = new Date();
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
-      const response = await fetch(
-        `https://www.strava.com/api/v3/athlete/activities?after=${Math.floor(sixMonthsAgo.getTime() / 1000)}&per_page=200`,
-        {
-          headers: { Authorization: `Bearer ${this.tokens!.accessToken}` }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Strava API error: ${response.statusText}`);
-      }
-
-      const activities = await response.json();
+      const activities = await db
+        .select()
+        .from(stravaActivities)
+        .where(
+          and(
+            eq(stravaActivities.userId, userId),
+            eq(stravaActivities.type, "Run")
+          )
+        )
+        .orderBy(desc(stravaActivities.startDate));
 
       // Calculate weekly stats
       const weeklyMileages: number[] = [];
       const runDays = new Set<string>();
       const workoutTypes = new Map<string, number>();
 
-      activities.forEach((activity: any) => {
-        if (activity.type === 'Run') {
-          // Track weekly mileage
-          const week = Math.floor(new Date(activity.start_date).getTime() / (7 * 24 * 60 * 60 * 1000));
-          weeklyMileages[week] = (weeklyMileages[week] || 0) + activity.distance / 1609.34; // Convert to miles
+      let totalMileage = 0;
+      let activityCount = 0;
 
-          // Track preferred run days
-          const day = new Date(activity.start_date).toLocaleDateString('en-US', { weekday: 'lowercase' });
+      for (const activity of activities) {
+        const activityDate = new Date(activity.startDate);
+        if (activityDate >= fourWeeksAgo) {
+          // Convert meters to miles and add to total
+          const miles = activity.distance / 1609.34;
+          totalMileage += miles;
+          activityCount++;
+
+          // Track run days
+          const day = activityDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
           runDays.add(day);
 
-          // Track workout types based on name patterns
+          // Analyze workout type from name
           const name = activity.name.toLowerCase();
           if (name.includes('tempo') || name.includes('threshold')) {
             workoutTypes.set('tempo', (workoutTypes.get('tempo') || 0) + 1);
@@ -419,17 +420,17 @@ export class StravaService {
             workoutTypes.set('easy', (workoutTypes.get('easy') || 0) + 1);
           }
         }
-      });
+      }
 
       // Calculate average weekly mileage
-      const avgWeeklyMileage = weeklyMileages.reduce((sum, miles) => sum + miles, 0) / weeklyMileages.length || 0;
+      const avgWeeklyMileage = totalMileage / 4; // 4 weeks
 
-      // Determine experience level based on mileage and workout variety
-      let level = 'beginner';
+      // Determine fitness level based on weekly mileage and workout variety
+      let fitnessLevel = 'beginner';
       if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
-        level = 'advanced';
+        fitnessLevel = 'advanced';
       } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
-        level = 'intermediate';
+        fitnessLevel = 'intermediate';
       }
 
       // Get most common workout types
@@ -439,13 +440,13 @@ export class StravaService {
         .map(([type]) => type);
 
       return {
-        level,
         weeklyMileage: Math.round(avgWeeklyMileage),
         preferredRunDays: Array.from(runDays),
+        fitnessLevel,
         commonWorkoutTypes: sortedWorkouts
       };
     } catch (error) {
-      console.error('Error analyzing running experience:', error);
+      console.error('Error analyzing running profile:', error);
       throw error;
     }
   }

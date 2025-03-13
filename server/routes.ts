@@ -112,14 +112,19 @@ export async function registerRoutes(app: Express) {
           await syncStravaActivities(req.user.id, tokens.accessToken);
           console.log("[Strava Callback] Successfully synced activities");
 
-          // Get running experience analysis
+          // Analyze running profile
           const stravaService = new StravaService(req.user.id);
-          const runningExperience = await stravaService.analyzeRunningExperience();
-          console.log("[Strava Callback] Running experience analysis:", runningExperience);
+          const runningProfile = await stravaService.analyzeRunningProfile(req.user.id);
+          console.log("[Strava Callback] Running profile analysis:", runningProfile);
 
-          // Store running experience in user profile
+          // Store running profile in user data
           await storage.updateUser(req.user.id, {
-            runningExperience: runningExperience
+            runningExperience: JSON.stringify({
+              level: runningProfile.fitnessLevel,
+              weeklyMileage: runningProfile.weeklyMileage,
+              preferredRunDays: runningProfile.preferredRunDays,
+              commonWorkoutTypes: runningProfile.commonWorkoutTypes
+            })
           });
 
         } catch (syncError) {
@@ -136,35 +141,20 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Strava profile endpoint - put this before other routes to ensure proper handling
-  app.get("/api/strava/profile", async (req, res) => {
+  // Add endpoint to get running profile
+  app.get("/api/strava/running-profile", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Not authenticated" });
       }
 
-      const user = req.user;
-      if (!user.stravaTokens) {
-        return res.status(400).json({ error: "Strava not connected" });
-      }
+      const stravaService = new StravaService(req.user.id);
+      const runningProfile = await stravaService.analyzeRunningProfile(req.user.id);
 
-      // Initialize Strava service with user ID
-      const stravaService = new StravaService(user.id);
-
-      // Get both profile and running analysis
-      const [profile, runningExperience] = await Promise.all([
-        stravaService.getAthleteProfile(),
-        stravaService.analyzeRunningExperience()
-      ]);
-
-      // Combine the data
-      res.json({
-        ...profile,
-        runningExperience
-      });
+      res.json(runningProfile);
     } catch (error) {
-      console.error("Error fetching Strava profile:", error);
-      res.status(500).json({ error: "Failed to fetch Strava profile" });
+      console.error("Error fetching running profile:", error);
+      res.status(500).json({ error: "Failed to fetch running profile" });
     }
   });
 
@@ -336,7 +326,11 @@ export async function registerRoutes(app: Express) {
           };
         });
 
-        // Construct the training plan with validated data
+        // Fetch running profile
+        const stravaService = new StravaService(userId);
+        const runningProfile = await stravaService.analyzeRunningProfile(userId);
+
+        // Construct the training plan with validated data and running profile
         const trainingPlan = {
           userId,
           name: req.body.name || `Training Plan - ${req.body.goal}`,
@@ -350,7 +344,7 @@ export async function registerRoutes(app: Express) {
             ...req.body.targetRace,
             date: endDate.toISOString()
           } : null,
-          runningExperience: req.body.runningExperience,
+          runningExperience: JSON.stringify(runningProfile), // Use the fetched running profile
           trainingPreferences: req.body.trainingPreferences,
           is_active: true
         };
