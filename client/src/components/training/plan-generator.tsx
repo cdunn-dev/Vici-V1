@@ -67,15 +67,15 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       startDate: new Date().toISOString(),
       age: undefined,
       gender: undefined,
-      preferredDistanceUnit: stravaProfile?.measurementPreference === "meters" ? "kilometers" : "miles",
+      preferredDistanceUnit: "miles", // Will be updated from Strava if available
       runningExperience: {
-        level: stravaProfile?.runningExperience.level || undefined,
+        level: undefined,
         fitnessLevel: undefined
       },
       trainingPreferences: {
-        weeklyRunningDays: stravaProfile?.runningExperience.preferredRunDays.length || 3,
-        maxWeeklyMileage: stravaProfile?.runningExperience.weeklyMileage || 15,
-        weeklyWorkouts: stravaProfile?.runningExperience.commonWorkoutTypes.length || 1,
+        weeklyRunningDays: 3,
+        maxWeeklyMileage: 15,
+        weeklyWorkouts: 1,
         preferredLongRunDay: "Sunday",
         coachingStyle: "directive"
       },
@@ -87,25 +87,32 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   // Update form when Strava data loads
   useEffect(() => {
     if (stravaProfile) {
-      form.setValue("gender", stravaProfile.gender);
-      form.setValue("preferredDistanceUnit",
-        stravaProfile.measurementPreference === "meters" ? "kilometers" : "miles"
-      );
-      form.setValue("runningExperience.level", stravaProfile.runningExperience.level);
-      form.setValue("trainingPreferences.weeklyRunningDays",
-        stravaProfile.runningExperience.preferredRunDays.length
-      );
-      form.setValue("trainingPreferences.maxWeeklyMileage",
-        stravaProfile.runningExperience.weeklyMileage
-      );
-      form.setValue("trainingPreferences.weeklyWorkouts",
-        stravaProfile.runningExperience.commonWorkoutTypes.length
-      );
+      if (stravaProfile.gender) {
+        form.setValue("gender", stravaProfile.gender);
+      }
+
+      if (stravaProfile.measurementPreference) {
+        form.setValue("preferredDistanceUnit",
+          stravaProfile.measurementPreference === "meters" ? "kilometers" : "miles"
+        );
+      }
+
+      if (stravaProfile.runningExperience?.level) {
+        form.setValue("runningExperience.level", stravaProfile.runningExperience.level);
+      }
+
+      const runDays = stravaProfile.runningExperience?.preferredRunDays?.length || 3;
+      const mileage = stravaProfile.runningExperience?.weeklyMileage || 15;
+      const workouts = stravaProfile.runningExperience?.commonWorkoutTypes?.length || 1;
+
+      form.setValue("trainingPreferences.weeklyRunningDays", runDays);
+      form.setValue("trainingPreferences.maxWeeklyMileage", mileage);
+      form.setValue("trainingPreferences.weeklyWorkouts", workouts);
 
       // Update slider values
-      setRunningDaysValue(stravaProfile.runningExperience.preferredRunDays.length);
-      setMileageValue(stravaProfile.runningExperience.weeklyMileage);
-      setWorkoutsValue(stravaProfile.runningExperience.commonWorkoutTypes.length);
+      setRunningDaysValue(runDays);
+      setMileageValue(mileage);
+      setWorkoutsValue(workouts);
     }
   }, [stravaProfile, form]);
 

@@ -17,9 +17,10 @@ export interface StravaProfile {
 export function useStravaProfile() {
   return useQuery<StravaProfile>({
     queryKey: ["/api/strava/profile"],
-    queryFn: getQueryFn(),
-    retry: false,
+    queryFn: () => getQueryFn({ on401: "returnNull" })("/api/strava/profile"),
     // Don't show errors if not connected to Strava
-    useErrorBoundary: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    retry: false,
+    throwOnError: false
   });
 }
