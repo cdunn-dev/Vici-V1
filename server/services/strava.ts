@@ -189,7 +189,10 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       .orderBy(desc(stravaActivities.startDate))
       .limit(1);
 
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({
+      per_page: "50" // Fetch more activities initially
+    });
+
     if (latestActivity) {
       const after = Math.floor(new Date(latestActivity.startDate).getTime() / 1000);
       params.append("after", after.toString());
@@ -220,28 +223,40 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     for (const activity of activities) {
       try {
+        // Only process running activities
+        if (activity.type !== 'Run') continue;
+
         const startDate = new Date(activity.start_date);
-        const newActivity = {
+        const insertActivity = {
           userId,
           stravaId: activity.id.toString(),
           name: activity.name,
           type: activity.type,
           startDate: startDate.toISOString(),
-          distance: activity.distance,
+          distance: Math.round(activity.distance * 100) / 100, // Convert to 2 decimal places
           movingTime: activity.moving_time,
           elapsedTime: activity.elapsed_time,
-          totalElevationGain: activity.total_elevation_gain,
-          averageSpeed: activity.average_speed,
-          maxSpeed: activity.max_speed,
-          averageHeartrate: activity.average_heartrate,
-          maxHeartrate: activity.max_heartrate,
-          startLatitude: activity.start_latitude?.toString(),
-          startLongitude: activity.start_longitude?.toString(),
+          totalElevationGain: Math.round(activity.total_elevation_gain),
+          averageSpeed: Math.round(activity.average_speed * 100) / 100,
+          maxSpeed: Math.round(activity.max_speed * 100) / 100,
+          averageHeartrate: activity.average_heartrate ? Math.round(activity.average_heartrate) : null,
+          maxHeartrate: activity.max_heartrate ? Math.round(activity.max_heartrate) : null,
+          startLatitude: activity.start_latitude?.toString() || null,
+          startLongitude: activity.start_longitude?.toString() || null,
           mapPolyline: activity.map?.summary_polyline || null,
         };
 
-        await db.insert(stravaActivities).values(newActivity);
-        console.log('[Strava] Inserted activity:', activity.id);
+        // Check if activity already exists
+        const [existingActivity] = await db
+          .select()
+          .from(stravaActivities)
+          .where(eq(stravaActivities.stravaId, insertActivity.stravaId))
+          .limit(1);
+
+        if (!existingActivity) {
+          await db.insert(stravaActivities).values(insertActivity);
+          console.log('[Strava] Inserted activity:', activity.id);
+        }
       } catch (error) {
         console.error('[Strava] Failed to insert activity:', error);
       }
