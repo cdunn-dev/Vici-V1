@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-// Mock database operations
+// Mock DB operations
 vi.mock('../../db', () => ({
   db: {
     insert: vi.fn().mockReturnValue({
@@ -18,15 +18,11 @@ vi.mock('../../db', () => ({
 }));
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getStravaAuthUrl, exchangeStravaCode, refreshStravaToken, syncStravaActivities } from '../../services/strava';
+import { exchangeStravaCode, refreshStravaToken, syncStravaActivities, getStravaAuthUrl } from '../../services/strava';
 import { activities as stravaActivities } from '../../schema/strava';
 import { db } from '../../db';
 
 describe('Strava Service', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('getStravaAuthUrl', () => {
     it('should generate correct authorization URL', () => {
       const url = new URL(getStravaAuthUrl({}));
@@ -58,14 +54,11 @@ describe('Strava Service', () => {
     });
 
     it('should handle exchange errors', async () => {
-      const mockError = new Error('Bad Request');
-      global.fetch = vi.fn().mockImplementation(() => {
-        throw mockError;
-      });
+      global.fetch = vi.fn().mockRejectedValue(new Error('Bad Request'));
 
       await expect(exchangeStravaCode('invalid_code'))
         .rejects
-        .toThrow(/Error exchanging Strava code.*Bad Request/i);
+        .toThrow('Error exchanging Strava code: Error: Bad Request');
     });
   });
 
@@ -91,14 +84,11 @@ describe('Strava Service', () => {
     });
 
     it('should handle refresh errors', async () => {
-      const mockError = new Error('Unauthorized');
-      global.fetch = vi.fn().mockImplementation(() => {
-        throw mockError;
-      });
+      global.fetch = vi.fn().mockRejectedValue(new Error('Unauthorized'));
 
       await expect(refreshStravaToken('invalid_token'))
         .rejects
-        .toThrow(/Error refreshing Strava token.*Unauthorized/i);
+        .toThrow('Error refreshing Strava token: Error: Unauthorized');
     });
   });
 
@@ -121,21 +111,7 @@ describe('Strava Service', () => {
     }];
 
     beforeEach(() => {
-      const selectChain = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        execute: vi.fn().mockResolvedValue([])
-      };
-
-      const insertChain = {
-        values: vi.fn().mockReturnThis(),
-        returning: vi.fn().mockResolvedValue([{ id: 1 }])
-      };
-
-      vi.mocked(db.select).mockReturnValue(selectChain);
-      vi.mocked(db.insert).mockReturnValue(insertChain);
+      vi.clearAllMocks();
     });
 
     it('should fetch and store activities successfully', async () => {
@@ -150,14 +126,11 @@ describe('Strava Service', () => {
     });
 
     it('should handle API errors', async () => {
-      const mockError = new Error('Too Many Requests');
-      global.fetch = vi.fn().mockImplementation(() => {
-        throw mockError;
-      });
+      global.fetch = vi.fn().mockRejectedValue(new Error('Too Many Requests'));
 
       await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
-        .toThrow(/Error syncing Strava activities.*Too Many Requests/i);
+        .toThrow('Error syncing Strava activities: Error: Too Many Requests');
     });
   });
 });
