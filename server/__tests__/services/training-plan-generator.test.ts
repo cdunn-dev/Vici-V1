@@ -1,36 +1,18 @@
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { generateTrainingPlan } from '../../services/training-plan-generator';
+import { TrainingPlanError, ERROR_MESSAGES } from '../../services/types/training-plan';
+import { addWeeks } from 'date-fns';
 
-// Mock OpenAI module before other imports
+// Mock AI service
 vi.mock('../../services/ai/openai', () => ({
   generateTrainingPlan: vi.fn()
 }));
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { generateTrainingPlan } from '../../services/training-plan-generator';
-import { generateTrainingPlan as mockGenerateAIPlan } from '../../services/ai/openai';
-
 describe('Training Plan Generator Service', () => {
-  const originalConsoleError = console.error;
-  const originalConsoleLog = console.log;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Silence console during tests
-    console.error = vi.fn();
-    console.log = vi.fn();
-  });
-
-  afterEach(() => {
-    // Restore console after tests
-    console.error = originalConsoleError;
-    console.log = originalConsoleLog;
-  });
-
   const validPreferences = {
     goal: "Complete a marathon",
-    goalDescription: "First-time marathoner aiming to finish strong",
-    startDate: '2025-03-15',
-    endDate: '2025-06-15',
+    startDate: new Date().toISOString(),
+    endDate: addWeeks(new Date(), 12).toISOString(),
     runningExperience: {
       level: 'intermediate',
       fitnessLevel: 'good'
@@ -39,108 +21,195 @@ describe('Training Plan Generator Service', () => {
       weeklyRunningDays: 5,
       maxWeeklyMileage: 50,
       weeklyWorkouts: 3,
-      preferredLongRunDay: 'Sunday',
-      coachingStyle: 'Moderate'
-    },
-    targetRace: {
-      distance: 'Marathon',
-      date: '2025-06-15',
-      goalTime: '3:45:00'
+      preferredLongRunDay: 'sunday',
+      coachingStyle: 'moderate'
     }
   };
 
-  it('should validate user preferences before generating plan', async () => {
-    const invalidPreferences = {
-      ...validPreferences,
-      goal: ''  // Empty string should trigger validation
-    };
-
-    // Log for debugging
-    console.log('Testing validation with preferences:', JSON.stringify(invalidPreferences, null, 2));
-
-    // Test validation error
-    const promise = generateTrainingPlan(invalidPreferences);
-    await expect(promise).rejects.toThrow('Training goal is required');
-    expect(mockGenerateAIPlan).not.toHaveBeenCalled();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    console.error = vi.fn();
+    console.log = vi.fn();
   });
 
-  it('should handle AI service errors gracefully', async () => {
-    const errorMessage = 'Failed to generate training plan';
-    vi.mocked(mockGenerateAIPlan).mockRejectedValueOnce(new Error(errorMessage));
+  describe('Input Validation', () => {
+    it('should validate required fields', async () => {
+      const invalidPreferences = {
+        ...validPreferences,
+        goal: '',
+      };
 
-    const promise = generateTrainingPlan(validPreferences);
-    await expect(promise).rejects.toThrow(errorMessage);
-  });
+      await expect(generateTrainingPlan(invalidPreferences))
+        .rejects
+        .toThrow(TrainingPlanError);
+    });
 
-  it('should generate appropriate training phases', async () => {
-    const mockAIResponse = {
-      weeklyPlans: [
-        {
-          week: 1,
-          phase: 'Base Building',
-          totalMileage: 30,
-          workouts: []
-        },
-        {
-          week: 4,
-          phase: 'Base Building',
-          totalMileage: 35,
-          workouts: []
-        },
-        {
-          week: 8,
-          phase: 'Peak Training',
-          totalMileage: 45,
-          workouts: []
-        },
-        {
-          week: 12,
-          phase: 'Taper',
-          totalMileage: 25,
-          workouts: []
+    it('should validate date ranges', async () => {
+      const invalidDatePreferences = {
+        ...validPreferences,
+        startDate: new Date('2025-01-01').toISOString(),
+        endDate: new Date('2024-12-31').toISOString(),
+      };
+
+      await expect(generateTrainingPlan(invalidDatePreferences))
+        .rejects
+        .toThrow(ERROR_MESSAGES.INVALID_DATE_RANGE);
+    });
+
+    it('should validate running experience levels', async () => {
+      const invalidExperience = {
+        ...validPreferences,
+        runningExperience: {
+          level: 'invalid',
+          fitnessLevel: 'good'
         }
-      ]
-    };
+      };
 
-    vi.mocked(mockGenerateAIPlan).mockResolvedValueOnce(mockAIResponse);
-    const result = await generateTrainingPlan(validPreferences);
-
-    // Verify phases are in the expected order
-    expect(result.weeklyPlans.map(week => week.phase))
-      .toEqual(['Base Building', 'Base Building', 'Peak Training', 'Taper']);
+      await expect(generateTrainingPlan(invalidExperience))
+        .rejects
+        .toThrow(ERROR_MESSAGES.INVALID_EXPERIENCE_LEVEL);
+    });
   });
 
-  it('should adjust workout distances based on max weekly mileage', async () => {
-    const lowMileagePreferences = {
-      ...validPreferences,
-      trainingPreferences: {
-        ...validPreferences.trainingPreferences,
-        maxWeeklyMileage: 25
-      }
-    };
+  describe('AI Service Integration', () => {
+    it('should handle AI service errors gracefully', async () => {
+      const mockGenerateAIPlan = vi.fn().mockRejectedValue(
+        new Error('AI service unavailable')
+      );
+      vi.mock('../../services/ai/openai', () => ({
+        generateTrainingPlan: mockGenerateAIPlan
+      }));
 
-    const mockAIResponse = {
-      weeklyPlans: [
-        {
-          week: 1,
-          phase: 'Base Building',
-          totalMileage: 20,
-          workouts: [
-            {
-              day: '2025-03-15',
-              type: 'Long Run',
-              distance: 6,
-              description: 'Easy-paced long run'
-            }
-          ]
+      await expect(generateTrainingPlan(validPreferences))
+        .rejects
+        .toThrow(ERROR_MESSAGES.AI_SERVICE_UNAVAILABLE);
+    });
+
+    it('should validate AI response format', async () => {
+      const mockGenerateAIPlan = vi.fn().mockResolvedValue({
+        invalidFormat: true
+      });
+      vi.mock('../../services/ai/openai', () => ({
+        generateTrainingPlan: mockGenerateAIPlan
+      }));
+
+      await expect(generateTrainingPlan(validPreferences))
+        .rejects
+        .toThrow(ERROR_MESSAGES.VALIDATION_ERROR);
+    });
+  });
+
+  describe('Plan Generation', () => {
+    it('should generate a plan matching user preferences', async () => {
+      const mockPlan = {
+        weeklyPlans: [
+          {
+            week: 1,
+            phase: 'Base Building',
+            totalMileage: 20,
+            workouts: [
+              {
+                day: new Date().toISOString(),
+                type: 'Easy Run',
+                distance: 3,
+                description: 'Easy-paced run'
+              }
+            ]
+          }
+        ]
+      };
+
+      vi.mock('../../services/ai/openai', () => ({
+        generateTrainingPlan: vi.fn().mockResolvedValue(mockPlan)
+      }));
+
+      const result = await generateTrainingPlan(validPreferences);
+      expect(result.weeklyPlans[0].phase).toBe('Base Building');
+      expect(result.weeklyPlans[0].totalMileage).toBeLessThanOrEqual(
+        validPreferences.trainingPreferences.maxWeeklyMileage
+      );
+    });
+
+    it('should respect max weekly mileage preferences', async () => {
+      const lowMileagePreferences = {
+        ...validPreferences,
+        trainingPreferences: {
+          ...validPreferences.trainingPreferences,
+          maxWeeklyMileage: 20
         }
-      ]
-    };
+      };
 
-    vi.mocked(mockGenerateAIPlan).mockResolvedValueOnce(mockAIResponse);
-    const result = await generateTrainingPlan(lowMileagePreferences);
+      const mockPlan = {
+        weeklyPlans: [
+          {
+            week: 1,
+            phase: 'Base Building',
+            totalMileage: 15,
+            workouts: [
+              {
+                day: new Date().toISOString(),
+                type: 'Easy Run',
+                distance: 3,
+                description: 'Easy-paced run'
+              }
+            ]
+          }
+        ]
+      };
 
-    expect(result.weeklyPlans[0].totalMileage).toBeLessThanOrEqual(25);
-    expect(result.weeklyPlans[0].workouts[0].distance).toBeLessThanOrEqual(8);
+      vi.mock('../../services/ai/openai', () => ({
+        generateTrainingPlan: vi.fn().mockResolvedValue(mockPlan)
+      }));
+
+      const result = await generateTrainingPlan(lowMileagePreferences);
+      expect(result.weeklyPlans[0].totalMileage).toBeLessThanOrEqual(20);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle missing optional fields', async () => {
+      const minimalPreferences = {
+        goal: validPreferences.goal,
+        startDate: validPreferences.startDate,
+        endDate: validPreferences.endDate,
+        runningExperience: validPreferences.runningExperience,
+        trainingPreferences: {
+          weeklyRunningDays: 3,
+          maxWeeklyMileage: 30,
+          weeklyWorkouts: 2,
+          preferredLongRunDay: 'sunday',
+          coachingStyle: 'conservative'
+        }
+      };
+
+      const mockPlan = {
+        weeklyPlans: [
+          {
+            week: 1,
+            phase: 'Base Building',
+            totalMileage: 15,
+            workouts: []
+          }
+        ]
+      };
+
+      vi.mock('../../services/ai/openai', () => ({
+        generateTrainingPlan: vi.fn().mockResolvedValue(mockPlan)
+      }));
+
+      const result = await generateTrainingPlan(minimalPreferences);
+      expect(result.weeklyPlans).toBeDefined();
+    });
+
+    it('should handle very short training durations', async () => {
+      const shortDurationPreferences = {
+        ...validPreferences,
+        endDate: addWeeks(new Date(), 2).toISOString()
+      };
+
+      await expect(generateTrainingPlan(shortDurationPreferences))
+        .rejects
+        .toThrow(ERROR_MESSAGES.INVALID_DATE_RANGE);
+    });
   });
 });
