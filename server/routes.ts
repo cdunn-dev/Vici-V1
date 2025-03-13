@@ -368,7 +368,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Get Strava auth URL
+  // Get Strava auth URL with enhanced logging
   app.get("/api/strava/auth", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {

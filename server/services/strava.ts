@@ -40,9 +40,19 @@ const ERROR_MESSAGES = {
   NOT_CONNECTED: 'Not connected to Strava'
 } as const;
 
+// Update getAppDomain to handle domain issues
 function getAppDomain() {
-  const domain = 'b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev';
-  console.log('[Strava] Using Replit domain:', domain);
+  // Use environment variable if set (for production)
+  if (process.env.APP_DOMAIN) {
+    return process.env.APP_DOMAIN;
+  }
+
+  // For development/preview, use Replit domain
+  const domain = process.env.REPL_SLUG ?
+    `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` :
+    'b69d20e7-bda1-4cf0-b59c-eedcc77485c7-00-3tg7kax6mu3y4.riker.replit.dev';
+
+  console.log('[Strava] Using domain for OAuth:', domain);
   return `https://${domain}`;
 }
 
@@ -56,6 +66,7 @@ export function getStravaAuthUrl(state: string = ""): string {
     throw new StravaError(ERROR_MESSAGES.MISSING_CLIENT_ID, 'CONFIG_ERROR');
   }
 
+  // Log full auth URL for debugging
   const params = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
@@ -66,7 +77,8 @@ export function getStravaAuthUrl(state: string = ""): string {
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
-  console.log('[Strava] Generated auth URL with redirect URI:', REDIRECT_URI);
+  console.log('[Strava] Generated auth URL:', authUrl);
+  console.log('[Strava] Using redirect URI:', REDIRECT_URI);
   return authUrl;
 }
 
