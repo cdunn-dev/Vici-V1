@@ -19,28 +19,33 @@ export interface StravaTokens {
 }
 
 function getAppDomain() {
+  // Ensure we're using HTTPS for Strava's security requirements
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
     return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
   }
+  // For local development, use HTTP
   return "http://localhost:5000";
 }
 
+// Ensure the redirect URI matches exactly what's configured in Strava
 const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
-export function getStravaAuthUrl(options: StravaAuthOptions = {}): string {
+export function getStravaAuthUrl(state: string = ""): string {
   if (!process.env.STRAVA_CLIENT_ID) {
     throw new Error("STRAVA_CLIENT_ID is not configured");
   }
 
+  // Add explicit approval_prompt and scope parameters
   const params = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: options.scope?.join(',') || "activity:read_all",
-    state: options.state || "",
+    scope: "activity:read_all",
+    state: state,
     approval_prompt: "auto"
   });
 
+  console.log("Generated Strava auth URL with redirect URI:", REDIRECT_URI);
   return `${STRAVA_AUTH_URL}?${params.toString()}`;
 }
 

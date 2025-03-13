@@ -27,18 +27,26 @@ export function StravaConnectButton({ className, onConnect }: StravaConnectButto
 
       setIsConnecting(true);
 
+      // Add state parameter for security
       const res = await fetch('/api/strava/auth', {
-        credentials: 'include', // Include credentials in the request
+        credentials: 'include',
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to get Strava authorization URL');
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to get Strava authorization URL');
       }
 
+      const data = await res.json();
       console.log('Redirecting to Strava auth URL:', data.url);
-      window.location.href = data.url;
+
+      // Ensure we're using the proper URL from the server
+      if (!data.url) {
+        throw new Error('No authorization URL received from server');
+      }
+
+      // Use window.location.assign for more reliable redirect
+      window.location.assign(data.url);
 
       if (onConnect) {
         onConnect();
