@@ -11,7 +11,7 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
-// Update getAppDomain to handle domain issues
+// Update getAppDomain to handle Replit.dev domains
 function getAppDomain() {
   // Use environment variable if set (for production)
   if (process.env.APP_DOMAIN) {
@@ -19,17 +19,17 @@ function getAppDomain() {
     return process.env.APP_DOMAIN;
   }
 
-  // For development/preview, use Replit domain
-  const replSlug = process.env.REPL_SLUG;
-  const replOwner = process.env.REPL_OWNER;
+  // For development/preview, use Replit.dev domain
+  const replId = process.env.REPL_ID;
 
-  if (!replSlug || !replOwner) {
+  if (!replId) {
     console.log('[Strava Domain] Missing Replit identifiers, using localhost');
     return 'localhost:5000';
   }
 
-  const domain = `${replSlug}.${replOwner}.repl.co`;
-  console.log('[Strava Domain] Using Replit domain:', domain);
+  // Construct the Replit.dev domain
+  const domain = `${replId}-00-3tg7kax6mu3y4.riker.replit.dev`;
+  console.log('[Strava Domain] Using Replit.dev domain:', domain);
   return domain;
 }
 
