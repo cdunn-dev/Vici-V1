@@ -53,17 +53,19 @@ export function getStravaAuthUrl(state: string = ""): string {
     throw new StravaError(ERROR_MESSAGES.MISSING_CLIENT_ID, 'CONFIG_ERROR');
   }
 
+  // Add more granular scopes to ensure proper permissions
   const params = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,
     redirect_uri: REDIRECT_URI,
     response_type: "code",
-    scope: "activity:read_all",
+    scope: "read,activity:read_all,profile:read_all",
     state: state,
-    approval_prompt: "auto"
+    approval_prompt: "force" // Force approval screen to ensure proper scope acceptance
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
   console.log('[Strava] Generated auth URL with redirect URI:', REDIRECT_URI);
+  console.log('[Strava] Full auth URL:', authUrl);
 
   return authUrl;
 }

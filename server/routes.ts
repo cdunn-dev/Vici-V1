@@ -52,13 +52,28 @@ export async function registerRoutes(app: Express) {
     try {
       const code = req.query.code;
       const state = req.query.state;
+      const error = req.query.error;
+      const error_description = req.query.error_description;
+
+      // Log all incoming parameters
+      console.log("Received Strava callback with params:", {
+        code: code ? "present" : "missing",
+        state,
+        error,
+        error_description
+      });
+
+      if (error) {
+        console.error("Strava auth error:", error, error_description);
+        return res.redirect(`/auth?error=${encodeURIComponent(error_description?.toString() || 'Unknown error')}`);
+      }
 
       if (!code) {
         console.error("No code provided in Strava callback");
         return res.status(400).json({ error: "No code provided" });
       }
 
-      console.log("Received Strava callback with code:", code);
+      console.log("Processing Strava callback for code:", code);
       console.log("State parameter:", state);
 
       // Exchange code for tokens
