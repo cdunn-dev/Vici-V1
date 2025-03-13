@@ -6,6 +6,13 @@ export interface StravaProfile {
   birthday: string;
   measurementPreference: string;
   weight: number;
+  profile: {
+    firstName: string;
+    lastName: string;
+    city: string;
+    state: string;
+    country: string;
+  };
   runningExperience: {
     level: string;
     weeklyMileage: number;

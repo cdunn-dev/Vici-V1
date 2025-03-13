@@ -12,6 +12,13 @@ describe('PlanGenerator', () => {
     birthday: '1990-01-01',
     measurementPreference: 'meters',
     weight: 70,
+    profile: {
+      firstName: 'John',
+      lastName: 'Doe',
+      city: 'New York',
+      state: 'NY',
+      country: 'United States'
+    },
     runningExperience: {
       level: 'intermediate',
       weeklyMileage: 30,

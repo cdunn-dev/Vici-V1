@@ -194,7 +194,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   };
 
   const STEPS = [
-    { id: "connect-strava", label: "Connect Strava", 
+    { id: "connect-strava", label: "Connect Strava",
       conditional: () => !stravaProfile && !isLoadingStrava }, // Only show if not connected
     { id: "welcome", label: "Welcome" },
     { id: "basicProfile", label: "Basic Profile" },
