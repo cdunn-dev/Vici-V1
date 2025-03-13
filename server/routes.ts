@@ -12,8 +12,7 @@ import multer from "multer";
 import path from "path";
 import { setupAuth } from "./auth";
 import { addWeeks } from "date-fns";
-import {StravaService} from "./services/strava"; //Import StravaService
-
+import { StravaService } from "./services/strava";
 
 // Configure multer for profile picture uploads
 const upload = multer({
@@ -39,6 +38,27 @@ const upload = multer({
 export async function registerRoutes(app: Express) {
   // Setup authentication routes and middleware
   setupAuth(app);
+
+  // Get Strava auth URL with enhanced logging
+  app.get("/api/auth/strava", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      if (!req.user?.id) {
+        return res.status(400).json({ error: "User ID not found" });
+      }
+
+      console.log("Generating Strava auth URL for user:", req.user.id);
+      const authUrl = getStravaAuthUrl(req.user.id.toString());
+      console.log("Generated auth URL:", authUrl);
+      res.json({ url: authUrl });
+    } catch (error) {
+      console.error("Error generating Strava auth URL:", error);
+      res.status(500).json({ error: "Failed to generate Strava auth URL" });
+    }
+  });
 
   // Strava profile endpoint - put this before other routes to ensure proper handling
   app.get("/api/strava/profile", async (req, res) => {

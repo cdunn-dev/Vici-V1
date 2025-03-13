@@ -48,7 +48,7 @@ function getAppDomain() {
   }
 
   // For development/preview, use Replit domain
-  const domain = process.env.REPL_SLUG ?
+  const domain = process.env.REPL_SLUG && process.env.REPL_OWNER ?
     `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` :
     'workspace.dunnchrisr.repl.co';
 
