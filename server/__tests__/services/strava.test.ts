@@ -1,30 +1,26 @@
-import { vi } from 'vitest';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { 
+  StravaService,
   exchangeStravaCode, 
-  refreshStravaToken, 
-  syncStravaActivities, 
+  refreshStravaToken,
+  syncStravaActivities,
   getStravaAuthUrl,
   StravaError 
 } from '../../services/strava';
-import { activities as stravaActivities } from '../../schema/strava';
-import { db } from '../../db';
+import { storage } from '../../storage';
+import { stravaActivities } from '@shared/schema';
 
-// Mock DB operations
-vi.mock('../../db', () => ({
-  db: {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockReturnThis(),
-      execute: vi.fn().mockResolvedValue(undefined)
-    }),
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      orderBy: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([])
-    })
+// Mock storage
+vi.mock('../../storage', () => ({
+  storage: {
+    getUser: vi.fn(),
+    updateUser: vi.fn()
   }
 }));
+
+// Mock fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
 describe('Strava Service', () => {
   beforeEach(() => {
@@ -254,7 +250,7 @@ describe('Strava Service', () => {
       });
 
       await syncStravaActivities(1, 'test_access_token');
-      expect(db.insert).toHaveBeenCalledWith(stravaActivities);
+      expect(vi.mocked(db.insert)).toHaveBeenCalledWith(stravaActivities);
     });
 
     it('should throw API_ERROR with proper message on fetch failure', async () => {
@@ -287,6 +283,194 @@ describe('Strava Service', () => {
         expect((error as StravaError).code).toBe('DATA_ERROR');
         expect(error.message).toContain('Invalid response from Strava API');
       }
+    });
+  });
+
+  let service: StravaService;
+  const userId = 123;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    service = new StravaService(userId);
+  });
+
+  describe('getAthleteProfile', () => {
+    const mockTokens = {
+      accessToken: 'test_access_token',
+      refreshToken: 'test_refresh_token',
+      expiresAt: Date.now() / 1000 + 3600 // Valid for 1 hour
+    };
+
+    const mockAthleteData = {
+      firstname: 'John',
+      lastname: 'Doe',
+      sex: 'M',
+      city: 'New York',
+      state: 'NY',
+      country: 'United States',
+      weight: 70,
+      measurement_preference: 'meters',
+      birthday: '1990-01-01'
+    };
+
+    beforeEach(() => {
+      vi.mocked(storage.getUser).mockResolvedValue({
+        id: userId,
+        stravaTokens: mockTokens
+      } as any);
+    });
+
+    it('should fetch and parse athlete profile correctly', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockAthleteData)
+      });
+
+      const profile = await service.getAthleteProfile();
+
+      expect(profile).toEqual({
+        gender: 'M',
+        birthday: '1990-01-01',
+        measurementPreference: 'meters',
+        weight: 70,
+        profile: {
+          firstName: 'John',
+          lastName: 'Doe',
+          city: 'New York',
+          state: 'NY',
+          country: 'United States'
+        }
+      });
+    });
+
+    it('should throw error when not connected to Strava', async () => {
+      vi.mocked(storage.getUser).mockResolvedValueOnce({
+        id: userId,
+        stravaTokens: null
+      } as any);
+
+      await expect(service.getAthleteProfile())
+        .rejects
+        .toThrow('Not connected to Strava');
+    });
+  });
+
+  describe('analyzeRunningExperience', () => {
+    const mockActivities = [
+      {
+        type: 'Run',
+        distance: 10000, // 10km
+        start_date: '2025-03-13T08:00:00Z',
+        name: 'Morning Easy Run'
+      },
+      {
+        type: 'Run',
+        distance: 15000,
+        start_date: '2025-03-14T08:00:00Z',
+        name: 'Long Run'
+      },
+      {
+        type: 'Run',
+        distance: 8000,
+        start_date: '2025-03-15T08:00:00Z',
+        name: 'Tempo Run'
+      }
+    ];
+
+    beforeEach(() => {
+      vi.mocked(storage.getUser).mockResolvedValue({
+        id: userId,
+        stravaTokens: {
+          accessToken: 'valid_token',
+          refreshToken: 'refresh_token',
+          expiresAt: Date.now() / 1000 + 3600
+        }
+      } as any);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockActivities)
+      });
+    });
+
+    it('should analyze running experience correctly', async () => {
+      const analysis = await service.analyzeRunningExperience();
+
+      expect(analysis).toEqual({
+        level: 'beginner', // Based on weekly mileage
+        weeklyMileage: expect.any(Number),
+        preferredRunDays: expect.arrayContaining(['wednesday', 'thursday', 'friday']),
+        commonWorkoutTypes: expect.arrayContaining(['easy', 'long run', 'tempo'])
+      });
+    });
+
+    it('should determine correct experience level based on mileage and workouts', async () => {
+      // Mock higher volume runner
+      const highVolumeActivities = mockActivities.map(a => ({
+        ...a,
+        distance: a.distance * 4 // 4x the distance
+      }));
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(highVolumeActivities)
+      });
+
+      const analysis = await service.analyzeRunningExperience();
+      expect(analysis.level).toBe('intermediate');
+    });
+
+    it('should handle empty activity list', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([])
+      });
+
+      const analysis = await service.analyzeRunningExperience();
+      expect(analysis).toEqual({
+        level: 'beginner',
+        weeklyMileage: 0,
+        preferredRunDays: [],
+        commonWorkoutTypes: []
+      });
+    });
+  });
+
+  describe('token refresh', () => {
+    it('should refresh expired token automatically', async () => {
+      const expiredTokens = {
+        accessToken: 'expired_token',
+        refreshToken: 'refresh_token',
+        expiresAt: Date.now() / 1000 - 3600 // Expired 1 hour ago
+      };
+
+      const newTokens = {
+        accessToken: 'new_token',
+        refreshToken: 'new_refresh_token',
+        expiresAt: Date.now() / 1000 + 3600
+      };
+
+      vi.mocked(storage.getUser).mockResolvedValueOnce({
+        id: userId,
+        stravaTokens: expiredTokens
+      } as any);
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(newTokens)
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({})
+        });
+
+      await service.getAthleteProfile();
+
+      expect(vi.mocked(storage.updateUser)).toHaveBeenCalledWith(
+        userId,
+        { stravaTokens: newTokens }
+      );
     });
   });
 });
