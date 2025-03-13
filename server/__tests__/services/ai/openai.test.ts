@@ -41,9 +41,7 @@ describe('OpenAI Service', () => {
 
       await expect(openaiService['makeRequest']('test prompt', 'test operation', 'json'))
         .rejects
-        .toMatchObject({
-          message: expect.stringContaining('OpenAI API error: Failed to parse response')
-        });
+        .toThrow(/OpenAI API error.*Failed to parse response/i);
     });
   });
 
@@ -67,13 +65,14 @@ describe('OpenAI Service', () => {
     };
 
     it('should handle generation errors', async () => {
-      mockCompletionCreate.mockRejectedValueOnce('Failed to generate training plan');
+      const mockError = new Error('Failed to generate training plan');
+      mockCompletionCreate.mockImplementation(() => {
+        throw mockError;
+      });
 
       await expect(openaiService.generateTrainingPlan(mockUserPreferences))
         .rejects
-        .toMatchObject({
-          message: expect.stringContaining('OpenAI API error: Failed to generate training plan')
-        });
+        .toThrow(/OpenAI API error.*Failed to generate training plan/i);
     });
   });
 
@@ -129,13 +128,14 @@ describe('OpenAI Service', () => {
     };
 
     it('should handle adjustment errors', async () => {
-      mockCompletionCreate.mockRejectedValueOnce('Failed to generate adjustments');
+      const mockError = new Error('Failed to generate adjustments');
+      mockCompletionCreate.mockImplementation(() => {
+        throw mockError;
+      });
 
       await expect(openaiService.generateAdjustments(mockFeedback, mockCurrentPlan))
         .rejects
-        .toMatchObject({
-          message: expect.stringContaining('OpenAI API error: Failed to generate adjustments')
-        });
+        .toThrow(/OpenAI API error.*Failed to generate adjustments/i);
     });
   });
 });
