@@ -249,69 +249,95 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       case "connect-strava":
         return (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Connect with Strava</CardTitle>
-                <CardDescription>
-                  Connecting your Strava account helps us create a more personalized training plan by:
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc pl-6 space-y-2">
-                  <li>Analyzing your current running patterns and volume</li>
-                  <li>Understanding your preferred running days and times</li>
-                  <li>Detecting your common workout types (easy runs, long runs, tempo, etc.)</li>
-                  <li>Using your preferred distance units (miles/kilometers)</li>
-                </ul>
+            {isLoadingStrava ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ) : stravaProfile ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connected to Strava</CardTitle>
+                  <CardDescription>
+                    We'll use your Strava data to create a personalized training plan:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Recent running volume: {(stravaProfile.runningExperience?.weeklyMileage || 0)} miles/week</li>
+                    <li>Preferred running days: {(stravaProfile.runningExperience?.preferredRunDays?.join(", ") || "Not set")}</li>
+                    <li>Common workout types: {(stravaProfile.runningExperience?.commonWorkoutTypes?.join(", ") || "Not set")}</li>
+                  </ul>
+                  <Button className="w-full mt-4" onClick={handleNext}>
+                    Continue
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Connect with Strava</CardTitle>
+                  <CardDescription>
+                    Connecting your Strava account helps us create a more personalized training plan by:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li>Analyzing your current running patterns and volume</li>
+                    <li>Understanding your preferred running days and times</li>
+                    <li>Detecting your common workout types (easy runs, long runs, tempo, etc.)</li>
+                    <li>Using your preferred distance units (miles/kilometers)</li>
+                  </ul>
 
-                <div className="mt-6 space-y-4">
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      You'll be redirected to Strava to sign in.  If you have two-factor authentication (2FA) enabled:
-                      <ul className="list-disc pl-6 mt-2">
-                        <li>You'll receive a verification code from Strava (not from us)</li>
-                        <li>Check your spam folder if you don't see the code</li>
-                        <li>The code is valid for a limited time</li>
-                      </ul>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Tip: For smoother authorization, you can log in to Strava first in another tab, then return here to connect.
-                        This will skip the verification code step entirely.
-                      </p>
-                    </AlertDescription>
-                  </Alert>
+                  <div className="mt-6 space-y-4">
+                    <Alert>
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        You'll be redirected to Strava to sign in. If you have two-factor authentication (2FA) enabled:
+                        <ul className="list-disc pl-6 mt-2">
+                          <li>You'll receive a verification code from Strava (not from us)</li>
+                          <li>Check your spam folder if you don't see the code</li>
+                          <li>The code is valid for a limited time</li>
+                        </ul>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Tip: For smoother authorization, you can log in to Strava first in another tab, then return here to connect.
+                          This will skip the verification code step entirely.
+                        </p>
+                      </AlertDescription>
+                    </Alert>
 
-                  <Button className="w-full" onClick={async () => {
-                    try {
-                      // Include current step in return URL
-                      const returnPath = `/training?planGeneratorStep=${currentStepIndex}`;
-                      const response = await fetch(`/api/auth/strava?returnTo=${encodeURIComponent(returnPath)}`);
-                      const data = await response.json();
+                    <Button className="w-full" onClick={async () => {
+                      try {
+                        // Include current step in return URL
+                        const returnPath = `/training?planGeneratorStep=${currentStepIndex}`;
+                        const response = await fetch(`/api/auth/strava?returnTo=${encodeURIComponent(returnPath)}`);
+                        const data = await response.json();
 
-                      if (data.url) {
-                        window.location.href = data.url;
-                      } else {
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          toast({
+                            title: "Error",
+                            description: "Failed to get Strava authorization URL",
+                            variant: "destructive"
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Error connecting to Strava:', error);
                         toast({
                           title: "Error",
-                          description: "Failed to get Strava authorization URL",
+                          description: "Failed to connect to Strava",
                           variant: "destructive"
                         });
                       }
-                    } catch (error) {
-                      console.error('Error connecting to Strava:', error);
-                      toast({
-                        title: "Error",
-                        description: "Failed to connect to Strava",
-                        variant: "destructive"
-                      });
-                    }
-                  }}>
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    Connect with Strava
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    }}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Connect with Strava
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         );
 
@@ -458,61 +484,72 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       case "runningProfile":
         return (
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="runningExperience.level"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Experience Level</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your experience level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(ExperienceLevels).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {field.value && ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isLoadingStrava ? (
+              <>
+                <Skeleton className="h-[72px] w-full" />
+                <Skeleton className="h-[72px] w-full" />
+              </>
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="runningExperience.level"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience Level</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your experience level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(ExperienceLevels).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {stravaProfile?.runningExperience ? (
+                          <>Based on your Strava history: {stravaProfile.runningExperience.level}</>
+                        ) : field.value && ExperienceLevelDescriptions[field.value as keyof typeof ExperienceLevelDescriptions]}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="runningExperience.fitnessLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Fitness Level</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your current fitness level" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(FitnessLevels).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="runningExperience.fitnessLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Fitness Level</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your current fitness level" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(FitnessLevels).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {field.value && FitnessLevelDescriptions[field.value as keyof typeof FitnessLevelDescriptions]}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
           </div>
         );
 
@@ -637,6 +674,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                       }}
                     />
                   </FormControl>
+                  {stravaProfile?.runningExperience && (
+                    <FormDescription>
+                      Based on your Strava history: {(stravaProfile.runningExperience.preferredRunDays?.length || 0)} days/week
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -660,6 +702,11 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                       }}
                     />
                   </FormControl>
+                  {stravaProfile?.runningExperience && (
+                    <FormDescription>
+                      Based on your Strava history: {(stravaProfile.runningExperience.weeklyMileage || 0)} miles/week
+                    </FormDescription>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
