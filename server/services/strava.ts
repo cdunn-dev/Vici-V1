@@ -76,7 +76,7 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     };
   } catch (error) {
     console.error("Error exchanging Strava code:", error);
-    throw new Error(`Failed to exchange Strava code: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error instanceof Error ? error : new Error("Failed to exchange code");
   }
 }
 
@@ -108,7 +108,7 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     };
   } catch (error) {
     console.error("Error refreshing Strava token:", error);
-    throw new Error(`Failed to refresh Strava token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error instanceof Error ? error : new Error("Failed to refresh token");
   }
 }
 
@@ -173,6 +173,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     console.log(`Synced ${activities.length} activities for user ${userId}`);
   } catch (error) {
     console.error("Error syncing Strava activities:", error);
-    throw new Error(`Failed to sync Strava activities: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error instanceof Error ? error : new Error("Failed to fetch activities");
   }
 }

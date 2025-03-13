@@ -63,8 +63,9 @@ describe('Strava Service', () => {
         statusText: 'Bad Request'
       });
 
-      await expect(exchangeStravaCode('invalid_code')).rejects
-        .toThrow('Failed to exchange Strava code: Failed to exchange code: Bad Request');
+      await expect(exchangeStravaCode('invalid_code'))
+        .rejects
+        .toThrow('Failed to exchange code: Bad Request');
     });
   });
 
@@ -95,8 +96,9 @@ describe('Strava Service', () => {
         statusText: 'Unauthorized'
       });
 
-      await expect(refreshStravaToken('invalid_token')).rejects
-        .toThrow('Failed to refresh Strava token: Failed to refresh token: Unauthorized');
+      await expect(refreshStravaToken('invalid_token'))
+        .rejects
+        .toThrow('Failed to refresh token: Unauthorized');
     });
   });
 
@@ -115,7 +117,10 @@ describe('Strava Service', () => {
       average_heartrate: 150,
       max_heartrate: 175,
       start_latitude: '40.7128',
-      start_longitude: '-74.0060'
+      start_longitude: '-74.0060',
+      map: {
+        summary_polyline: 'test_polyline'
+      }
     }];
 
     it('should fetch and store activities successfully', async () => {
@@ -134,8 +139,9 @@ describe('Strava Service', () => {
         statusText: 'Too Many Requests'
       });
 
-      await expect(syncStravaActivities(1, 'test_access_token')).rejects
-        .toThrow('Failed to sync Strava activities: Failed to fetch activities: Too Many Requests');
+      await expect(syncStravaActivities(1, 'test_access_token'))
+        .rejects
+        .toThrow('Failed to fetch activities: Too Many Requests');
     });
   });
 });
