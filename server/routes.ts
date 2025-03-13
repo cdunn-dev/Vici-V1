@@ -12,6 +12,7 @@ import multer from "multer";
 import path from "path";
 import { setupAuth } from "./auth";
 import { addWeeks } from "date-fns";
+import {StravaService} from "./services/strava"; //Import StravaService
 
 
 // Configure multer for profile picture uploads
@@ -455,6 +456,38 @@ export async function registerRoutes(app: Express) {
     } catch (error) {
       console.error("Profile picture upload error:", error);
       res.status(500).json({ error: "Failed to upload profile picture" });
+    }
+  });
+
+  // In the registerRoutes function, add the new Strava profile endpoint
+  app.get("/api/strava/profile", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = req.user;
+      if (!user.stravaTokens) {
+        return res.status(400).json({ error: "Strava not connected" });
+      }
+
+      // Initialize Strava service with user ID
+      const stravaService = new StravaService(user.id);
+
+      // Get both profile and running analysis
+      const [profile, runningExperience] = await Promise.all([
+        stravaService.getAthleteProfile(),
+        stravaService.analyzeRunningExperience()
+      ]);
+
+      // Combine the data
+      res.json({
+        ...profile,
+        runningExperience
+      });
+    } catch (error) {
+      console.error("Error fetching Strava profile:", error);
+      res.status(500).json({ error: "Failed to fetch Strava profile" });
     }
   });
 

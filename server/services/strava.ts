@@ -1,11 +1,9 @@
+import { ActivityProvider, ProviderCredentials, Activity, AthleteProfile } from './activity/types';
+import fetch from 'node-fetch';
 import { db } from "../db";
 import { eq, desc } from "drizzle-orm";
 import { stravaActivities } from "@shared/schema";
 import type { InsertStravaActivity } from "@shared/schema";
-
-const STRAVA_API_BASE = "https://www.strava.com/api/v3";
-const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
-const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
 // Standardized error categories for Strava operations
 export class StravaError extends Error {
@@ -255,3 +253,169 @@ export interface StravaTokens {
   refreshToken: string;
   expiresAt: number;
 }
+
+const STRAVA_API_BASE = "https://www.strava.com/api/v3";
+const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
+const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
+
+export class StravaService {
+  private clientId: string;
+  private clientSecret: string;
+  private userId: number;
+  private tokens?: ProviderCredentials;
+
+  constructor(userId: number) {
+    this.clientId = process.env.STRAVA_CLIENT_ID || '';
+    this.clientSecret = process.env.STRAVA_CLIENT_SECRET || '';
+    this.userId = userId;
+
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('Strava credentials not configured');
+    }
+  }
+
+  private async refreshTokenIfNeeded() {
+    if (!this.tokens) {
+      // Get tokens from storage
+      const user = await storage.getUser(this.userId);
+      if (!user?.stravaTokens) {
+        throw new Error('Not connected to Strava');
+      }
+      this.tokens = user.stravaTokens;
+    }
+
+    // Check if token needs refresh
+    if (Date.now() >= this.tokens.expiresAt * 1000) {
+      const newTokens = await refreshStravaToken(this.tokens.refreshToken);
+      this.tokens = newTokens;
+      // Update user's tokens in storage
+      await storage.updateUser(this.userId, { stravaTokens: newTokens });
+    }
+  }
+
+  async getAthleteProfile(): Promise<AthleteProfile> {
+    await this.refreshTokenIfNeeded();
+
+    try {
+      const response = await fetch('https://www.strava.com/api/v3/athlete', {
+        headers: { Authorization: `Bearer ${this.tokens!.accessToken}` }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Strava API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      return {
+        gender: data.sex,
+        birthday: data.birthday,
+        measurementPreference: data.measurement_preference,
+        weight: data.weight,
+        profile: {
+          firstName: data.firstname,
+          lastName: data.lastname,
+          city: data.city,
+          state: data.state,
+          country: data.country
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching athlete profile:', error);
+      throw error;
+    }
+  }
+
+  async analyzeRunningExperience(): Promise<{
+    level: string;
+    weeklyMileage: number;
+    preferredRunDays: string[];
+    commonWorkoutTypes: string[];
+  }> {
+    await this.refreshTokenIfNeeded();
+
+    try {
+      // Get last 6 months of activities
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+      const response = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?after=${Math.floor(sixMonthsAgo.getTime() / 1000)}&per_page=200`,
+        {
+          headers: { Authorization: `Bearer ${this.tokens!.accessToken}` }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Strava API error: ${response.statusText}`);
+      }
+
+      const activities = await response.json();
+
+      // Calculate weekly stats
+      const weeklyMileages: number[] = [];
+      const runDays = new Set<string>();
+      const workoutTypes = new Map<string, number>();
+
+      activities.forEach((activity: any) => {
+        if (activity.type === 'Run') {
+          // Track weekly mileage
+          const week = Math.floor(new Date(activity.start_date).getTime() / (7 * 24 * 60 * 60 * 1000));
+          weeklyMileages[week] = (weeklyMileages[week] || 0) + activity.distance / 1609.34; // Convert to miles
+
+          // Track preferred run days
+          const day = new Date(activity.start_date).toLocaleDateString('en-US', { weekday: 'lowercase' });
+          runDays.add(day);
+
+          // Track workout types based on name patterns
+          const name = activity.name.toLowerCase();
+          if (name.includes('tempo') || name.includes('threshold')) {
+            workoutTypes.set('tempo', (workoutTypes.get('tempo') || 0) + 1);
+          } else if (name.includes('interval') || name.includes('speed')) {
+            workoutTypes.set('interval', (workoutTypes.get('interval') || 0) + 1);
+          } else if (name.includes('long')) {
+            workoutTypes.set('long run', (workoutTypes.get('long run') || 0) + 1);
+          } else {
+            workoutTypes.set('easy', (workoutTypes.get('easy') || 0) + 1);
+          }
+        }
+      });
+
+      // Calculate average weekly mileage
+      const avgWeeklyMileage = weeklyMileages.reduce((sum, miles) => sum + miles, 0) / weeklyMileages.length || 0;
+
+      // Determine experience level based on mileage and workout variety
+      let level = 'beginner';
+      if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
+        level = 'advanced';
+      } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
+        level = 'intermediate';
+      }
+
+      // Get most common workout types
+      const sortedWorkouts = Array.from(workoutTypes.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([type]) => type);
+
+      return {
+        level,
+        weeklyMileage: Math.round(avgWeeklyMileage),
+        preferredRunDays: Array.from(runDays),
+        commonWorkoutTypes: sortedWorkouts
+      };
+    } catch (error) {
+      console.error('Error analyzing running experience:', error);
+      throw error;
+    }
+  }
+}
+
+// Export other existing functions
+export {
+  getStravaAuthUrl,
+  exchangeStravaCode,
+  refreshStravaToken,
+  syncStravaActivities,
+  StravaService
+};

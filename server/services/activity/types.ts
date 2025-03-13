@@ -35,6 +35,20 @@ export interface Activity {
   originalData: any;   // Raw data from provider
 }
 
+export interface AthleteProfile {
+  gender: string;
+  birthday: string;
+  measurementPreference: string;
+  weight: number;
+  profile: {
+    firstName: string;
+    lastName: string;
+    city: string;
+    state: string;
+    country: string;
+  };
+}
+
 export type ActivityType = 
   | 'run'
   | 'trail_run'
@@ -67,8 +81,8 @@ export interface ProviderCredentials {
 
 export class ActivityServiceError extends Error {
   constructor(
+    public readonly code: string,
     message: string,
-    public readonly provider: string,
     public readonly operation: string,
     public readonly originalError?: Error
   ) {

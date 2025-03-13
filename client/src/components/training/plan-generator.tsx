@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Info } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
@@ -21,6 +21,11 @@ import { addWeeks } from "date-fns";
 import type { TrainingPlanWithWeeklyPlans } from "@shared/schema";
 import { TimeInput } from "./time-input";
 import { planGeneratorSchema } from "./plan-generator-schema";
+import * as z from "zod";
+import { useStravaProfile } from "@/hooks/use-strava-profile";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
 import {
   RaceDistances,
   ExperienceLevels,
@@ -35,7 +40,7 @@ import {
   DistanceUnits,
   TrainingGoals,
 } from "./plan-generator-constants";
-import * as z from "zod";
+
 
 type PlanGeneratorFormData = z.infer<typeof planGeneratorSchema>;
 
@@ -53,21 +58,24 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
   const [workoutsValue, setWorkoutsValue] = useState(1);
   const { toast } = useToast();
 
+  // Fetch Strava profile data
+  const { data: stravaProfile, isLoading: isLoadingStrava } = useStravaProfile();
+
   const form = useForm<PlanGeneratorFormData>({
     resolver: zodResolver(planGeneratorSchema),
     defaultValues: {
       startDate: new Date().toISOString(),
       age: undefined,
       gender: undefined,
-      preferredDistanceUnit: "miles",
+      preferredDistanceUnit: stravaProfile?.measurementPreference === "meters" ? "kilometers" : "miles",
       runningExperience: {
-        level: undefined,
+        level: stravaProfile?.runningExperience.level || undefined,
         fitnessLevel: undefined
       },
       trainingPreferences: {
-        weeklyRunningDays: 3,
-        maxWeeklyMileage: 15,
-        weeklyWorkouts: 1,
+        weeklyRunningDays: stravaProfile?.runningExperience.preferredRunDays.length || 3,
+        maxWeeklyMileage: stravaProfile?.runningExperience.weeklyMileage || 15,
+        weeklyWorkouts: stravaProfile?.runningExperience.commonWorkoutTypes.length || 1,
         preferredLongRunDay: "Sunday",
         coachingStyle: "directive"
       },
@@ -75,6 +83,31 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       targetRace: undefined,
     }
   });
+
+  // Update form when Strava data loads
+  useEffect(() => {
+    if (stravaProfile) {
+      form.setValue("gender", stravaProfile.gender);
+      form.setValue("preferredDistanceUnit",
+        stravaProfile.measurementPreference === "meters" ? "kilometers" : "miles"
+      );
+      form.setValue("runningExperience.level", stravaProfile.runningExperience.level);
+      form.setValue("trainingPreferences.weeklyRunningDays",
+        stravaProfile.runningExperience.preferredRunDays.length
+      );
+      form.setValue("trainingPreferences.maxWeeklyMileage",
+        stravaProfile.runningExperience.weeklyMileage
+      );
+      form.setValue("trainingPreferences.weeklyWorkouts",
+        stravaProfile.runningExperience.commonWorkoutTypes.length
+      );
+
+      // Update slider values
+      setRunningDaysValue(stravaProfile.runningExperience.preferredRunDays.length);
+      setMileageValue(stravaProfile.runningExperience.weeklyMileage);
+      setWorkoutsValue(stravaProfile.runningExperience.commonWorkoutTypes.length);
+    }
+  }, [stravaProfile, form]);
 
   const handleClose = () => {
     setOpen(false);
@@ -199,6 +232,21 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
             <p className="text-muted-foreground">
               Let's create a personalized training plan that matches your goals and preferences.
             </p>
+            {isLoadingStrava && (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            )}
+            {stravaProfile && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  We've pre-filled some of your preferences based on your Strava data.
+                  You can adjust these as needed.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         );
 
@@ -232,73 +280,88 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
       case "basicProfile":
         return (
           <div className="space-y-6">
-            <FormField
-              control={form.control}
-              name="age"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Age</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isLoadingStrava ? (
+              <>
+                <Skeleton className="h-[72px] w-full" />
+                <Skeleton className="h-[72px] w-full" />
+                <Skeleton className="h-[72px] w-full" />
+              </>
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="gender"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gender</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(GenderOptions).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {GenderLabels[value as keyof typeof GenderLabels]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Gender</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(GenderOptions).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {GenderLabels[value as keyof typeof GenderLabels]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="preferredDistanceUnit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Distance Unit</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(DistanceUnits).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="preferredDistanceUnit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Preferred Distance Unit</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {Object.entries(DistanceUnits).map(([key, value]) => (
+                            <SelectItem key={key} value={value}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {stravaProfile && (
+                        <FormDescription>
+                          Based on your Strava settings
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
           </div>
         );
 
