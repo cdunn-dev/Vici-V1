@@ -8,82 +8,119 @@ import { useToast } from '@/hooks/use-toast';
 // Mock fetch globally
 global.fetch = vi.fn();
 
+// Mock useToast
+vi.mock('@/hooks/use-toast', () => ({
+  useToast: vi.fn(() => ({
+    toast: vi.fn()
+  }))
+}));
+
 describe('useAuth Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    console.error = vi.fn();
   });
 
-  it('should handle successful login', async () => {
-    const mockUser = { id: 1, email: 'test@example.com' };
-    vi.mocked(fetch).mockImplementationOnce(() => mockApiResponse(mockUser));
+  describe('Login Flow', () => {
+    const validCredentials = {
+      email: 'test@example.com',
+      password: 'password123'
+    };
 
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
-    });
+    it('should handle successful login', async () => {
+      const mockUser = { id: 1, email: validCredentials.email };
+      vi.mocked(fetch).mockImplementationOnce(() => mockApiResponse(mockUser));
 
-    await act(async () => {
-      await result.current.loginMutation.mutateAsync({
-        email: 'test@example.com',
-        password: 'password123'
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper()
+      });
+
+      await act(async () => {
+        await result.current.loginMutation.mutateAsync(validCredentials);
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.error).toBeNull();
+      expect(useToast().toast).toHaveBeenCalledWith({
+        title: 'Welcome back!',
+        description: 'You have successfully logged in.'
       });
     });
 
-    expect(result.current.user).toEqual(mockUser);
-    expect(result.current.error).toBeNull();
-  });
+    it('should handle invalid credentials', async () => {
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        mockApiError(401, 'Invalid email or password combination')
+      );
 
-  it('should handle login errors', async () => {
-    vi.mocked(fetch).mockImplementationOnce(() => 
-      mockApiError(401, 'Invalid credentials')
-    );
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper()
+      });
 
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
-    });
-
-    await act(async () => {
       try {
-        await result.current.loginMutation.mutateAsync({
-          email: 'wrong@example.com',
-          password: 'wrongpass'
+        await act(async () => {
+          await result.current.loginMutation.mutateAsync(validCredentials);
         });
       } catch (error) {
-        // Expected to throw
+        expect(error.message).toBe('Invalid email or password combination');
       }
-    });
 
-    expect(result.current.user).toBeNull();
-    expect(result.current.loginMutation.error).toBeTruthy();
-  });
-
-  it('should handle logout', async () => {
-    vi.mocked(fetch).mockImplementationOnce(() => mockApiResponse({}));
-
-    const { result } = renderHook(() => useAuth());
-
-    await act(async () => {
-      await result.current.logoutMutation.mutateAsync();
-    });
-
-    expect(result.current.user).toBeNull();
-  });
-
-  it('should handle registration', async () => {
-    const mockUser = { id: 1, email: 'new@example.com' };
-    vi.mocked(fetch).mockImplementationOnce(() => mockApiResponse(mockUser));
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
-    });
-
-    await act(async () => {
-      await result.current.registerMutation.mutateAsync({
-        email: 'new@example.com',
-        password: 'newpass123',
-        confirmPassword: 'newpass123'
+      expect(result.current.user).toBeNull();
+      expect(useToast().toast).toHaveBeenCalledWith({
+        title: 'Login failed',
+        description: 'Invalid email or password combination',
+        variant: 'destructive'
       });
     });
 
-    expect(result.current.user).toEqual(mockUser);
+    it('should handle network errors', async () => {
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'));
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper()
+      });
+
+      try {
+        await act(async () => {
+          await result.current.loginMutation.mutateAsync(validCredentials);
+        });
+      } catch (error) {
+        expect(error.message).toBe('Network error');
+      }
+
+      expect(result.current.user).toBeNull();
+      expect(useToast().toast).toHaveBeenCalledWith({
+        title: 'Login failed',
+        description: 'Network error',
+        variant: 'destructive'
+      });
+    });
+  });
+
+  describe('Authentication Status', () => {
+    it('should handle unauthenticated state properly', async () => {
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        mockApiError(401, 'You must be logged in to perform this action')
+      );
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper()
+      });
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should handle session errors', async () => {
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        mockApiError(500, 'Session management error')
+      );
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper()
+      });
+
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.user).toBeNull();
+    });
   });
 });

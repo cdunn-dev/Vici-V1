@@ -2,21 +2,17 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    let errorMessage = `${res.status}: ${res.statusText}`;
+    let errorMessage: string;
     try {
       // Clone response before reading
       const resClone = res.clone();
       const data = await resClone.json();
-      if (data.error) {
-        errorMessage = data.error;
-      }
+      errorMessage = data.error || `${res.status}: ${res.statusText}`;
     } catch (e) {
-      // If JSON parsing fails, try to get the text content
-      const resClone = res.clone();
-      const text = await resClone.text();
-      if (text) {
-        errorMessage = text;
-      }
+      // If JSON parsing fails, provide a default error message
+      errorMessage = res.status === 401 
+        ? 'You must be logged in to perform this action'
+        : `${res.status}: ${res.statusText}`;
     }
     throw new Error(errorMessage);
   }
@@ -57,8 +53,13 @@ export const getQueryFn: <T>(options: {
         credentials: "include",
       });
 
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        return null;
+      // Handle 401 according to behavior option
+      if (res.status === 401) {
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+        const data = await res.json();
+        throw new Error(data.error || 'You must be logged in to perform this action');
       }
 
       await throwIfResNotOk(res);
