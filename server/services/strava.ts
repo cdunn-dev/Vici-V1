@@ -58,6 +58,7 @@ function getAppDomain() {
 
 const REDIRECT_URI = `${getAppDomain()}/api/auth/strava/callback`;
 
+// Update getStravaAuthUrl to be more explicit with scopes and parameters
 export function getStravaAuthUrl(state: string = ""): string {
   console.log('[Strava] Generating auth URL');
 
@@ -73,7 +74,7 @@ export function getStravaAuthUrl(state: string = ""): string {
     response_type: "code",
     scope: "read,activity:read_all,profile:read_all",
     state: state,
-    approval_prompt: "force"
+    // Remove approval_prompt to let Strava handle it normally
   });
 
   const authUrl = `${STRAVA_AUTH_URL}?${params.toString()}`;
