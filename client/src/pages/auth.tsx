@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -134,6 +135,11 @@ export default function AuthPage() {
                                 <Input {...field} type="password" />
                               </FormControl>
                               <FormMessage />
+                              <div className="text-sm text-right">
+                                <Link href="/auth/forgot-password" className="text-primary hover:underline">
+                                  Forgot password?
+                                </Link>
+                              </div>
                             </FormItem>
                           )}
                         />

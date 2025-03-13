@@ -8,7 +8,9 @@ export type AuthErrorCode =
   | 'SESSION_ERROR'
   | 'UNAUTHORIZED'
   | 'DATABASE_ERROR'
-  | 'NOT_AUTHENTICATED';
+  | 'NOT_AUTHENTICATED'
+  | 'RESET_TOKEN_INVALID'
+  | 'RESET_TOKEN_EXPIRED';
 
 export interface AuthErrorMetadata {
   httpStatus: number;
@@ -48,6 +50,14 @@ export const AUTH_ERROR_METADATA: Record<AuthErrorCode, AuthErrorMetadata> = {
   NOT_AUTHENTICATED: {
     httpStatus: 401,
     userMessage: 'You must be logged in to perform this action'
+  },
+  RESET_TOKEN_INVALID: {
+    httpStatus: 400,
+    userMessage: 'Invalid or expired password reset link'
+  },
+  RESET_TOKEN_EXPIRED: {
+    httpStatus: 400,
+    userMessage: 'This password reset link has expired'
   }
 };
 
@@ -87,5 +97,8 @@ export const ERROR_MESSAGES = {
   INVALID_EMAIL: 'Invalid email format',
   PASSWORD_TOO_SHORT: 'Password must be at least 8 characters long',
   SESSION_EXPIRED: 'Your session has expired, please log in again',
-  VERIFICATION_FAILED: 'Email verification failed'
+  VERIFICATION_FAILED: 'Email verification failed',
+  RESET_TOKEN_INVALID: 'Invalid or expired password reset link',
+  RESET_TOKEN_EXPIRED: 'This password reset link has expired',
+  RESET_EMAIL_SENT: 'If an account exists with this email, you will receive a password reset link'
 } as const;
