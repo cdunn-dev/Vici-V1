@@ -466,6 +466,29 @@ export async function registerRoutes(app: Express) {
     }
   });
 
+  // Add this route after the existing /api/activities/sync endpoint
+  app.post("/api/activities/resync-all", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+
+      const user = req.user;
+      if (!user.stravaTokens) {
+        return res.status(400).json({ error: "Strava not connected" });
+      }
+
+      console.log('[API] Starting full activity resync for user:', user.id);
+      const stravaService = new StravaService(user.id);
+      await stravaService.resyncActivities();
+
+      res.json({ message: "Activities resynced successfully" });
+    } catch (error) {
+      console.error("Error resyncing activities:", error);
+      res.status(500).json({ error: "Failed to resync activities" });
+    }
+  });
+
   app.post("/api/register", async (req, res, next) => {
     try {
       const existingUser = await storage.getUserByEmail(req.body.email);

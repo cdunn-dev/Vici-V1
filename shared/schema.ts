@@ -143,7 +143,6 @@ export const users = pgTable("users", {
     maxWeeklyMileage: number;
     weeklyWorkouts: number;
     preferredLongRunDay: string;
-    coachingStyle: string;
     notificationPreferences: {
       email: boolean;
       push: boolean;
@@ -265,7 +264,6 @@ export const trainingPlans = pgTable("training_plans", {
     maxWeeklyMileage: number;
     weeklyWorkouts: number;
     preferredLongRunDay: string;
-    coachingStyle: string;
   }>(),
   active: boolean("is_active").default(true),
 });
@@ -415,7 +413,6 @@ export const trainingPreferencesSchema = z.object({
   maxWeeklyMileage: z.number(),
   weeklyWorkouts: z.number(),
   preferredLongRunDay: z.string(),
-  coachingStyle: z.string(),
 });
 
 export const trainingPlanSchema = z.object({

@@ -905,4 +905,110 @@ export class StravaService {
       throw error;
     }
   }
+  async resyncActivities(): Promise<void> {
+    try {
+      await this.refreshTokenIfNeeded();
+
+      console.log('[StravaService] Starting activity resync for user:', this.userId);
+
+      // Get all activities for this user
+      const activities = await db
+        .select()
+        .from(stravaActivities)
+        .where(eq(stravaActivities.userId, this.userId))
+        .orderBy(desc(stravaActivities.startDate));
+
+      console.log(`[StravaService] Found ${activities.length} activities to resync`);
+
+      for (const activity of activities) {
+        try {
+          if (!checkRateLimit(this.userId)) {
+            console.log('[StravaService] Rate limit reached, waiting before continuing...');
+            await new Promise(resolve => setTimeout(resolve, 15 * 60 * 1000)); // Wait 15 minutes
+          }
+
+          console.log(`[StravaService] Resyncing activity ${activity.stravaId}`);
+          const detailedActivity = await fetchDetailedActivity(parseInt(activity.stravaId), this.tokens!.accessToken);
+
+          // Calculate heart rate zones if data exists
+          const heartrateZones = detailedActivity.has_heartrate && detailedActivity.average_heartrate && detailedActivity.max_heartrate
+            ? calculateHeartRateZones({
+                avgHeartrate: detailedActivity.average_heartrate,
+                maxHeartrate: detailedActivity.max_heartrate
+              })
+            : [];
+
+          // Calculate pace zones if splits exist
+          const paceZones = detailedActivity.splits_metric?.length
+            ? calculatePaceZones(
+                detailedActivity.splits_metric.map(split => ({
+                  distance: split.distance,
+                  time: split.moving_time
+                }))
+              )
+            : [];
+
+          // Process laps with type safety
+          const laps = detailedActivity.laps?.map(lap => ({
+            lapIndex: lap.lap_index,
+            splitIndex: lap.split_index,
+            distance: lap.distance,
+            elapsedTime: lap.elapsed_time,
+            movingTime: lap.moving_time,
+            startDate: new Date(lap.start_date).toISOString(),
+            averageSpeed: lap.average_speed,
+            maxSpeed: lap.max_speed || null,
+            averageHeartrate: lap.average_heartrate || null,
+            maxHeartrate: lap.max_heartrate || null,
+            paceZone: lap.pace_zone || null
+          }));
+
+          // Process split metrics with type safety
+          const splitMetrics = detailedActivity.splits_metric?.map(split => ({
+            distance: split.distance,
+            elapsedTime: split.elapsed_time,
+            elevationDifference: split.elevation_difference,
+            movingTime: split.moving_time,
+            split: split.split,
+            averageSpeed: split.average_speed,
+            averageHeartrate: split.average_heartrate || null,
+            paceZone: split.pace_zone || null
+          }));
+
+          // Update the activity with enriched data
+          await db
+            .update(stravaActivities)
+            .set({
+              hasHeartrate: detailedActivity.has_heartrate || false,
+              averageHeartrate: detailedActivity.average_heartrate || null,
+              maxHeartrate: detailedActivity.max_heartrate || null,
+              heartrateZones,
+              paceZones,
+              laps: laps || [],
+              splitMetrics: splitMetrics || [],
+              updatedAt: new Date()
+            })
+            .where(eq(stravaActivities.id, activity.id));
+
+          console.log(`[StravaService] Successfully resynced activity ${activity.stravaId}`, {
+            hasHeartrate: detailedActivity.has_heartrate,
+            hasLaps: laps?.length > 0,
+            hasSplits: splitMetrics?.length > 0,
+            hasHRZones: heartrateZones.length > 0,
+            hasPaceZones: paceZones.length > 0
+          });
+
+        } catch (error) {
+          console.error(`[StravaService] Error resyncing activity ${activity.stravaId}:`, error);
+          // Continue with next activity
+          continue;
+        }
+      }
+
+      console.log('[StravaService] Activity resync completed');
+    } catch (error) {
+      console.error('[StravaService] Error during activity resync:', error);
+      throw error;
+    }
+  }
 }
