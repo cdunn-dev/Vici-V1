@@ -358,10 +358,49 @@ async function fetchDetailedActivity(activityId: number, accessToken: string): P
   }
 }
 
+// Add validation helper at the top of the file
+function validateActivityData(activity: InsertStravaActivity): boolean {
+  // Required fields must be present
+  if (!activity.userId || !activity.stravaId || !activity.name || !activity.type) {
+    console.error('[Strava] Missing required fields:', {
+      userId: !!activity.userId,
+      stravaId: !!activity.stravaId,
+      name: !!activity.name,
+      type: !!activity.type
+    });
+    return false;
+  }
+
+  // Numeric fields should be valid
+  if (isNaN(activity.distance) || isNaN(activity.movingTime) || isNaN(activity.elapsedTime)) {
+    console.error('[Strava] Invalid numeric fields:', {
+      distance: activity.distance,
+      movingTime: activity.movingTime,
+      elapsedTime: activity.elapsedTime
+    });
+    return false;
+  }
+
+  // Date fields should be valid
+  if (!(activity.startDate instanceof Date) || isNaN(activity.startDate.getTime())) {
+    console.error('[Strava] Invalid date:', activity.startDate);
+    return false;
+  }
+
+  return true;
+}
+
+// Update the sync function to include validation
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   console.log('[Strava] Starting activity sync for user:', userId);
 
   try {
+    // Verify user exists
+    const user = await storage.getUser(userId);
+    if (!user) {
+      throw new StravaError(`User ${userId} not found`, 'DATA_ERROR');
+    }
+
     if (!checkRateLimit(userId)) {
       throw new StravaError('Rate limit exceeded. Please try again later.', 'API_ERROR');
     }
@@ -414,9 +453,10 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           continue;
         }
 
+        console.log(`[Strava] Processing activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
-        // Process heart rate zones if available
+        // Calculate heart rate zones if heart rate data exists
         const heartrateZones = detailedActivity.has_heartrate && detailedActivity.average_heartrate && detailedActivity.max_heartrate
           ? calculateHeartRateZones({
               avgHeartrate: detailedActivity.average_heartrate,
@@ -424,7 +464,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
             })
           : [];
 
-        // Process pace zones if splits are available
+        // Calculate pace zones if splits exist
         const paceZones = detailedActivity.splits_metric?.length
           ? calculatePaceZones(
               detailedActivity.splits_metric.map(split => ({
@@ -434,7 +474,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
             )
           : [];
 
-        // Process laps with proper null handling
+        // Process laps with type safety
         const laps = detailedActivity.laps?.map(lap => ({
           lapIndex: lap.lap_index,
           splitIndex: lap.split_index,
@@ -449,7 +489,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           paceZone: lap.pace_zone || null
         }));
 
-        // Process split metrics with proper null handling
+        // Process split metrics with type safety
         const splitMetrics = detailedActivity.splits_metric?.map(split => ({
           distance: split.distance,
           elapsedTime: split.elapsed_time,
@@ -505,8 +545,12 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           workoutId: null
         };
 
-        // Debug log the processed activity
-        console.log('[Strava] Processed activity:', {
+        // Validate activity data before adding to batch
+        if (!validateActivityData(insertActivity)) {
+          throw new Error(`Invalid activity data for ${activity.id}`);
+        }
+
+        console.log('[Strava] Activity validation passed:', {
           id: insertActivity.stravaId,
           hasHeartrate: insertActivity.hasHeartrate,
           hasLaps: insertActivity.laps.length > 0,
