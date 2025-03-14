@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
@@ -8,13 +7,29 @@ import { useToast } from "@/hooks/use-toast";
 
 // UI Components
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Search, RefreshCw, MapPin, Clock, Award, Activity } from "lucide-react";
+import {
+  Calendar,
+  Search,
+  RefreshCw,
+  MapPin,
+  Clock,
+  Award,
+  Activity,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityDetailDialog } from "@/components/training/activity-detail-dialog";
 
 // Types
 interface ActivityWithWorkout {
@@ -58,6 +73,7 @@ export default function Log() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedActivity, setSelectedActivity] = useState<ActivityWithWorkout | null>(null);
 
   const { data: activities, isLoading } = useQuery<ActivityWithWorkout[]>({
     queryKey: ["/api/activities"],
@@ -91,13 +107,14 @@ export default function Log() {
   // Filter activities based on search query and active tab
   const filteredActivities = activities?.filter(
     (item) => {
-      const matchesSearch = item.activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           item.activity.type.toLowerCase().includes(searchQuery.toLowerCase());
-      
+      const matchesSearch =
+        item.activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.activity.type.toLowerCase().includes(searchQuery.toLowerCase());
+
       if (activeTab === "all") return matchesSearch;
       if (activeTab === "runs") return matchesSearch && item.activity.type.toLowerCase() === "run";
       if (activeTab === "planned") return matchesSearch && item.workout !== null;
-      
+
       return matchesSearch;
     }
   );
@@ -113,7 +130,7 @@ export default function Log() {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
@@ -129,16 +146,16 @@ export default function Log() {
     const minutesPerMile = (seconds / 60) / miles;
     const paceMinutes = Math.floor(minutesPerMile);
     const paceSeconds = Math.round((minutesPerMile - paceMinutes) * 60);
-    
-    return `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')}/mi`;
+
+    return `${paceMinutes}:${paceSeconds.toString().padStart(2, "0")}/mi`;
   };
 
   // Get activity type icon
   const getActivityIcon = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'run':
+      case "run":
         return <Activity className="h-5 w-5" />;
-      case 'ride':
+      case "ride":
         return <Activity className="h-5 w-5 rotate-45" />;
       default:
         return <Activity className="h-5 w-5" />;
@@ -156,9 +173,9 @@ export default function Log() {
               Track your workouts and monitor your progress
             </p>
           </div>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
@@ -180,7 +197,7 @@ export default function Log() {
               className="pl-10"
             />
           </div>
-          
+
           <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
             <TabsList className="grid grid-cols-3 w-full md:w-auto">
               <TabsTrigger value="all">All</TabsTrigger>
@@ -198,7 +215,7 @@ export default function Log() {
               {filteredActivities?.length || 0} activities found
             </CardDescription>
           </CardHeader>
-          
+
           <ScrollArea className="h-[calc(100vh-300px)]">
             <CardContent className="p-0">
               {isLoading ? (
@@ -220,7 +237,11 @@ export default function Log() {
               ) : filteredActivities && filteredActivities.length > 0 ? (
                 <div className="divide-y">
                   {filteredActivities.map((item) => (
-                    <div key={item.activity.id} className="p-4 md:p-6 hover:bg-muted/50 transition-colors">
+                    <div
+                      key={item.activity.id}
+                      className="p-4 md:p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedActivity(item)}
+                    >
                       <div className="flex flex-col gap-1">
                         {/* Activity header */}
                         <div className="flex justify-between items-start">
@@ -234,12 +255,12 @@ export default function Log() {
                             {item.workout ? "Planned Workout" : item.activity.type}
                           </Badge>
                         </div>
-                        
+
                         {/* Date and location */}
                         <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
                           <Calendar className="h-3.5 w-3.5" />
                           {format(parseISO(item.activity.startDate), "MMM d, yyyy 'at' h:mm a")}
-                          
+
                           {(item.activity.startLatitude && item.activity.startLongitude) && (
                             <>
                               <span className="mx-1">•</span>
@@ -248,32 +269,32 @@ export default function Log() {
                             </>
                           )}
                         </div>
-                        
+
                         {/* Stats */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mt-3">
                           <div className="bg-muted/50 rounded-md p-2 flex flex-col">
                             <span className="text-xs text-muted-foreground">Distance</span>
                             <span className="font-medium">{formatDistance(item.activity.distance)}</span>
                           </div>
-                          
+
                           <div className="bg-muted/50 rounded-md p-2 flex flex-col">
                             <span className="text-xs text-muted-foreground">Time</span>
                             <span className="font-medium">{formatTime(item.activity.movingTime)}</span>
                           </div>
-                          
+
                           <div className="bg-muted/50 rounded-md p-2 flex flex-col">
                             <span className="text-xs text-muted-foreground">Pace</span>
                             <span className="font-medium">
                               {calculatePace(item.activity.distance, item.activity.movingTime)}
                             </span>
                           </div>
-                          
+
                           <div className="bg-muted/50 rounded-md p-2 flex flex-col">
                             <span className="text-xs text-muted-foreground">Elevation</span>
                             <span className="font-medium">{item.activity.totalElevationGain}m</span>
                           </div>
                         </div>
-                        
+
                         {/* Planned workout details if any */}
                         {item.workout && (
                           <div className="mt-3 p-3 bg-primary/5 border border-primary/10 rounded-md">
@@ -294,11 +315,7 @@ export default function Log() {
                 <div className="p-6 text-center">
                   <p className="text-muted-foreground">No activities found</p>
                   {searchQuery && (
-                    <Button
-                      variant="link"
-                      onClick={() => setSearchQuery("")}
-                      className="mt-2"
-                    >
+                    <Button variant="link" onClick={() => setSearchQuery("")} className="mt-2">
                       Clear search
                     </Button>
                   )}
@@ -306,13 +323,20 @@ export default function Log() {
               )}
             </CardContent>
           </ScrollArea>
-          
+
           <CardFooter className="flex justify-between pt-6">
             <p className="text-sm text-muted-foreground">
               Connect with Strava to sync more activities
             </p>
           </CardFooter>
         </Card>
+
+        {/* Activity Detail Dialog */}
+        <ActivityDetailDialog
+          activity={selectedActivity?.activity}
+          open={!!selectedActivity}
+          onOpenChange={(open) => !open && setSelectedActivity(null)}
+        />
       </div>
     </div>
   );
