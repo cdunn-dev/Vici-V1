@@ -24,7 +24,13 @@ import { apiRequest, invalidateQueries } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Define gender options directly since Zod enum doesn't expose them
-const genderOptions = ["male", "female", "non-binary", "other", "prefer-not-to-say"] as const;
+const genderOptions = [
+  "male",
+  "female", 
+  "non-binary",
+  "other",
+  "prefer-not-to-say"
+] as const;
 
 export default function ProfileReview() {
   const { toast } = useToast();
@@ -145,7 +151,7 @@ export default function ProfileReview() {
                       <FormLabel>Gender</FormLabel>
                       <Select 
                         onValueChange={field.onChange} 
-                        value={field.value}
+                        value={field.value || ""}
                       >
                         <FormControl>
                           <SelectTrigger>

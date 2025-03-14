@@ -27,24 +27,15 @@ export const CoachingStyleEnum = z.enum([
 
 // Updated Gender enum to handle both Strava and display formats
 export const GenderEnum = z.enum([
-  "M",
-  "F",
   "male",
   "female",
   "non-binary",
   "other",
   "prefer-not-to-say"
-]).transform(val => {
-  // Normalize gender values
-  switch(val) {
-    case 'M': return 'male';
-    case 'F': return 'female';
-    default: return val;
-  }
-});
+]);
 
 // Distance unit options
-export const DistanceUnitEnum = z.enum(["miles", "kilometers", "feet", "meters"]);
+export const DistanceUnitEnum = z.enum(["miles", "kilometers"]);
 
 // Personal best record schema
 export const personalBestSchema = z.object({
@@ -214,7 +205,6 @@ export const targetRaceSchema = z.object({
   previousBest: z.string().optional(),
   goalTime: z.string().optional(),
 });
-
 
 
 export const trainingPreferencesSchema = z.object({
