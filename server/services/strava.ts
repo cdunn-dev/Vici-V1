@@ -398,29 +398,27 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     for (const activity of activities) {
       try {
-        // Only process running activities
         if (activity.type !== 'Run') {
           console.log('[Strava] Skipping non-running activity:', activity.id, activity.type);
           continue;
         }
 
-        // Fetch detailed activity data
         console.log(`[Strava] Fetching detailed data for activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
-        // Convert the start date string to a Date object for proper formatting
-        const startDate = new Date(detailedActivity.start_date);
-        if (isNaN(startDate.getTime())) {
-          throw new Error('Invalid start date');
-        }
+        // Debug log the detailed activity data
+        console.log('[Strava] Detailed activity data:', JSON.stringify({
+          id: detailedActivity.id,
+          has_heartrate: detailedActivity.has_heartrate,
+          laps: detailedActivity.laps?.length,
+          splits: detailedActivity.splits_metric?.length
+        }));
 
-        // Calculate heart rate zones if heart rate data is available
         const heartrateZones = detailedActivity.has_heartrate ? calculateHeartRateZones({
           avgHeartrate: detailedActivity.average_heartrate || 0,
           maxHeartrate: detailedActivity.max_heartrate || 0
         }) : [];
 
-        // Calculate pace zones from splits if available
         const paceZones = detailedActivity.splits_metric ? calculatePaceZones(
           detailedActivity.splits_metric.map(split => ({
             distance: split.distance,
@@ -428,7 +426,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           }))
         ) : [];
 
-        // Process lap data with strict typing
         const laps = detailedActivity.laps?.map(lap => ({
           lapIndex: lap.lap_index,
           splitIndex: lap.split_index,
@@ -441,9 +438,8 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           averageHeartrate: lap.average_heartrate || null,
           maxHeartrate: lap.max_heartrate || null,
           paceZone: lap.pace_zone || null
-        })) || [];
+        }));
 
-        // Process split metrics with strict typing
         const splitMetrics = detailedActivity.splits_metric?.map(split => ({
           distance: split.distance,
           elapsedTime: split.elapsed_time,
@@ -453,16 +449,15 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           averageSpeed: split.average_speed,
           averageHeartrate: split.average_heartrate || null,
           paceZone: split.pace_zone || null
-        })) || [];
+        }));
 
-        // Prepare activity data with proper type conversions
         const insertActivity: InsertStravaActivity = {
           userId,
           stravaId: detailedActivity.id.toString(),
           name: detailedActivity.name,
           description: detailedActivity.description || null,
           type: detailedActivity.type,
-          startDate,
+          startDate: new Date(detailedActivity.start_date),
           distance: Math.round(detailedActivity.distance * 100) / 100,
           movingTime: detailedActivity.moving_time,
           elapsedTime: detailedActivity.elapsed_time,
@@ -493,12 +488,21 @@ export async function syncStravaActivities(userId: number, accessToken: string):
             summaryPolyline: detailedActivity.map.summary_polyline || '',
             resourceState: detailedActivity.map.resource_state || 1,
           } : null,
-          laps,
-          splitMetrics,
-          heartrateZones,
-          paceZones,
-          workoutId: null, // Will be linked later if matching workout exists
+          laps: laps || [],
+          splitMetrics: splitMetrics || [],
+          heartrateZones: heartrateZones,
+          paceZones: paceZones,
+          workoutId: null
         };
+
+        // Debug log the processed activity data
+        console.log('[Strava] Processed activity data:', JSON.stringify({
+          id: insertActivity.stravaId,
+          hasHeartrate: insertActivity.hasHeartrate,
+          heartrateZones: insertActivity.heartrateZones?.length,
+          laps: insertActivity.laps?.length,
+          splitMetrics: insertActivity.splitMetrics?.length
+        }));
 
         processedActivities.push(insertActivity);
       } catch (error) {
@@ -507,13 +511,12 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       }
     }
 
-    // Batch insert activities
     if (processedActivities.length > 0) {
+      console.log('[Strava] Inserting activities:', processedActivities.length);
       await db.insert(stravaActivities).values(processedActivities);
-      console.log('[Strava] Successfully inserted', processedActivities.length, 'activities');
+      console.log('[Strava] Successfully inserted activities');
     }
 
-    // Log any errors that occurred during processing
     if (errors.length > 0) {
       console.error('[Strava] Encountered errors while processing activities:', errors);
     }
