@@ -406,6 +406,18 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         console.log(`[Strava] Fetching detailed data for activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
+        // Add debug logging to verify API response format
+        console.log('[Strava] Raw API response:', JSON.stringify({
+          id: activity.id,
+          name: detailedActivity.name,
+          type: detailedActivity.type,
+          has_heartrate: detailedActivity.has_heartrate,
+          laps: detailedActivity.laps,
+          splits_metric: detailedActivity.splits_metric,
+          map: detailedActivity.map
+        }, null, 2));
+
+
         // Debug log the detailed activity data
         console.log('[Strava] Detailed activity data:', JSON.stringify({
           id: detailedActivity.id,
