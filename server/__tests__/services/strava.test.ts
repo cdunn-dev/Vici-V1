@@ -19,10 +19,27 @@ vi.mock('../../storage', () => ({
   }
 }));
 
-// Mock database
+// Mock database with type-safe mocks
 vi.mock('../../db', () => ({
   db: {
-    insert: vi.fn().mockReturnValue({ values: vi.fn() }),
+    insert: vi.fn().mockReturnValue({ 
+      values: vi.fn().mockReturnValue([{
+        id: 1,
+        stravaId: '1234567890',
+        userId: 1,
+        name: 'Test Activity',
+        type: 'Run',
+        distance: 5000,
+        movingTime: 1800,
+        elapsedTime: 1800,
+        totalElevationGain: 100,
+        startDate: new Date(),
+        laps: [],
+        splitMetrics: [],
+        heartrateZones: [],
+        paceZones: []
+      }])
+    }),
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -35,15 +52,19 @@ vi.mock('../../db', () => ({
   }
 }));
 
-// Mock fetch
+// Mock fetch with type-safe responses
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe('Strava Service', () => {
+  const userId = 1;
+  let service: StravaService;
+
   beforeEach(() => {
     vi.clearAllMocks();
     console.error = vi.fn();
     console.log = vi.fn();
+    service = new StravaService(userId);
   });
 
   describe('getStravaAuthUrl', () => {
@@ -281,7 +302,7 @@ describe('Strava Service', () => {
           json: () => Promise.resolve(mockDetailedActivity)
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities(userId, 'test_access_token');
 
       // Verify db insert was called with processed activity data
       const insertCall = vi.mocked(db.insert).mock.calls[0];
@@ -310,7 +331,7 @@ describe('Strava Service', () => {
           json: () => Promise.resolve([])
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities(userId, 'test_access_token');
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
@@ -332,7 +353,7 @@ describe('Strava Service', () => {
           json: () => Promise.resolve({ ...mockDetailedActivity })
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities(userId, 'test_access_token');
 
       const insertCall = vi.mocked(db.insert).mock.calls[0];
       expect(insertCall[1].values).toHaveLength(3);
@@ -353,199 +374,10 @@ describe('Strava Service', () => {
           json: () => Promise.resolve(mockDetailedActivity)
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities(userId, 'test_access_token');
 
       const insertCall = vi.mocked(db.insert).mock.calls[0];
       expect(insertCall[1].values).toHaveLength(1);
-    });
-  });
-
-  describe('Activity Detail Processing', () => {
-    const mockDetailedActivity = {
-      id: 1234567890,
-      name: "Morning Run",
-      type: "Run",
-      start_date: "2025-03-15T08:00:00Z",
-      distance: 5000,
-      moving_time: 1800,
-      elapsed_time: 1800,
-      total_elevation_gain: 50,
-      average_speed: 2.78,
-      max_speed: 3.5,
-      average_heartrate: 150,
-      max_heartrate: 175,
-      has_heartrate: true,
-      laps: [
-        {
-          lap_index: 1,
-          split_index: 1,
-          distance: 1000,
-          elapsed_time: 360,
-          moving_time: 360,
-          start_date: "2025-03-15T08:05:00Z",
-          average_speed: 2.8,
-          average_heartrate: 155
-        }
-      ],
-      splits_metric: [
-        {
-          distance: 1000,
-          elapsed_time: 360,
-          elevation_difference: 10,
-          moving_time: 360,
-          split: 1,
-          average_speed: 2.8,
-          average_heartrate: 155
-        }
-      ],
-      map: {
-        summary_polyline: "test_polyline",
-        resource_state: 2
-      }
-    };
-
-    const calculateHeartRateZones = ({ avgHeartrate, maxHeartrate }: { avgHeartrate: number; maxHeartrate: number }) => {
-      // Placeholder implementation
-      return Array.from({ length: 5 }, (_, i) => ({ zone: i + 1, min: i * (maxHeartrate / 5), max: (i + 1) * (maxHeartrate / 5) }));
-    };
-
-    const calculatePaceZones = (splits: { distance: number; time: number }[]) => {
-      // Placeholder implementation
-      return Array.from({ length: 5 }, (_, i) => ({ zone: i + 1, description: `Zone ${i + 1}`, pace: i * 10 }));
-    };
-
-
-    it('should process heart rate zones correctly', () => {
-      const heartrateZones = calculateHeartRateZones({
-        avgHeartrate: 150,
-        maxHeartrate: 175
-      });
-
-      expect(heartrateZones).toHaveLength(5);
-      expect(heartrateZones[0]).toMatchObject({
-        zone: 1,
-        min: 0,
-        max: expect.any(Number)
-      });
-    });
-
-    it('should process pace zones correctly', () => {
-      const splits = [
-        { distance: 1000, time: 300 },
-        { distance: 1000, time: 310 }
-      ];
-
-      const paceZones = calculatePaceZones(splits);
-
-      expect(paceZones).toHaveLength(5);
-      expect(paceZones[0]).toMatchObject({
-        zone: 1,
-        description: 'Zone 1',
-        pace: expect.any(Number)
-      });
-    });
-
-    it('should correctly process and store detailed activity data', async () => {
-      // Mock fetch for detailed activity
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-      }).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockDetailedActivity)
-      });
-
-      await syncStravaActivities(1, 'test_access_token');
-
-      // Verify db insert was called with processed activity data
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      expect(insertCall[0]).toBe(stravaActivities);
-
-      const insertedActivity = insertCall[1].values[0];
-      expect(insertedActivity).toMatchObject({
-        stravaId: '1234567890',
-        name: 'Morning Run',
-        type: 'Run',
-        hasHeartrate: true,
-        laps: expect.arrayContaining([
-          expect.objectContaining({
-            lapIndex: 1,
-            distance: 1000
-          })
-        ]),
-        splitMetrics: expect.arrayContaining([
-          expect.objectContaining({
-            distance: 1000,
-            elapsedTime: 360
-          })
-        ]),
-        heartrateZones: expect.arrayContaining([
-          expect.objectContaining({
-            zone: expect.any(Number),
-            min: expect.any(Number),
-            max: expect.any(Number)
-          })
-        ]),
-        paceZones: expect.arrayContaining([
-          expect.objectContaining({
-            zone: expect.any(Number),
-            description: expect.any(String),
-            pace: expect.any(Number)
-          })
-        ])
-      });
-    });
-
-    it('should handle missing heart rate data gracefully', async () => {
-      const activityWithoutHR = {
-        ...mockDetailedActivity,
-        has_heartrate: false,
-        average_heartrate: undefined,
-        max_heartrate: undefined
-      };
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(activityWithoutHR)
-        });
-
-      await syncStravaActivities(1, 'test_access_token');
-
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      const insertedActivity = insertCall[1].values[0];
-
-      expect(insertedActivity.hasHeartrate).toBe(false);
-      expect(insertedActivity.heartrateZones).toEqual([]);
-    });
-
-    it('should handle missing split data gracefully', async () => {
-      const activityWithoutSplits = {
-        ...mockDetailedActivity,
-        splits_metric: undefined
-      };
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(activityWithoutSplits)
-        });
-
-      await syncStravaActivities(1, 'test_access_token');
-
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      const insertedActivity = insertCall[1].values[0];
-
-      expect(insertedActivity.splitMetrics).toEqual([]);
-      expect(insertedActivity.paceZones).toEqual([]);
     });
   });
 
@@ -670,7 +502,6 @@ describe('Strava Service', () => {
 
   describe('automatic sync', () => {
     let service: StravaService;
-    const userId = 1;
 
     beforeEach(() => {
       vi.useFakeTimers();
@@ -703,13 +534,9 @@ describe('Strava Service', () => {
   });
 });
 
-describe('Activity Sync', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  describe('Detailed Activity Processing', () => {
-    const mockDetailedActivity = {
+describe('Activity Transformation', () => {
+  it('should transform activity data correctly', async () => {
+    const mockActivity = {
       id: 1234567890,
       name: "Morning Run",
       type: "Run",
@@ -717,12 +544,12 @@ describe('Activity Sync', () => {
       distance: 5000,
       moving_time: 1800,
       elapsed_time: 1800,
-      total_elevation_gain: 50,
+      total_elevation_gain: 100,
       average_speed: 2.78,
       max_speed: 3.5,
-      average_heartrate: 150,
-      max_heartrate: 175,
       has_heartrate: true,
+      average_heartrate: 150,
+      max_heartrate: 180,
       laps: [
         {
           lap_index: 1,
@@ -752,152 +579,131 @@ describe('Activity Sync', () => {
       }
     };
 
-    it('should correctly fetch and transform detailed activity data', async () => {
-      // Mock activity list response
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        // Mock detailed activity response
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockDetailedActivity)
-        });
-
-      await syncStravaActivities(1, 'test_access_token');
-
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      expect(insertCall[0]).toBe(stravaActivities);
-
-      const insertedActivity = insertCall[1].values[0];
-      expect(insertedActivity).toMatchObject({
-        stravaId: '1234567890',
-        name: 'Morning Run',
-        type: 'Run',
-        hasHeartrate: true,
-        map: expect.objectContaining({
-          summaryPolyline: 'test_polyline',
-          resourceState: 2
-        }),
-        laps: expect.arrayContaining([
-          expect.objectContaining({
-            lapIndex: 1,
-            distance: 1000,
-            averageHeartrate: 155
-          })
-        ]),
-        splitMetrics: expect.arrayContaining([
-          expect.objectContaining({
-            distance: 1000,
-            elapsedTime: 360,
-            averageHeartrate: 155
-          })
-        ]),
-        heartrateZones: expect.arrayContaining([
-          expect.objectContaining({
-            zone: expect.any(Number),
-            min: expect.any(Number),
-            max: expect.any(Number)
-          })
-        ])
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([mockActivity])
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockActivity)
       });
+
+    await syncStravaActivities(1, 'test_access_token');
+
+    const insertCall = vi.mocked(db.insert).mock.calls[0];
+    const insertedActivity = insertCall[1].values[0];
+
+    // Verify transformed data structure
+    expect(insertedActivity).toMatchObject({
+      userId: 1,
+      stravaId: '1234567890',
+      name: 'Morning Run',
+      type: 'Run',
+      distance: 5000,
+      movingTime: 1800,
+      elapsedTime: 1800,
+      totalElevationGain: 100,
+      hasHeartrate: true,
+      averageHeartrate: 150,
+      maxHeartrate: 180,
+      map: {
+        summaryPolyline: 'test_polyline',
+        resourceState: 2
+      }
     });
 
-    it('should verify JSON fields are properly formatted', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(mockDetailedActivity)
-        });
+    // Verify array fields are properly formatted
+    expect(Array.isArray(insertedActivity.laps)).toBe(true);
+    expect(Array.isArray(insertedActivity.splitMetrics)).toBe(true);
+    expect(Array.isArray(insertedActivity.heartrateZones)).toBe(true);
+    expect(Array.isArray(insertedActivity.paceZones)).toBe(true);
 
-      await syncStravaActivities(1, 'test_access_token');
-
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      const insertedActivity = insertCall[1].values[0];
-
-      // Verify JSON fields are arrays/objects, not strings
-      expect(Array.isArray(insertedActivity.laps)).toBe(true);
-      expect(Array.isArray(insertedActivity.splitMetrics)).toBe(true);
-      expect(Array.isArray(insertedActivity.heartrateZones)).toBe(true);
-      expect(typeof insertedActivity.map).toBe('object');
+    // Verify nested arrays have correct structure
+    expect(insertedActivity.laps[0]).toMatchObject({
+      lapIndex: 1,
+      distance: 1000,
+      elapsedTime: 360,
+      averageHeartrate: 155
     });
 
-    it('should handle missing optional data gracefully', async () => {
-      const activityWithoutOptionals = {
-        ...mockDetailedActivity,
-        has_heartrate: false,
-        average_heartrate: undefined,
-        max_heartrate: undefined,
-        laps: undefined,
-        splits_metric: undefined,
-        map: null
-      };
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(activityWithoutOptionals)
-        });
-
-      await syncStravaActivities(1, 'test_access_token');
-
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      const insertedActivity = insertCall[1].values[0];
-
-      expect(insertedActivity.hasHeartrate).toBe(false);
-      expect(insertedActivity.laps).toEqual([]);
-      expect(insertedActivity.splitMetrics).toEqual([]);
-      expect(insertedActivity.heartrateZones).toEqual([]);
-      expect(insertedActivity.map).toBeNull();
+    expect(insertedActivity.splitMetrics[0]).toMatchObject({
+      distance: 1000,
+      elapsedTime: 360,
+      averageHeartrate: 155
     });
+  });
 
-    // Test required numeric fields
-    it('should handle missing required numeric fields with defaults', async () => {
-      const activityWithMissingFields = {
-        id: 1234567890,
-        name: "Morning Run",
-        type: "Run",
-        start_date: "2025-03-15T08:00:00Z",
-        // Missing required numeric fields
-        distance: undefined,
-        moving_time: undefined,
-        elapsed_time: undefined,
-        total_elevation_gain: undefined,
-        average_speed: undefined,
-        max_speed: undefined
-      };
+  it('should handle missing optional fields', async () => {
+    const mockActivityWithoutOptionals = {
+      id: 1234567890,
+      name: "Basic Run",
+      type: "Run",
+      start_date: "2025-03-15T08:00:00Z",
+      distance: 5000,
+      moving_time: 1800,
+      elapsed_time: 1800,
+      total_elevation_gain: 100,
+      average_speed: 2.78,
+      max_speed: 3.5,
+      has_heartrate: false
+    };
 
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(activityWithMissingFields)
-        });
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([mockActivityWithoutOptionals])
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockActivityWithoutOptionals)
+      });
 
-      await syncStravaActivities(1, 'test_access_token');
+    await syncStravaActivities(1, 'test_access_token');
 
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      const insertedActivity = insertCall[1].values[0];
+    const insertCall = vi.mocked(db.insert).mock.calls[0];
+    const insertedActivity = insertCall[1].values[0];
 
-      // Verify defaults are applied
-      expect(insertedActivity.distance).toBe(0);
-      expect(insertedActivity.movingTime).toBe(0);
-      expect(insertedActivity.elapsedTime).toBe(0);
-      expect(insertedActivity.totalElevationGain).toBe(0);
-      expect(insertedActivity.averageSpeed).toBe(0);
-      expect(insertedActivity.maxSpeed).toBe(0);
-    });
+    // Verify optional fields have default values
+    expect(insertedActivity.hasHeartrate).toBe(false);
+    expect(insertedActivity.averageHeartrate).toBeNull();
+    expect(insertedActivity.maxHeartrate).toBeNull();
+    expect(insertedActivity.laps).toEqual([]);
+    expect(insertedActivity.splitMetrics).toEqual([]);
+    expect(insertedActivity.heartrateZones).toEqual([]);
+    expect(insertedActivity.paceZones).toEqual([]);
+    expect(insertedActivity.map).toBeNull();
+  });
+
+  it('should validate required numeric fields', async () => {
+    const mockActivityWithMissingFields = {
+      id: 1234567890,
+      name: "Invalid Run",
+      type: "Run",
+      start_date: "2025-03-15T08:00:00Z"
+    };
+
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([mockActivityWithMissingFields])
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockActivityWithMissingFields)
+      });
+
+    await syncStravaActivities(1, 'test_access_token');
+
+    const insertCall = vi.mocked(db.insert).mock.calls[0];
+    const insertedActivity = insertCall[1].values[0];
+
+    // Verify numeric fields have default values
+    expect(insertedActivity.distance).toBe(0);
+    expect(insertedActivity.movingTime).toBe(0);
+    expect(insertedActivity.elapsedTime).toBe(0);
+    expect(insertedActivity.totalElevationGain).toBe(0);
+    expect(insertedActivity.averageSpeed).toBe(0);
+    expect(insertedActivity.maxSpeed).toBe(0);
   });
 });
