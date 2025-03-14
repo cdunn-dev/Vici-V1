@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,13 +15,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useStravaProfile } from "@/hooks/use-strava-profile";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { userProfileUpdateSchema, GenderEnum, RunningExperienceLevelEnum, FitnessLevelEnum } from "@shared/schema";
+import { userProfileUpdateSchema, GenderEnum } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { Loader2, CheckCircle2, Activity } from "lucide-react";
 import { apiRequest, invalidateQueries } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Get the enum values for the gender select
+const genderOptions = GenderEnum.options;
 
 export default function ProfileReview() {
   const { toast } = useToast();
@@ -150,7 +153,7 @@ export default function ProfileReview() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {Object.values(GenderEnum.Values).map((gender) => (
+                          {genderOptions.map((gender) => (
                             <SelectItem
                               key={gender}
                               value={gender}
