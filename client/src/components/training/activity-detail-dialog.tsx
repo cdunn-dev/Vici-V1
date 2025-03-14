@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { format, parseISO } from "date-fns";
 import { Activity, MapPin, Clock, TrendingUp, Heart, Thermometer, Trophy, Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 
 interface ActivityDetailDialogProps {
   activity: any; // We'll type this properly once we confirm all the fields
@@ -21,7 +22,7 @@ export function ActivityDetailDialog({ activity, open, onOpenChange }: ActivityD
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
@@ -36,7 +37,7 @@ export function ActivityDetailDialog({ activity, open, onOpenChange }: ActivityD
     const minutesPerMile = (seconds / 60) / miles;
     const paceMinutes = Math.floor(minutesPerMile);
     const paceSeconds = Math.round((minutesPerMile - paceMinutes) * 60);
-    
+
     return `${paceMinutes}:${paceSeconds.toString().padStart(2, '0')}/mi`;
   };
 
@@ -59,7 +60,7 @@ export function ActivityDetailDialog({ activity, open, onOpenChange }: ActivityD
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 {format(parseISO(activity.startDate), "PPp")}
-                
+
                 {activity.startLatitude && activity.startLongitude && (
                   <>
                     <span className="mx-1">•</span>
@@ -68,7 +69,7 @@ export function ActivityDetailDialog({ activity, open, onOpenChange }: ActivityD
                   </>
                 )}
               </div>
-              
+
               {activity.description && (
                 <p className="mt-2 text-sm">{activity.description}</p>
               )}
@@ -80,19 +81,19 @@ export function ActivityDetailDialog({ activity, open, onOpenChange }: ActivityD
                 <div className="text-sm text-muted-foreground">Distance</div>
                 <div className="text-lg font-semibold">{formatDistance(activity.distance)}</div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-lg p-3">
                 <div className="text-sm text-muted-foreground">Time</div>
                 <div className="text-lg font-semibold">{formatTime(activity.movingTime)}</div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-lg p-3">
                 <div className="text-sm text-muted-foreground">Pace</div>
                 <div className="text-lg font-semibold">
                   {calculatePace(activity.distance, activity.movingTime)}
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-lg p-3">
                 <div className="text-sm text-muted-foreground">Elevation</div>
                 <div className="text-lg font-semibold">
