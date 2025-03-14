@@ -23,9 +23,11 @@ interface StravaTokenResponse {
   };
 }
 
+// Update the StravaActivity interface with additional fields
 interface StravaActivity {
   id: number;
   name: string;
+  description?: string;
   type: string;
   start_date: string;
   distance: number;
@@ -38,9 +40,51 @@ interface StravaActivity {
   max_heartrate?: number;
   start_latitude?: number;
   start_longitude?: number;
+  // Additional fields
+  gear_id?: string;
+  device_name?: string;
+  average_cadence?: number;
+  average_temp?: number;
+  suffer_score?: number;
+  perceived_exertion?: number;
+  elevation_high?: number;
+  elevation_low?: number;
+  start_address?: string;
+  achievement_count?: number;
+  kudos_count?: number;
+  comment_count?: number;
+  athlete_count?: number;
+  photo_count?: number;
+  device_watts?: boolean;
+  has_heartrate?: boolean;
   map?: {
     summary_polyline?: string;
+    polyline?: string;
+    resource_state?: number;
   };
+  laps?: Array<{
+    lap_index: number;
+    split_index: number;
+    distance: number;
+    elapsed_time: number;
+    moving_time: number;
+    start_date: string;
+    average_speed: number;
+    max_speed?: number;
+    average_heartrate?: number;
+    max_heartrate?: number;
+    pace_zone?: number;
+  }>;
+  splits_metric?: Array<{
+    distance: number;
+    elapsed_time: number;
+    elevation_difference: number;
+    moving_time: number;
+    split: number;
+    average_speed: number;
+    average_heartrate?: number;
+    pace_zone?: number;
+  }>;
 }
 
 // Rate limiting configuration
@@ -316,14 +360,23 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           continue;
         }
 
-        // Validate required fields
-        if (!activity.id || !activity.start_date || activity.distance === undefined) {
-          console.error('[Strava] Invalid activity data:', activity);
-          throw new Error('Missing required activity fields');
+        // Fetch detailed activity data
+        console.log(`[Strava] Fetching detailed data for activity ${activity.id}`);
+        const detailedResponse = await fetch(
+          `${STRAVA_API_BASE}/activities/${activity.id}?include_all_efforts=true`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+
+        if (!detailedResponse.ok) {
+          throw new Error(`Failed to fetch detailed activity data: ${detailedResponse.statusText}`);
         }
 
+        const detailedActivity = await detailedResponse.json() as StravaActivity;
+
         // Convert the start date string to a Date object for proper formatting
-        const startDate = new Date(activity.start_date);
+        const startDate = new Date(detailedActivity.start_date);
         if (isNaN(startDate.getTime())) {
           throw new Error('Invalid start date');
         }
@@ -331,21 +384,76 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         // Prepare activity data with proper type conversions
         const insertActivity: InsertStravaActivity = {
           userId,
-          stravaId: activity.id.toString(),
-          name: activity.name,
-          type: activity.type,
+          stravaId: detailedActivity.id.toString(),
+          name: detailedActivity.name,
+          description: detailedActivity.description || null,
+          type: detailedActivity.type,
           startDate,
-          distance: Math.round(activity.distance * 100) / 100,
-          movingTime: activity.moving_time,
-          elapsedTime: activity.elapsed_time,
-          totalElevationGain: Math.round(activity.total_elevation_gain),
-          averageSpeed: Math.round(activity.average_speed * 100) / 100,
-          maxSpeed: Math.round(activity.max_speed * 100) / 100,
-          averageHeartrate: activity.average_heartrate ? Math.round(activity.average_heartrate) : null,
-          maxHeartrate: activity.max_heartrate ? Math.round(activity.max_heartrate) : null,
-          startLatitude: activity.start_latitude?.toString() || null,
-          startLongitude: activity.start_longitude?.toString() || null,
-          mapPolyline: activity.map?.summary_polyline || null,
+          distance: Math.round(detailedActivity.distance * 100) / 100,
+          movingTime: detailedActivity.moving_time,
+          elapsedTime: detailedActivity.elapsed_time,
+          totalElevationGain: Math.round(detailedActivity.total_elevation_gain),
+          averageSpeed: Math.round(detailedActivity.average_speed * 100) / 100,
+          maxSpeed: Math.round(detailedActivity.max_speed * 100) / 100,
+          averageHeartrate: detailedActivity.average_heartrate ? Math.round(detailedActivity.average_heartrate) : null,
+          maxHeartrate: detailedActivity.max_heartrate ? Math.round(detailedActivity.max_heartrate) : null,
+          startLatitude: detailedActivity.start_latitude?.toString() || null,
+          startLongitude: detailedActivity.start_longitude?.toString() || null,
+
+          // Additional fields
+          gearId: detailedActivity.gear_id || null,
+          deviceName: detailedActivity.device_name || null,
+          averageCadence: detailedActivity.average_cadence ? Math.round(detailedActivity.average_cadence) : null,
+          averageTemp: detailedActivity.average_temp ? Math.round(detailedActivity.average_temp) : null,
+          sufferScore: detailedActivity.suffer_score || null,
+          perceivedExertion: detailedActivity.perceived_exertion || null,
+          elevationHigh: detailedActivity.elevation_high ? Math.round(detailedActivity.elevation_high) : null,
+          elevationLow: detailedActivity.elevation_low ? Math.round(detailedActivity.elevation_low) : null,
+          startAddress: detailedActivity.start_address || null,
+          achievementCount: detailedActivity.achievement_count || null,
+          kudosCount: detailedActivity.kudos_count || null,
+          commentCount: detailedActivity.comment_count || null,
+          athleteCount: detailedActivity.athlete_count || null,
+          photoCount: detailedActivity.photo_count || null,
+          deviceWatts: detailedActivity.device_watts || false,
+          hasHeartrate: detailedActivity.has_heartrate || false,
+
+          // Map data
+          map: detailedActivity.map ? {
+            summaryPolyline: detailedActivity.map.summary_polyline || '',
+            resourceState: detailedActivity.map.resource_state || 1,
+            streamData: null // Fetch stream data separately if needed
+          } : null,
+
+          // Laps and splits
+          laps: detailedActivity.laps?.map(lap => ({
+            lapIndex: lap.lap_index,
+            splitIndex: lap.split_index,
+            distance: lap.distance,
+            elapsedTime: lap.elapsed_time,
+            movingTime: lap.moving_time,
+            startDate: lap.start_date,
+            averageSpeed: lap.average_speed,
+            maxSpeed: lap.max_speed,
+            averageHeartrate: lap.average_heartrate,
+            maxHeartrate: lap.max_heartrate,
+            paceZone: lap.pace_zone
+          })) || [],
+
+          splitMetrics: detailedActivity.splits_metric?.map(split => ({
+            distance: split.distance,
+            elapsedTime: split.elapsed_time,
+            elevationDifference: split.elevation_difference,
+            movingTime: split.moving_time,
+            split: split.split,
+            averageSpeed: split.average_speed,
+            averageHeartrate: split.average_heartrate,
+            paceZone: split.pace_zone
+          })) || [],
+
+          // Initialize empty arrays for zones
+          heartrateZones: [],
+          paceZones: []
         };
 
         processedActivities.push(insertActivity);

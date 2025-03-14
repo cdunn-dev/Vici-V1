@@ -134,11 +134,42 @@ export const trainingPlans = pgTable("training_plans", {
 });
 
 // Strava activities table
+// Add new schema types for detailed activity data
+export const LapSchema = z.object({
+  lapIndex: z.number(),
+  splitIndex: z.number(),
+  distance: z.number(),
+  elapsedTime: z.number(),
+  movingTime: z.number(),
+  startDate: z.string(),
+  averageSpeed: z.number(),
+  maxSpeed: z.number().optional(),
+  averageHeartrate: z.number().optional(),
+  maxHeartrate: z.number().optional(),
+  paceZone: z.number().optional(),
+});
+
+export const DetailedMapSchema = z.object({
+  summaryPolyline: z.string(),
+  resourceState: z.number(),
+  streamData: z.object({
+    distance: z.array(z.number()).optional(),
+    altitude: z.array(z.number()).optional(),
+    velocity: z.array(z.number()).optional(),
+    heartrate: z.array(z.number()).optional(),
+    cadence: z.array(z.number()).optional(),
+    watts: z.array(z.number()).optional(),
+    temp: z.array(z.number()).optional(),
+    time: z.array(z.number()).optional(),
+  }).optional(),
+});
+
 export const stravaActivities = pgTable("strava_activities", {
   id: serial("id").primaryKey(),
   userId: serial("user_id").references(() => users.id),
   stravaId: text("strava_id").notNull().unique(),
   name: text("name").notNull(),
+  description: text("description"),
   type: text("type").notNull(),
   startDate: timestamp("start_date").notNull(),
   distance: integer("distance").notNull(), // in meters
@@ -151,11 +182,43 @@ export const stravaActivities = pgTable("strava_activities", {
   maxHeartrate: integer("max_heartrate"),
   startLatitude: text("start_latitude"),
   startLongitude: text("start_longitude"),
-  map: json("map").$type<{
-    summaryPolyline: string;
-    resourceState: number;
-  }>(),
+
+  // New fields for enhanced activity data
+  map: json("map").$type<z.infer<typeof DetailedMapSchema>>(),
+  laps: json("laps").$type<z.infer<typeof LapSchema>[]>(),
+  gearId: text("gear_id"),
+  deviceName: text("device_name"),
+  averageCadence: integer("average_cadence"),
+  averageTemp: integer("average_temp"),
+  sufferScore: integer("suffer_score"),
+  trainingEffect: integer("training_effect"),
+  perceivedExertion: integer("perceived_exertion"),
+  elevationHigh: integer("elevation_high"),
+  elevationLow: integer("elevation_low"),
+  startAddress: text("start_address"),
+  achievementCount: integer("achievement_count"),
+  kudosCount: integer("kudos_count"),
+  commentCount: integer("comment_count"),
+  athleteCount: integer("athlete_count"),
+  photoCount: integer("photo_count"),
+  deviceWatts: boolean("device_watts"),
+  hasHeartrate: boolean("has_heartrate"),
+  heartrateZones: json("heartrate_zones").$type<number[]>(),
+  paceZones: json("pace_zones").$type<number[]>(),
+  splitMetrics: json("split_metrics").$type<{
+    distance: number;
+    elapsedTime: number;
+    elevationDifference: number;
+    movingTime: number;
+    split: number;
+    averageSpeed: number;
+    averageHeartrate?: number;
+    paceZone?: number;
+  }[]>(),
+
   workoutId: integer("workout_id").references(() => workouts.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Workouts table to store individual workouts from training plans
