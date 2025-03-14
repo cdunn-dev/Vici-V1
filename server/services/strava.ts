@@ -363,8 +363,7 @@ async function fetchDetailedActivity(activityId: number, accessToken: string): P
   return data;
 }
 
-// Add enhanced logging around API response and database insertion
-async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
+export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   console.log('[Strava] Starting activity sync for user:', userId);
 
   try {
@@ -418,19 +417,7 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
         console.log(`[Strava] Processing activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
-        // Enhanced logging for API response
-        console.log('[Strava] Raw detailed activity response:', JSON.stringify({
-          id: detailedActivity.id,
-          name: detailedActivity.name,
-          type: detailedActivity.type,
-          has_heartrate: detailedActivity.has_heartrate,
-          laps: detailedActivity.laps?.length || 0,
-          splits_count: detailedActivity.splits_metric?.length || 0,
-          has_map: Boolean(detailedActivity.map),
-          rawData: detailedActivity // Log complete raw data
-        }, null, 2));
-
-        // Process heart rate zones
+        // Process heart rate zones if available
         const heartrateZones = detailedActivity.has_heartrate
           ? calculateHeartRateZones({
               avgHeartrate: detailedActivity.average_heartrate || 0,
@@ -444,7 +431,7 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
             : 'No heart rate data available'
         );
 
-        // Process pace zones from splits
+        // Process pace zones from splits if available
         const paceZones = detailedActivity.splits_metric
           ? calculatePaceZones(
               detailedActivity.splits_metric.map(split => ({
@@ -460,42 +447,42 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
             : 'No split metrics available'
         );
 
-        // Process laps with detailed logging
-        const laps = detailedActivity.laps?.map(lap => {
-          const processedLap = {
-            lapIndex: lap.lap_index,
-            splitIndex: lap.split_index || 0,
-            distance: lap.distance || 0,
-            elapsedTime: lap.elapsed_time || 0,
-            movingTime: lap.moving_time || 0,
-            startDate: new Date(lap.start_date).toISOString(),
-            averageSpeed: lap.average_speed || 0,
-            maxSpeed: lap.max_speed || null,
-            averageHeartrate: lap.average_heartrate || null,
-            maxHeartrate: lap.max_heartrate || null,
-            paceZone: lap.pace_zone || null
-          };
-          console.log('[Strava] Processed lap:', JSON.stringify(processedLap));
-          return processedLap;
-        }) || [];
+        // Process lap data
+        const laps = detailedActivity.laps?.map(lap => ({
+          lapIndex: lap.lap_index,
+          splitIndex: lap.split_index,
+          distance: lap.distance,
+          elapsedTime: lap.elapsed_time,
+          movingTime: lap.moving_time,
+          startDate: new Date(lap.start_date).toISOString(),
+          averageSpeed: lap.average_speed,
+          maxSpeed: lap.max_speed || null,
+          averageHeartrate: lap.average_heartrate || null,
+          maxHeartrate: lap.max_heartrate || null,
+          paceZone: lap.pace_zone || null
+        })) || [];
 
-        // Process split metrics with detailed logging
-        const splitMetrics = detailedActivity.splits_metric?.map(split => {
-          const processedSplit = {
-            distance: split.distance || 0,
-            elapsedTime: split.elapsed_time || 0,
-            elevationDifference: split.elevation_difference || 0,
-            movingTime: split.moving_time || 0,
-            split: split.split || 0,
-            averageSpeed: split.average_speed || 0,
-            averageHeartrate: split.average_heartrate || null,
-            paceZone: split.pace_zone || null
-          };
-          console.log('[Strava] Processed split:', JSON.stringify(processedSplit));
-          return processedSplit;
-        }) || [];
+        // Process split metrics
+        const splitMetrics = detailedActivity.splits_metric?.map(split => ({
+          distance: split.distance,
+          elapsedTime: split.elapsed_time,
+          elevationDifference: split.elevation_difference,
+          movingTime: split.moving_time,
+          split: split.split,
+          averageSpeed: split.average_speed,
+          averageHeartrate: split.average_heartrate || null,
+          paceZone: split.pace_zone || null
+        })) || [];
 
-        // Create the activity object for insertion with all required fields
+        // Prepare map data
+        const map = detailedActivity.map
+          ? {
+              summaryPolyline: detailedActivity.map.summary_polyline || '',
+              resourceState: detailedActivity.map.resource_state || 1
+            }
+          : null;
+
+        // Create the activity object for insertion
         const insertActivity: InsertStravaActivity = {
           userId,
           stravaId: detailedActivity.id.toString(),
@@ -517,10 +504,31 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
             summaryPolyline: detailedActivity.map.summary_polyline || '',
             resourceState: detailedActivity.map.resource_state || 1
           } : null,
-          laps,
-          splitMetrics,
-          heartrateZones,
-          paceZones,
+          laps: detailedActivity.laps?.map(lap => ({
+            lapIndex: lap.lap_index,
+            splitIndex: lap.split_index || 0,
+            distance: lap.distance || 0,
+            elapsedTime: lap.elapsed_time || 0,
+            movingTime: lap.moving_time || 0,
+            startDate: new Date(lap.start_date).toISOString(),
+            averageSpeed: lap.average_speed || 0,
+            maxSpeed: lap.max_speed || null,
+            averageHeartrate: lap.average_heartrate || null,
+            maxHeartrate: lap.max_heartrate || null,
+            paceZone: lap.pace_zone || null
+          })) || [],
+          splitMetrics: detailedActivity.splits_metric?.map(split => ({
+            distance: split.distance || 0,
+            elapsedTime: split.elapsed_time || 0,
+            elevationDifference: split.elevation_difference || 0,
+            movingTime: split.moving_time || 0,
+            split: split.split || 0,
+            averageSpeed: split.average_speed || 0,
+            averageHeartrate: split.average_heartrate || null,
+            paceZone: split.pace_zone || null
+          })) || [],
+          heartrateZones: heartrateZones || [],
+          paceZones: paceZones || [],
           // Other optional fields
           startLatitude: detailedActivity.start_latitude?.toString() || null,
           startLongitude: detailedActivity.start_longitude?.toString() || null,
@@ -543,26 +551,15 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
           workoutId: null
         };
 
-        // Log the complete transformed activity
-        console.log('[Strava] Final processed activity data for insertion:', JSON.stringify({
+        // Log the final processed activity data
+        console.log('[Strava] Final processed activity data:', JSON.stringify({
           id: insertActivity.stravaId,
           name: insertActivity.name,
-          type: insertActivity.type,
           hasHeartrate: insertActivity.hasHeartrate,
-          heartrateZones: insertActivity.heartrateZones?.length || 0,
-          laps: insertActivity.laps?.length || 0,
-          splitMetrics: insertActivity.splitMetrics?.length || 0,
-          paceZones: insertActivity.paceZones?.length || 0,
-          hasMap: Boolean(insertActivity.map),
-          // Log numeric fields to verify they're not null
-          distance: insertActivity.distance,
-          movingTime: insertActivity.movingTime,
-          elapsedTime: insertActivity.elapsedTime,
-          totalElevationGain: insertActivity.totalElevationGain,
-          averageSpeed: insertActivity.averageSpeed,
-          maxSpeed: insertActivity.maxSpeed,
-          // Complete raw object for debugging
-          complete: insertActivity
+          heartrateZones: insertActivity.heartrateZones.length,
+          laps: insertActivity.laps.length,
+          splitMetrics: insertActivity.splitMetrics.length,
+          paceZones: insertActivity.paceZones.length
         }, null, 2));
 
         processedActivities.push(insertActivity);
@@ -573,41 +570,17 @@ async function syncStravaActivities(userId: number, accessToken: string): Promis
     }
 
     if (processedActivities.length > 0) {
-      console.log('[Strava] Attempting to insert activities:', processedActivities.map(a => ({
-        id: a.stravaId,
-        hasHeartrate: a.hasHeartrate,
-        hasZones: a.heartrateZones.length > 0,
-        hasLaps: a.laps.length > 0
-      })));
+      console.log('[Strava] Inserting activities:', JSON.stringify(
+        processedActivities.map(a => ({
+          id: a.stravaId,
+          hasHeartrate: a.hasHeartrate,
+          hasZones: a.heartrateZones.length > 0,
+          hasLaps: a.laps.length > 0
+        }))
+      ));
 
-      try {
-        await db.insert(stravaActivities).values(processedActivities);
-        console.log('[Strava] Successfully inserted activities');
-
-        // Verify insertion by querying the database
-        for (const activity of processedActivities) {
-          const [inserted] = await db
-            .select()
-            .from(stravaActivities)
-            .where(eq(stravaActivities.stravaId, activity.stravaId))
-            .limit(1);
-
-          if (inserted) {
-            console.log('[Strava] Verified insertion of activity:', {
-              id: inserted.stravaId,
-              hasHeartrate: inserted.hasHeartrate,
-              heartrateZones: inserted.heartrateZones?.length || 0,
-              laps: inserted.laps?.length || 0,
-              splitMetrics: inserted.splitMetrics?.length || 0
-            });
-          } else {
-            console.error('[Strava] Failed to verify insertion for activity:', activity.stravaId);
-          }
-        }
-      } catch (error) {
-        console.error('[Strava] Database insertion error:', error);
-        throw error;
-      }
+      await db.insert(stravaActivities).values(processedActivities);
+      console.log('[Strava] Successfully inserted activities');
     }
 
     if (errors.length > 0) {
@@ -842,7 +815,8 @@ export class StravaService {
     // Convert to array and format times
     return Array.from(personalBests.entries()).map(([distance, record]) => ({
       distance,
-      time: this.formatTime(record.time),      date: record.date
+      time: this.formatTime(record.time),
+      date: record.date
     }));
   }
 
@@ -911,37 +885,34 @@ export class StravaService {
             workoutTypes.set('easy', (workoutTypes.get('easy') || 0) + 1);
           }
         }
+
+        // Calculate average weekly mileage
+        const avgWeeklyMileage = totalMileage / 4; // 4 weeks
+
+        // Determine fitness level based on weekly mileage and workout variety
+        let fitnessLevel = 'beginner';
+        if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
+          fitnessLevel = 'advanced';
+        } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
+          fitnessLevel = 'intermediate';
+        }
+
+        // Get most common workout types
+        const sortedWorkouts = Array.from(workoutTypes.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([type]) => type);
+
+        return {
+          weeklyMileage: Math.round(avgWeeklyMileage),
+          preferredRunDays: Array.from(runDays),
+          fitnessLevel,
+          commonWorkoutTypes: sortedWorkouts
+        };
+      } catch (error) {
+        console.error('Error analyzing running profile:', error);
+        throw error;
       }
-
-      // Calculate average weekly mileage
-      const avgWeeklyMileage = totalMileage / 4; // 4 weeks
-
-      // Determine fitness level based on weekly mileage and workout variety
-      let fitnessLevel = 'beginner';
-      if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
-        fitnessLevel = 'advanced';
-      } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
-        fitnessLevel = 'intermediate';
-      }
-
-      // Get most common workout types
-      const sortedWorkouts = Array.from(workoutTypes.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([type]) => type);
-
-      return {
-        weeklyMileage: Math.round(avgWeeklyMileage),
-        preferredRunDays: Array.from(runDays),
-        fitnessLevel,
-        commonWorkoutTypes: sortedWorkouts
-      };
-    } catch (error) {
-      console.error('Error analyzing running profile:', error);
-      throw error;
     }
   }
 }
-
-// Re-export syncStravaActivities for testing
-export { syncStravaActivities };

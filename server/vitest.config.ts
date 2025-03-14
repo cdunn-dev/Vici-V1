@@ -3,19 +3,25 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
     globals: true,
-    clearMocks: true,
+    environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
-    mockReset: true,
-    restoreMocks: true,
     include: ['**/__tests__/**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.test.{ts,tsx}',
+        '**/types.ts',
+      ],
+    },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '../client/src'),
+      '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../shared'),
-    }
-  }
+    },
+  },
 });
