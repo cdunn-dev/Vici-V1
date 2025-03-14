@@ -10,6 +10,7 @@ import connectPgSimple from "connect-pg-simple";
 import { db } from "./db";
 import { AuthError, ERROR_MESSAGES } from "./services/auth/types";
 import { sendPasswordResetEmail } from "./services/email";
+import { Pool } from "@neondatabase/serverless";
 
 const scryptAsync = promisify(scrypt);
 
@@ -32,16 +33,19 @@ async function generateResetToken(): Promise<string> {
 
 export function setupAuth(app: Express) {
   const PgSession = connectPgSimple(session);
+  const sessionPool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+  const sessionStore = new PgSession({
+    pool: sessionPool,
+    tableName: 'session',
+    createTableIfMissing: true
+  });
 
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "default-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: new PgSession({
-      pool: db.$pool,
-      tableName: 'session',
-      createTableIfMissing: true
-    }),
+    store: sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
@@ -65,35 +69,25 @@ export function setupAuth(app: Express) {
           return done(null, user);
         } catch (error) {
           console.error('[Auth] Login error:', error);
-          return done(new AuthError(
-            'DATABASE_ERROR',
-            ERROR_MESSAGES.DATABASE_ERROR,
-            error
-          ));
+          return done(error);
         }
       }
     )
   );
 
-  passport.serializeUser((user: any, done) => done(null, user.id));
+  passport.serializeUser((user: Express.User, done) => {
+    done(null, user.id);
+  });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
       if (!user) {
-        return done(new AuthError(
-          'USER_NOT_FOUND',
-          ERROR_MESSAGES.USER_NOT_FOUND
-        ));
+        return done(null, false);
       }
       done(null, user);
     } catch (error) {
-      console.error('[Auth] Session error:', error);
-      done(new AuthError(
-        'SESSION_ERROR',
-        ERROR_MESSAGES.SESSION_ERROR,
-        error
-      ));
+      done(error);
     }
   });
 
@@ -119,7 +113,7 @@ export function setupAuth(app: Express) {
       const insertData = {
         email: registerResult.data.email,
         password: await hashPassword(registerResult.data.password),
-        emailVerified: true, 
+        emailVerified: true,
         connectedApps: [],
         stravaTokens: null,
         profilePicture: null,
@@ -166,8 +160,8 @@ export function setupAuth(app: Express) {
       }
 
       if (!user) {
-        return res.status(401).json({ 
-          error: info?.message || ERROR_MESSAGES.INVALID_CREDENTIALS 
+        return res.status(401).json({
+          error: info?.message || ERROR_MESSAGES.INVALID_CREDENTIALS
         });
       }
 
@@ -198,12 +192,10 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  // Add password reset endpoints
   app.post("/api/reset-password", async (req, res) => {
     try {
       const { email } = req.body;
 
-      // Validate email
       if (!email || typeof email !== 'string') {
         throw new AuthError(
           'VALIDATION_ERROR',
@@ -211,22 +203,17 @@ export function setupAuth(app: Express) {
         );
       }
 
-      // Find user
       const user = await storage.getUserByEmail(email);
 
       if (user) {
-        // Generate reset token
         const resetToken = await generateResetToken();
         const resetExpires = new Date(Date.now() + 3600000); // 1 hour
 
-        // Store reset token
         await storage.storeResetToken(user.id, resetToken, resetExpires);
 
-        // Send reset email
         await sendPasswordResetEmail(email, resetToken);
       }
 
-      // Always return success to prevent email enumeration
       res.json({ message: ERROR_MESSAGES.RESET_EMAIL_SENT });
     } catch (error) {
       console.error('[Auth] Reset password error:', error);
@@ -243,7 +230,6 @@ export function setupAuth(app: Express) {
       const { token } = req.params;
       const { password } = req.body;
 
-      // Validate password
       if (!password || typeof password !== 'string' || password.length < 8) {
         throw new AuthError(
           'VALIDATION_ERROR',
@@ -251,7 +237,6 @@ export function setupAuth(app: Express) {
         );
       }
 
-      // Verify token and get user
       const resetInfo = await storage.getResetToken(token);
       if (!resetInfo) {
         throw new AuthError(
@@ -267,11 +252,9 @@ export function setupAuth(app: Express) {
         );
       }
 
-      // Update password
       const hashedPassword = await hashPassword(password);
       await storage.updateUserPassword(resetInfo.userId, hashedPassword);
 
-      // Remove used token
       await storage.removeResetToken(token);
 
       res.json({ message: 'Password successfully reset' });
