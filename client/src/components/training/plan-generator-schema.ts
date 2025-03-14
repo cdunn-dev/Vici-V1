@@ -5,7 +5,6 @@ import {
   ExperienceLevels,
   FitnessLevels,
   DaysOfWeek,
-  CoachingStyles,
   GenderOptions,
   DistanceUnits,
 } from "./plan-generator-constants";
@@ -64,7 +63,7 @@ const raceTargetSchema = z.object({
 
 /**
  * Training preferences schema
- * Defines user's preferred training schedule and style
+ * Defines user's preferred training schedule
  */
 const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number()
@@ -80,7 +79,6 @@ const trainingPreferencesSchema = z.object({
     .min(0, "Cannot have negative workouts")
     .max(3, "Maximum 3 quality sessions per week"),
   preferredLongRunDay: z.enum(Object.values(DaysOfWeek) as [string, ...string[]]),
-  coachingStyle: z.enum(Object.values(CoachingStyles) as [string, ...string[]]),
 });
 
 /**

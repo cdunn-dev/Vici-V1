@@ -76,8 +76,7 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
         weeklyRunningDays: 3,
         maxWeeklyMileage: 15,
         weeklyWorkouts: 1,
-        preferredLongRunDay: "Sunday",
-        coachingStyle: "directive"
+        preferredLongRunDay: "Sunday"
       },
       goal: undefined,
       targetRace: undefined,
@@ -762,34 +761,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="trainingPreferences.coachingStyle"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Desired Coaching Style</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select coaching style" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.entries(CoachingStyles).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {field.value && CoachingStyleDescriptions[field.value as keyof typeof CoachingStyleDescriptions]}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
         );
 
@@ -818,7 +789,6 @@ export default function PlanGenerator({ existingPlan, onPreview }: PlanGenerator
           "trainingPreferences.maxWeeklyMileage",
           "trainingPreferences.weeklyWorkouts",
           "trainingPreferences.preferredLongRunDay",
-          "trainingPreferences.coachingStyle",
         ];
       default:
         return [];

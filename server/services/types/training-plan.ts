@@ -97,5 +97,4 @@ export const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number().min(1).max(7),
   maxWeeklyMileage: z.number().min(0),
   preferredLongRunDay: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
-  coachingStyle: z.enum(['conservative', 'moderate', 'aggressive']),
 });

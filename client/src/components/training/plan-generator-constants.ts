@@ -78,23 +78,6 @@ export const DaysOfWeek = {
   SUNDAY: "Sunday",
 } as const;
 
-// Coaching Styles with descriptions
-export const CoachingStyles = {
-  AUTHORITATIVE: "Authoritative",
-  DIRECTIVE: "Directive",
-  MOTIVATIONAL: "Motivational",
-  COLLABORATIVE: "Collaborative",
-  HYBRID: "Hybrid",
-} as const;
-
-export const CoachingStyleDescriptions = {
-  [CoachingStyles.AUTHORITATIVE]: "Clear, structured guidance with detailed explanations and rationale behind each workout",
-  [CoachingStyles.DIRECTIVE]: "Direct instructions and specific workout requirements with less explanation",
-  [CoachingStyles.MOTIVATIONAL]: "Encouraging and supportive with flexible guidelines and positive reinforcement",
-  [CoachingStyles.COLLABORATIVE]: "Interactive approach with room for adjustments based on your feedback",
-  [CoachingStyles.HYBRID]: "Mix of different styles adapted to your needs and preferences",
-} as const;
-
 // Validation helper functions
 export const isValidTimeFormat = (time: string): boolean => {
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/;

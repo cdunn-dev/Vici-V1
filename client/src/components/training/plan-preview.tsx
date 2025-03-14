@@ -37,7 +37,6 @@ interface PlanPreviewProps {
       maxWeeklyMileage: number;
       weeklyWorkouts: number;
       preferredLongRunDay: string;
-      coachingStyle: string;
     };
     weeklyPlans?: Array<{
       week: number;
@@ -147,7 +146,6 @@ export default function PlanPreview({
       maxWeeklyMileage: planDetails.trainingPreferences?.maxWeeklyMileage || 0,
       weeklyWorkouts: planDetails.trainingPreferences?.weeklyWorkouts || 0,
       preferredLongRunDay: planDetails.trainingPreferences?.preferredLongRunDay || 'Sunday',
-      coachingStyle: planDetails.trainingPreferences?.coachingStyle || 'Moderate'
     },
     is_active: true
   } : null;
