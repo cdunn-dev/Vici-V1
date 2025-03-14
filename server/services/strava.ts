@@ -295,6 +295,52 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
   }
 }
 
+// Add at the top of the file after imports
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+
+async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
+  try {
+    const response = await fetch(url, options);
+
+    // If rate limited, wait and retry
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '1');
+      if (retries > 0) {
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        return fetchWithRetry(url, options, retries - 1);
+      }
+    }
+
+    return response;
+  } catch (error) {
+    if (retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return fetchWithRetry(url, options, retries - 1);
+    }
+    throw error;
+  }
+}
+
+// Add this function to handle detailed activity fetching
+async function fetchDetailedActivity(activityId: number, accessToken: string): Promise<StravaActivity> {
+  const response = await fetchWithRetry(
+    `${STRAVA_API_BASE}/activities/${activityId}?include_all_efforts=true`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Strava] Failed to fetch detailed activity ${activityId}:`, response.status, response.statusText, errorText);
+    throw new StravaError(`Failed to fetch detailed activity: ${response.statusText}`, 'API_ERROR');
+  }
+
+  return await response.json();
+}
+
+
 // Update syncStravaActivities to properly handle types and add debug logging
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   console.log('[Strava] Starting activity sync for user:', userId);
@@ -325,7 +371,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     console.log('[Strava] Fetching activities with params:', params.toString());
 
-    const response = await fetch(
+    const response = await fetchWithRetry(
       `${STRAVA_API_BASE}/athlete/activities?${params.toString()}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -362,18 +408,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
         // Fetch detailed activity data
         console.log(`[Strava] Fetching detailed data for activity ${activity.id}`);
-        const detailedResponse = await fetch(
-          `${STRAVA_API_BASE}/activities/${activity.id}?include_all_efforts=true`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-
-        if (!detailedResponse.ok) {
-          throw new Error(`Failed to fetch detailed activity data: ${detailedResponse.statusText}`);
-        }
-
-        const detailedActivity = await detailedResponse.json() as StravaActivity;
+        const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
         // Convert the start date string to a Date object for proper formatting
         const startDate = new Date(detailedActivity.start_date);
@@ -534,7 +569,7 @@ export class StravaService {
 
     try {
       // Fetch athlete profile
-      const response = await fetch('https://www.strava.com/api/v3/athlete', {
+      const response = await fetchWithRetry('https://www.strava.com/api/v3/athlete', {
         headers: { Authorization: `Bearer ${this.tokens!.accessToken}` }
       });
 
@@ -609,6 +644,7 @@ export class StravaService {
     time: string;
     date: string;
   }>> {
+    // Get activities for analysis
     const activities = await db
       .select()
       .from(stravaActivities)
@@ -620,6 +656,8 @@ export class StravaService {
       )
       .orderBy(desc(stravaActivities.startDate));
 
+    // Track both standard race distances and best efforts
+    const personalBests = new Map<string, { time: number; date: string }>();
     const raceDistances = {
       '5K': 5000,
       '10K': 10000,
@@ -627,9 +665,9 @@ export class StravaService {
       'Marathon': 42195
     };
 
-    const personalBests = new Map<string, { time: number; date: string }>();
-
+    // Process each activity
     for (const activity of activities) {
+      // Check standard race distances
       for (const [raceName, raceDistance] of Object.entries(raceDistances)) {
         if (Math.abs(activity.distance - raceDistance) / raceDistance <= 0.01) {
           const time = activity.movingTime;
@@ -643,8 +681,36 @@ export class StravaService {
           }
         }
       }
+
+      // Process best efforts from split metrics if available
+      if (activity.splitMetrics) {
+        for (const split of activity.splitMetrics) {
+          // Common racing distances in meters
+          const distances = {
+            '1K': 1000,
+            '1 Mile': 1609.34,
+            '5K': 5000,
+            '10K': 10000
+          };
+
+          for (const [effortName, effortDistance] of Object.entries(distances)) {
+            if (Math.abs(split.distance - effortDistance) / effortDistance <= 0.01) {
+              const time = split.elapsedTime;
+              const existingPB = personalBests.get(effortName);
+
+              if (!existingPB || time < existingPB.time) {
+                personalBests.set(effortName, {
+                  time,
+                  date: activity.startDate.toISOString()
+                });
+              }
+            }
+          }
+        }
+      }
     }
 
+    // Convert to array and format times
     return Array.from(personalBests.entries()).map(([distance, record]) => ({
       distance,
       time: this.formatTime(record.time),
