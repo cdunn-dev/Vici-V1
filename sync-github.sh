@@ -7,6 +7,9 @@ echo "Checking for uncommitted changes..."
 git config --global user.email "replit@example.com" || true
 git config --global user.name "Replit Automator" || true
 
+# Change to the project directory
+cd /home/runner/workspace || exit 1
+
 # Check if there are any changes to commit
 if [[ -n $(git status -s) ]]; then
   echo "Found changes, committing..."
