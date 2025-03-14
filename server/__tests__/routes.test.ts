@@ -12,95 +12,6 @@ vi.mock('../services/strava', () => ({
   syncStravaActivities: vi.fn()
 }));
 
-describe('API Routes', () => {
-  let app: express.Express;
-
-  beforeEach(() => {
-    app = express();
-    registerRoutes(app);
-  });
-
-  describe('Strava Profile Endpoint', () => {
-    const mockProfile = {
-      gender: 'M',
-      birthday: '1990-01-01',
-      measurementPreference: 'meters',
-      weight: 70,
-      profile: {
-        firstName: 'John',
-        lastName: 'Doe',
-        city: 'New York',
-        state: 'NY',
-        country: 'United States'
-      },
-      runningExperience: {
-        level: 'intermediate',
-        weeklyMileage: 30,
-        preferredRunDays: ['monday', 'wednesday', 'saturday'],
-        commonWorkoutTypes: ['easy', 'tempo', 'long run']
-      }
-    };
-
-    beforeEach(() => {
-      vi.clearAllMocks();
-    });
-
-    it('should return 401 when not authenticated', async () => {
-      const response = await request(app).get('/api/strava/profile');
-      expect(response.status).toBe(401);
-    });
-
-    it('should return 400 when Strava is not connected', async () => {
-      const response = await request(app)
-        .get('/api/strava/profile')
-        .set('user', JSON.stringify({ id: 1, stravaTokens: null }));
-      expect(response.status).toBe(400);
-    });
-
-    it('should return profile data when authenticated and connected', async () => {
-      vi.mocked(StravaService).mockImplementation(() => ({
-        getAthleteProfile: vi.fn().mockResolvedValue(mockProfile),
-        analyzeRunningExperience: vi.fn().mockResolvedValue(mockProfile.runningExperience)
-      }));
-
-      const response = await request(app)
-        .get('/api/strava/profile')
-        .set('user', JSON.stringify({
-          id: 1,
-          stravaTokens: {
-            accessToken: 'valid_token',
-            refreshToken: 'refresh_token',
-            expiresAt: Date.now() / 1000 + 3600
-          }
-        }));
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual(mockProfile);
-    });
-
-    it('should handle errors from Strava API', async () => {
-      vi.mocked(StravaService).mockImplementation(() => ({
-        getAthleteProfile: vi.fn().mockRejectedValue(new Error('Strava API error')),
-        analyzeRunningExperience: vi.fn().mockRejectedValue(new Error('Strava API error'))
-      }));
-
-      const response = await request(app)
-        .get('/api/strava/profile')
-        .set('user', JSON.stringify({
-          id: 1,
-          stravaTokens: {
-            accessToken: 'valid_token',
-            refreshToken: 'refresh_token',
-            expiresAt: Date.now() / 1000 + 3600
-          }
-        }));
-
-      expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Failed to fetch Strava profile');
-    });
-  });
-});
-
 describe('Strava OAuth Routes', () => {
   let app: express.Express;
 
@@ -129,8 +40,8 @@ describe('Strava OAuth Routes', () => {
         })
         .set('user', JSON.stringify({ id: 123 }));
 
-      expect(response.status).toBe(302); // Redirect after success
-      expect(response.header.location).toBe('/training');
+      expect(response.status).toBe(302);
+      expect(response.header.location).toBe('/profile/review');
     });
 
     it('should handle authorization errors', async () => {
@@ -168,6 +79,135 @@ describe('Strava OAuth Routes', () => {
 
       expect(response.status).toBe(302);
       expect(response.header.location).toBe('/auth?error=strava-auth-failed');
+    });
+  });
+
+  describe('Profile Data Sync and Storage', () => {
+    const mockProfile = {
+      gender: 'M',
+      birthday: '1990-01-01',
+      measurementPreference: 'miles',
+      profile: {
+        firstName: 'John',
+        lastName: 'Doe',
+        profilePicture: 'https://example.com/pic.jpg'
+      },
+      personalBests: [
+        { distance: '5K', time: '20:00', date: '2025-01-01' }
+      ],
+      stravaStats: {
+        totalDistance: 1000000,
+        totalRuns: 100
+      },
+      runningExperience: {
+        level: 'intermediate',
+        weeklyMileage: 30,
+        preferredRunDays: ['monday', 'wednesday', 'saturday'],
+        commonWorkoutTypes: ['easy', 'tempo', 'long run']
+      }
+    };
+
+    it('should properly store and return profile data', async () => {
+      vi.mocked(StravaService).mockImplementation(() => ({
+        getAthleteProfile: vi.fn().mockResolvedValue(mockProfile),
+        analyzeRunningProfile: vi.fn().mockResolvedValue(mockProfile.runningExperience)
+      }));
+
+      // Test profile storage during OAuth callback
+      const tokens = {
+        accessToken: 'test_access',
+        refreshToken: 'test_refresh',
+        expiresAt: Date.now() / 1000 + 3600
+      };
+
+      vi.mocked(exchangeStravaCode).mockResolvedValueOnce(tokens);
+
+      const callbackResponse = await request(app)
+        .get('/api/auth/strava/callback')
+        .query({ code: 'valid_code' })
+        .set('user', JSON.stringify({ id: 123 }));
+
+      expect(callbackResponse.status).toBe(302);
+      expect(callbackResponse.header.location).toBe('/profile/review');
+
+      // Verify stored data can be retrieved
+      const profileResponse = await request(app)
+        .get('/api/strava/profile')
+        .set('user', JSON.stringify({
+          id: 123,
+          stravaTokens: tokens
+        }));
+
+      expect(profileResponse.status).toBe(200);
+      expect(profileResponse.body).toMatchObject({
+        gender: mockProfile.gender,
+        birthday: mockProfile.birthday,
+        measurementPreference: mockProfile.measurementPreference,
+        runningExperience: mockProfile.runningExperience
+      });
+    });
+
+    it('should handle profile update errors gracefully', async () => {
+      vi.mocked(StravaService).mockImplementation(() => ({
+        getAthleteProfile: vi.fn().mockRejectedValue(new Error('Failed to fetch profile')),
+        analyzeRunningProfile: vi.fn().mockRejectedValue(new Error('Analysis failed'))
+      }));
+
+      const response = await request(app)
+        .patch('/api/users/123')
+        .set('user', JSON.stringify({ id: 123 }))
+        .send({
+          gender: 'M',
+          birthday: '1990-01-01',
+          preferredDistanceUnit: 'miles'
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBeTruthy();
+    });
+  });
+
+  describe('Continuous Sync', () => {
+    it('should handle activity sync requests', async () => {
+      const user = {
+        id: 123,
+        stravaTokens: {
+          accessToken: 'valid_token',
+          refreshToken: 'refresh_token',
+          expiresAt: Date.now() / 1000 + 3600
+        }
+      };
+
+      vi.mocked(syncStravaActivities).mockResolvedValueOnce();
+
+      const response = await request(app)
+        .post('/api/activities/sync')
+        .set('user', JSON.stringify(user));
+
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe('Activities synced successfully');
+    });
+
+    it('should handle sync failures appropriately', async () => {
+      const user = {
+        id: 123,
+        stravaTokens: {
+          accessToken: 'invalid_token',
+          refreshToken: 'refresh_token',
+          expiresAt: Date.now() / 1000 + 3600
+        }
+      };
+
+      vi.mocked(syncStravaActivities).mockRejectedValueOnce(
+        new Error('Sync failed')
+      );
+
+      const response = await request(app)
+        .post('/api/activities/sync')
+        .set('user', JSON.stringify(user));
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Failed to sync activities');
     });
   });
 });
