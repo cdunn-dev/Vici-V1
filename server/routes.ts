@@ -102,23 +102,27 @@ export async function registerRoutes(app: Express) {
       // If user is authenticated, update their Strava tokens
       if (req.isAuthenticated() && req.user) {
         console.log("[Strava Callback] Updating tokens for user:", req.user.id);
-        await storage.updateUser(req.user.id, {
-          stravaTokens: tokens,
-          connectedApps: [...(req.user.connectedApps || []), "strava"],
-        });
 
-        // Sync activities after successful connection
+        // Initialize Strava service
+        const stravaService = new StravaService(req.user.id);
+
         try {
-          await syncStravaActivities(req.user.id, tokens.accessToken);
-          console.log("[Strava Callback] Successfully synced activities");
+          // Fetch complete profile data
+          const [profile, runningProfile] = await Promise.all([
+            stravaService.getAthleteProfile(),
+            stravaService.analyzeRunningProfile(req.user.id)
+          ]);
 
-          // Analyze running profile
-          const stravaService = new StravaService(req.user.id);
-          const runningProfile = await stravaService.analyzeRunningProfile(req.user.id);
-          console.log("[Strava Callback] Running profile analysis:", runningProfile);
-
-          // Store running profile in user data
+          // Update user profile with Strava data
           await storage.updateUser(req.user.id, {
+            stravaTokens: tokens,
+            connectedApps: [...(req.user.connectedApps || []), "strava"],
+            gender: profile.gender,
+            birthday: profile.birthday,
+            preferredDistanceUnit: profile.measurementPreference,
+            profilePicture: profile.profile.profilePicture,
+            personalBests: profile.personalBests,
+            stravaStats: profile.stravaStats,
             runningExperience: JSON.stringify({
               level: runningProfile.fitnessLevel,
               weeklyMileage: runningProfile.weeklyMileage,
@@ -127,9 +131,16 @@ export async function registerRoutes(app: Express) {
             })
           });
 
+          // Sync activities
+          await syncStravaActivities(req.user.id, tokens.accessToken);
+          console.log("[Strava Callback] Successfully synced activities");
+
         } catch (syncError) {
-          console.error("[Strava Callback] Error syncing activities:", syncError);
+          console.error("[Strava Callback] Error during profile sync:", syncError);
         }
+
+        // Redirect to profile review page
+        return res.redirect('/profile/review');
       }
 
       // Redirect back to training plan with preserved state

@@ -337,6 +337,7 @@ export class StravaService {
     await this.refreshTokenIfNeeded();
 
     try {
+      // Fetch athlete profile
       const response = await fetch('https://www.strava.com/api/v3/athlete', {
         headers: { Authorization: `Bearer ${this.tokens!.accessToken}` }
       });
@@ -346,6 +347,9 @@ export class StravaService {
       }
 
       const data = await response.json();
+
+      // Extract personal bests from activities
+      const personalBests = await this.analyzePersonalBests(this.userId);
 
       return {
         gender: data.sex,
@@ -357,13 +361,86 @@ export class StravaService {
           lastName: data.lastname,
           city: data.city,
           state: data.state,
-          country: data.country
+          country: data.country,
+          profilePicture: data.profile_medium // Add profile picture URL
+        },
+        personalBests,
+        stravaStats: {
+          totalDistance: data.total_distance || 0,
+          totalRuns: data.total_runs || 0,
+          recentRaces: [],
+          predictedRaces: []
         }
       };
     } catch (error) {
       console.error('Error fetching athlete profile:', error);
       throw error;
     }
+  }
+
+  private async analyzePersonalBests(userId: number): Promise<Array<{
+    distance: string;
+    time: string;
+    date: string;
+  }>> {
+    // Get all activities
+    const activities = await db
+      .select()
+      .from(stravaActivities)
+      .where(
+        and(
+          eq(stravaActivities.userId, userId),
+          eq(stravaActivities.type, "Run")
+        )
+      )
+      .orderBy(desc(stravaActivities.startDate));
+
+    // Standard race distances in meters
+    const raceDistances = {
+      '5K': 5000,
+      '10K': 10000,
+      'Half Marathon': 21097.5,
+      'Marathon': 42195
+    };
+
+    const personalBests = new Map<string, { time: number; date: string }>();
+
+    // Analyze each activity for PBs
+    for (const activity of activities) {
+      // Find closest standard distance
+      for (const [raceName, raceDistance] of Object.entries(raceDistances)) {
+        // Allow 1% variance in distance
+        if (Math.abs(activity.distance - raceDistance) / raceDistance <= 0.01) {
+          const time = activity.movingTime; // in seconds
+          const existingPB = personalBests.get(raceName);
+
+          if (!existingPB || time < existingPB.time) {
+            personalBests.set(raceName, {
+              time,
+              date: activity.startDate.toISOString()
+            });
+          }
+        }
+      }
+    }
+
+    // Convert to array format
+    return Array.from(personalBests.entries()).map(([distance, record]) => ({
+      distance,
+      time: this.formatTime(record.time),
+      date: record.date
+    }));
+  }
+
+  private formatTime(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
 
   async analyzeRunningProfile(userId: number): Promise<{
