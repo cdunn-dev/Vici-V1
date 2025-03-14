@@ -1,12 +1,15 @@
 import { pgTable, serial, text, boolean, timestamp, integer, real, doublePrecision, jsonb } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
+import { workouts, users } from "@shared/schema";
 
-export const activities = pgTable('strava_activities', {
+// Define relationships between tables
+export const stravaActivities = pgTable('strava_activities', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
   stravaId: text('strava_id').notNull().unique(),
-  userId: integer('user_id').notNull(),
   name: text('name').notNull(),
+  description: text('description'),
   type: text('type').notNull(),
   startDate: timestamp('start_date').notNull(),
   distance: doublePrecision('distance').notNull(),
@@ -36,19 +39,72 @@ export const activities = pgTable('strava_activities', {
   deviceWatts: boolean('device_watts'),
   hasHeartrate: boolean('has_heartrate'),
 
-  // Complex data types stored as JSONB
-  map: jsonb('map'),
-  laps: jsonb('laps'),
-  splitMetrics: jsonb('split_metrics'),
-  heartrateZones: jsonb('heartrate_zones'),
-  paceZones: jsonb('pace_zones'),
+  // Complex data types stored as JSONB for better querying and flexibility
+  map: jsonb('map').$type<{
+    summaryPolyline: string;
+    resourceState: number;
+    streamData?: {
+      distance: number[];
+      altitude: number[];
+      velocity: number[];
+      heartrate?: number[];
+      cadence?: number[];
+      watts?: number[];
+      temp?: number[];
+      time: number[];
+    };
+  }>(),
 
-  workoutId: integer('workout_id'),
+  laps: jsonb('laps').$type<{
+    lapIndex: number;
+    splitIndex: number;
+    distance: number;
+    elapsedTime: number;
+    movingTime: number;
+    startDate: string;
+    averageSpeed: number;
+    maxSpeed?: number;
+    averageHeartrate?: number;
+    maxHeartrate?: number;
+    paceZone?: number;
+  }[]>(),
+
+  splitMetrics: jsonb('split_metrics').$type<{
+    distance: number;
+    elapsedTime: number;
+    elevationDifference: number;
+    movingTime: number;
+    split: number;
+    averageSpeed: number;
+    averageHeartrate?: number;
+    paceZone?: number;
+  }[]>(),
+
+  heartrateZones: jsonb('heartrate_zones').$type<{
+    zone: number;
+    min: number;
+    max: number;
+    timeInZone?: number;
+  }[]>(),
+
+  paceZones: jsonb('pace_zones').$type<{
+    zone: number;
+    description: string;
+    pace: number;
+    timeInZone?: number;
+  }[]>(),
+
+  // References to related tables
+  workoutId: integer('workout_id').references(() => workouts.id),
+
+  // Metadata
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });
 
-export const insertActivitySchema = createInsertSchema(activities);
+// Create insert schema with proper typing
+export const insertActivitySchema = createInsertSchema(stravaActivities);
 
-export type Activity = typeof activities.$inferSelect;
+// Export types for use in application code
+export type Activity = typeof stravaActivities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;

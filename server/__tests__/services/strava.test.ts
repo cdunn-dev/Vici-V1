@@ -198,71 +198,67 @@ describe('Strava Service', () => {
   });
 
   describe('syncStravaActivities', () => {
-    const mockDetailedActivity = {
-      id: 1234567890,
-      name: "Morning Run",
-      description: "Great run today!",
-      type: "Run",
-      start_date: "2025-03-15T08:00:00Z",
-      distance: 5000,
-      moving_time: 1800,
-      elapsed_time: 1800,
-      total_elevation_gain: 50,
-      average_speed: 2.78,
-      max_speed: 3.5,
-      average_heartrate: 150,
-      max_heartrate: 175,
-      start_latitude: 40.7128,
-      start_longitude: -74.0060,
-      device_name: "Garmin Forerunner",
-      average_cadence: 180,
-      average_temp: 20,
-      suffer_score: 80,
-      perceived_exertion: 7,
-      elevation_high: 100,
-      elevation_low: 0,
-      map: {
-        summary_polyline: "test_polyline",
-        resource_state: 2
-      },
-      laps: [
-        {
-          lap_index: 1,
-          split_index: 1,
-          distance: 1000,
-          elapsed_time: 360,
-          moving_time: 360,
-          start_date: "2025-03-15T08:05:00Z",
-          average_speed: 2.8,
-          max_speed: 3.2,
-          average_heartrate: 155,
-          max_heartrate: 165
-        }
-      ],
-      splits_metric: [
-        {
-          distance: 1000,
-          elapsed_time: 360,
-          elevation_difference: 10,
-          moving_time: 360,
-          split: 1,
-          average_speed: 2.8,
-          average_heartrate: 155
-        }
-      ]
-    };
-
     it('should fetch and store detailed activity data successfully', async () => {
-      // Mock the initial activities list response
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
         })
-        // Mock the detailed activity fetch
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve(mockDetailedActivity)
+          json: () => Promise.resolve({
+            id: 1234567890,
+            name: "Morning Run",
+            description: "Great run today!",
+            type: "Run",
+            start_date: "2025-03-15T08:00:00Z",
+            distance: 5000,
+            moving_time: 1800,
+            elapsed_time: 1800,
+            total_elevation_gain: 50,
+            average_speed: 2.78,
+            max_speed: 3.5,
+            average_heartrate: 150,
+            max_heartrate: 175,
+            start_latitude: 40.7128,
+            start_longitude: -74.0060,
+            device_name: "Garmin Forerunner",
+            average_cadence: 180,
+            average_temp: 20,
+            suffer_score: 80,
+            perceived_exertion: 7,
+            elevation_high: 100,
+            elevation_low: 0,
+            map: {
+              summary_polyline: "test_polyline",
+              resource_state: 2
+            },
+            laps: [
+              {
+                lap_index: 1,
+                split_index: 1,
+                distance: 1000,
+                elapsed_time: 360,
+                moving_time: 360,
+                start_date: "2025-03-15T08:05:00Z",
+                average_speed: 2.8,
+                max_speed: 3.2,
+                average_heartrate: 155,
+                max_heartrate: 165
+              }
+            ],
+            splits_metric: [
+              {
+                distance: 1000,
+                elapsed_time: 360,
+                elevation_difference: 10,
+                moving_time: 360,
+                split: 1,
+                average_speed: 2.8,
+                average_heartrate: 155
+              }
+            ]
+          })
         });
 
       await syncStravaActivities(1, 'test_access_token');
@@ -313,7 +309,7 @@ describe('Strava Service', () => {
         // Mock detailed activity fetches
         .mockResolvedValue({
           ok: true,
-          json: () => Promise.resolve({ ...mockDetailedActivity })
+          json: () => Promise.resolve({id: 1234567890, name: "Morning Run", description: "Great run today!", type: "Run", start_date: "2025-03-15T08:00:00Z", distance: 5000, moving_time: 1800, elapsed_time: 1800, total_elevation_gain: 50, average_speed: 2.78, max_speed: 3.5, average_heartrate: 150, max_heartrate: 175, start_latitude: 40.7128, start_longitude: -74.0060, device_name: "Garmin Forerunner", average_cadence: 180, average_temp: 20, suffer_score: 80, perceived_exertion: 7, elevation_high: 100, elevation_low: 0, map: { summary_polyline: "test_polyline", resource_state: 2 }, laps: [{ lap_index: 1, split_index: 1, distance: 1000, elapsed_time: 360, moving_time: 360, start_date: "2025-03-15T08:05:00Z", average_speed: 2.8, max_speed: 3.2, average_heartrate: 155, max_heartrate: 165 }], splits_metric: [{ distance: 1000, elapsed_time: 360, elevation_difference: 10, moving_time: 360, split: 1, average_speed: 2.8, average_heartrate: 155 }]})
         });
 
       await syncStravaActivities(1, 'test_access_token');
@@ -334,7 +330,7 @@ describe('Strava Service', () => {
         .mockRejectedValueOnce(new Error('Failed to fetch'))
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve(mockDetailedActivity)
+          json: () => Promise.resolve({id: 1234567890, name: "Morning Run", description: "Great run today!", type: "Run", start_date: "2025-03-15T08:00:00Z", distance: 5000, moving_time: 1800, elapsed_time: 1800, total_elevation_gain: 50, average_speed: 2.78, max_speed: 3.5, average_heartrate: 150, max_heartrate: 175, start_latitude: 40.7128, start_longitude: -74.0060, device_name: "Garmin Forerunner", average_cadence: 180, average_temp: 20, suffer_score: 80, perceived_exertion: 7, elevation_high: 100, elevation_low: 0, map: { summary_polyline: "test_polyline", resource_state: 2 }, laps: [{ lap_index: 1, split_index: 1, distance: 1000, elapsed_time: 360, moving_time: 360, start_date: "2025-03-15T08:05:00Z", average_speed: 2.8, max_speed: 3.2, average_heartrate: 155, max_heartrate: 165 }], splits_metric: [{ distance: 1000, elapsed_time: 360, elevation_difference: 10, moving_time: 360, split: 1, average_speed: 2.8, average_heartrate: 155 }]})
         });
 
       await syncStravaActivities(1, 'test_access_token');
@@ -494,6 +490,151 @@ describe('Strava Service', () => {
       await service.stopAutoSync();
       vi.advanceTimersByTime(15 * 60 * 1000);
       expect(storage.getUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('fetchDetailedActivity', () => {
+    const mockDetailedActivity = {
+      id: 1234567890,
+      name: "Morning Run",
+      description: "Great run today!",
+      type: "Run",
+      start_date: "2025-03-15T08:00:00Z",
+      distance: 5000,
+      moving_time: 1800,
+      elapsed_time: 1800,
+      total_elevation_gain: 50,
+      average_speed: 2.78,
+      max_speed: 3.5,
+      average_heartrate: 150,
+      max_heartrate: 175,
+      start_latitude: 40.7128,
+      start_longitude: -74.0060,
+      device_name: "Garmin Forerunner",
+      average_cadence: 180,
+      average_temp: 20,
+      suffer_score: 80,
+      perceived_exertion: 7,
+      elevation_high: 100,
+      elevation_low: 0,
+      map: {
+        summary_polyline: "test_polyline",
+        resource_state: 2
+      },
+      laps: [
+        {
+          lap_index: 1,
+          split_index: 1,
+          distance: 1000,
+          elapsed_time: 360,
+          moving_time: 360,
+          start_date: "2025-03-15T08:05:00Z",
+          average_speed: 2.8,
+          max_speed: 3.2,
+          average_heartrate: 155,
+          max_heartrate: 165
+        }
+      ],
+      splits_metric: [
+        {
+          distance: 1000,
+          elapsed_time: 360,
+          elevation_difference: 10,
+          moving_time: 360,
+          split: 1,
+          average_speed: 2.8,
+          average_heartrate: 155
+        }
+      ]
+    };
+
+    it('should fetch and store detailed activity data successfully', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockDetailedActivity)
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      // Verify db insert was called with processed activity data
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      expect(insertCall[0]).toBe(stravaActivities);
+
+      const insertedActivity = insertCall[1].values[0];
+      expect(insertedActivity).toMatchObject({
+        stravaId: '1234567890',
+        name: 'Morning Run',
+        description: 'Great run today!',
+        type: 'Run',
+        laps: expect.any(Array),
+        splitMetrics: expect.any(Array)
+      });
+
+      // Verify detailed metrics were processed correctly
+      expect(insertedActivity.laps).toHaveLength(1);
+      expect(insertedActivity.splitMetrics).toHaveLength(1);
+      expect(insertedActivity.heartrateZones).toHaveLength(5); // Should have 5 HR zones
+      expect(insertedActivity.paceZones).toHaveLength(5); // Should have 5 pace zones
+    });
+
+    it('should handle missing optional fields gracefully', async () => {
+      const activityWithoutOptionals = {
+        ...mockDetailedActivity,
+        laps: undefined,
+        splits_metric: undefined,
+        average_heartrate: undefined,
+        max_heartrate: undefined
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(activityWithoutOptionals)
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      const insertedActivity = insertCall[1].values[0];
+
+      expect(insertedActivity.laps).toEqual([]);
+      expect(insertedActivity.splitMetrics).toEqual([]);
+      expect(insertedActivity.heartrateZones).toEqual([]);
+      expect(insertedActivity.paceZones).toEqual([]);
+    });
+
+    it('should correctly calculate heart rate zones when data is available', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockDetailedActivity)
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      const insertedActivity = insertCall[1].values[0];
+
+      expect(insertedActivity.heartrateZones).toEqual([
+        { zone: 1, min: 0, max: 105 },
+        { zone: 2, min: 105, max: 123 },
+        { zone: 3, min: 123, max: 140 },
+        { zone: 4, min: 140, max: 158 },
+        { zone: 5, min: 158, max: 175 }
+      ]);
     });
   });
 });

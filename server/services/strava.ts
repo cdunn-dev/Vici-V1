@@ -324,20 +324,38 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_R
 
 // Add this function to handle detailed activity fetching
 async function fetchDetailedActivity(activityId: number, accessToken: string): Promise<StravaActivity> {
-  const response = await fetchWithRetry(
-    `${STRAVA_API_BASE}/activities/${activityId}?include_all_efforts=true`,
-    {
-      headers: { Authorization: `Bearer ${accessToken}` }
+  console.log(`[Strava] Fetching detailed activity ${activityId}`);
+  try {
+    const response = await fetchWithRetry(
+      `${STRAVA_API_BASE}/activities/${activityId}?include_all_efforts=true`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Strava] Failed to fetch detailed activity ${activityId}:`, response.status, response.statusText, errorText);
+      throw new StravaError(`Failed to fetch detailed activity: ${response.statusText}`, 'API_ERROR');
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[Strava] Failed to fetch detailed activity ${activityId}:`, response.status, response.statusText, errorText);
-    throw new StravaError(`Failed to fetch detailed activity: ${response.statusText}`, 'API_ERROR');
+    const activity = await response.json();
+
+    // Debug log raw response
+    console.log(`[Strava] Raw activity data for ${activityId}:`, {
+      id: activity.id,
+      type: activity.type,
+      has_heartrate: activity.has_heartrate,
+      has_laps: !!activity.laps?.length,
+      has_splits: !!activity.splits_metric?.length,
+      has_map: !!activity.map
+    });
+
+    return activity;
+  } catch (error) {
+    console.error(`[Strava] Error fetching activity ${activityId}:`, error);
+    throw error;
   }
-
-  return await response.json();
 }
 
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
@@ -356,7 +374,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
       .orderBy(desc(stravaActivities.startDate))
       .limit(1);
 
-    // Configure pagination and time filtering
     const params = new URLSearchParams({
       per_page: "50",
       page: "1"
@@ -378,7 +395,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Strava] Activities fetch failed:', response.status, response.statusText, errorText);
       throw new StravaError(
         `${ERROR_MESSAGES.FAILED_FETCH}: ${response.statusText}. Details: ${errorText}`,
         'API_ERROR'
@@ -387,11 +403,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
     const activities = await response.json() as StravaActivity[];
     console.log(`[Strava] Retrieved ${activities.length} activities from API`);
-
-    if (!Array.isArray(activities)) {
-      console.error('[Strava] Invalid activities response:', activities);
-      throw new StravaError(ERROR_MESSAGES.INVALID_RESPONSE, 'DATA_ERROR');
-    }
 
     const processedActivities: InsertStravaActivity[] = [];
     const errors: Error[] = [];
@@ -403,41 +414,27 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           continue;
         }
 
-        console.log(`[Strava] Fetching detailed data for activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
-        // Add debug logging to verify API response format
-        console.log('[Strava] Raw API response:', JSON.stringify({
-          id: activity.id,
-          name: detailedActivity.name,
-          type: detailedActivity.type,
-          has_heartrate: detailedActivity.has_heartrate,
-          laps: detailedActivity.laps,
-          splits_metric: detailedActivity.splits_metric,
-          map: detailedActivity.map
-        }, null, 2));
+        // Process heart rate zones if available
+        const heartrateZones = detailedActivity.has_heartrate && detailedActivity.average_heartrate && detailedActivity.max_heartrate
+          ? calculateHeartRateZones({
+              avgHeartrate: detailedActivity.average_heartrate,
+              maxHeartrate: detailedActivity.max_heartrate
+            })
+          : [];
 
+        // Process pace zones if splits are available
+        const paceZones = detailedActivity.splits_metric?.length
+          ? calculatePaceZones(
+              detailedActivity.splits_metric.map(split => ({
+                distance: split.distance,
+                time: split.moving_time
+              }))
+            )
+          : [];
 
-        // Debug log the detailed activity data
-        console.log('[Strava] Detailed activity data:', JSON.stringify({
-          id: detailedActivity.id,
-          has_heartrate: detailedActivity.has_heartrate,
-          laps: detailedActivity.laps?.length,
-          splits: detailedActivity.splits_metric?.length
-        }));
-
-        const heartrateZones = detailedActivity.has_heartrate ? calculateHeartRateZones({
-          avgHeartrate: detailedActivity.average_heartrate || 0,
-          maxHeartrate: detailedActivity.max_heartrate || 0
-        }) : [];
-
-        const paceZones = detailedActivity.splits_metric ? calculatePaceZones(
-          detailedActivity.splits_metric.map(split => ({
-            distance: split.distance,
-            time: split.moving_time
-          }))
-        ) : [];
-
+        // Process laps with proper null handling
         const laps = detailedActivity.laps?.map(lap => ({
           lapIndex: lap.lap_index,
           splitIndex: lap.split_index,
@@ -452,6 +449,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           paceZone: lap.pace_zone || null
         }));
 
+        // Process split metrics with proper null handling
         const splitMetrics = detailedActivity.splits_metric?.map(split => ({
           distance: split.distance,
           elapsedTime: split.elapsed_time,
@@ -502,19 +500,20 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           } : null,
           laps: laps || [],
           splitMetrics: splitMetrics || [],
-          heartrateZones: heartrateZones,
-          paceZones: paceZones,
+          heartrateZones,
+          paceZones,
           workoutId: null
         };
 
-        // Debug log the processed activity data
-        console.log('[Strava] Processed activity data:', JSON.stringify({
+        // Debug log the processed activity
+        console.log('[Strava] Processed activity:', {
           id: insertActivity.stravaId,
           hasHeartrate: insertActivity.hasHeartrate,
-          heartrateZones: insertActivity.heartrateZones?.length,
-          laps: insertActivity.laps?.length,
-          splitMetrics: insertActivity.splitMetrics?.length
-        }));
+          hasLaps: insertActivity.laps.length > 0,
+          hasSplits: insertActivity.splitMetrics.length > 0,
+          hasHRZones: insertActivity.heartrateZones.length > 0,
+          hasPaceZones: insertActivity.paceZones.length > 0
+        });
 
         processedActivities.push(insertActivity);
       } catch (error) {
