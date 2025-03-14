@@ -76,8 +76,7 @@ export async function registerRoutes(app: Express) {
         code: req.query.code ? "present" : "missing",
         state: req.query.state,
         error: req.query.error,
-        error_description: req.query.error_description,
-        headers: req.headers
+        error_description: req.query.error_description
       });
 
       const code = req.query.code;
@@ -126,8 +125,8 @@ export async function registerRoutes(app: Express) {
             birthday: profile.birthday,
             preferredDistanceUnit: profile.measurementPreference,
             profilePicture: profile.profile.profilePicture,
-            personalBests: profile.personalBests,
-            stravaStats: profile.stravaStats,
+            personalBests: JSON.stringify(profile.personalBests),
+            stravaStats: JSON.stringify(profile.stravaStats),
             runningExperience: JSON.stringify({
               level: runningProfile.fitnessLevel,
               weeklyMileage: runningProfile.weeklyMileage,

@@ -111,6 +111,11 @@ export default function ProfileReview() {
               <CardTitle>Review Your Strava Profile</CardTitle>
               <CardDescription>
                 We've imported your data from Strava. Please review and confirm these details.
+                {stravaProfile?.profile && (
+                  <div className="mt-2 text-sm">
+                    Welcome, {stravaProfile.profile.firstName} {stravaProfile.profile.lastName}
+                  </div>
+                )}
               </CardDescription>
             </div>
           </div>
@@ -231,11 +236,17 @@ export default function ProfileReview() {
                     </div>
                   )}
 
-                  {/* Running Stats */}
+                  {/* Running Experience */}
                   {stravaProfile?.runningExperience && (
                     <div className="space-y-2">
                       <h4 className="font-medium">Running Stats</h4>
                       <div className="grid gap-2">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>Experience Level</div>
+                          <div className="font-medium">
+                            {stravaProfile.runningExperience.level}
+                          </div>
+                        </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <div>Weekly Mileage</div>
                           <div className="font-mono">
@@ -246,6 +257,12 @@ export default function ProfileReview() {
                           <div>Preferred Run Days</div>
                           <div className="font-mono">
                             {stravaProfile.runningExperience.preferredRunDays.length} days/week
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>Common Workouts</div>
+                          <div className="font-medium">
+                            {stravaProfile.runningExperience.commonWorkoutTypes.join(", ")}
                           </div>
                         </div>
                       </div>
