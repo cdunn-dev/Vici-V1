@@ -25,6 +25,55 @@ export const CoachingStyleEnum = z.enum([
   "hybrid"
 ]);
 
+// Updated Gender enum to handle both Strava and display formats
+export const GenderEnum = z.enum([
+  "M",
+  "F",
+  "male",
+  "female",
+  "non-binary",
+  "other",
+  "prefer-not-to-say"
+]).transform(val => {
+  // Normalize gender values
+  switch(val) {
+    case 'M': return 'male';
+    case 'F': return 'female';
+    default: return val;
+  }
+});
+
+// Distance unit options
+export const DistanceUnitEnum = z.enum(["miles", "kilometers", "feet", "meters"]);
+
+// Personal best record schema
+export const personalBestSchema = z.object({
+  distance: z.string(),
+  time: z.string(),
+  date: z.string().datetime()
+});
+
+// Running experience schema
+export const runningExperienceSchema = z.object({
+  level: RunningExperienceLevelEnum,
+  weeklyMileage: z.number(),
+  preferredRunDays: z.array(z.string()),
+  commonWorkoutTypes: z.array(z.string()),
+  fitnessLevel: FitnessLevelEnum.optional()
+});
+
+// Strava stats schema
+export const stravaStatsSchema = z.object({
+  totalDistance: z.number(),
+  totalRuns: z.number(),
+  averagePace: z.number().optional(),
+  recentRaces: z.array(personalBestSchema).optional(),
+  predictedRaces: z.array(z.object({
+    distance: z.string(),
+    predictedTime: z.string()
+  })).optional()
+});
+
 // User schema with profile fields
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -42,58 +91,19 @@ export const users = pgTable("users", {
     refreshToken: string;
     expiresAt: number;
   } | null>(),
-  personalBests: json("personal_bests").$type<{
-    distance: string;
-    time: string;
-    date: string;
-  }[]>().default([]),
-  runningExperience: text("running_experience"),
-  fitnessLevel: text("fitness_level"),
-  preferredCoachingStyle: text("preferred_coaching_style"),
-  stravaStats: json("strava_stats").$type<{
-    totalDistance: number;
-    totalRuns: number;
-    averagePace: number;
-    recentRaces: {
-      distance: string;
-      time: string;
-      date: string;
-    }[];
-    predictedRaces: {
-      distance: string;
-      predictedTime: string;
-    }[];
-  } | null>(),
+  personalBests: json("personal_bests").$type<z.infer<typeof personalBestSchema>[]>().default([]),
+  runningExperience: json("running_experience").$type<z.infer<typeof runningExperienceSchema>>(),
+  stravaStats: json("strava_stats").$type<z.infer<typeof stravaStatsSchema> | null>()
 });
-
-// Personal best record schema
-export const personalBestSchema = z.object({
-  distance: z.string(),
-  time: z.string(),
-  date: z.string(),
-});
-
-// Gender options enum
-export const GenderEnum = z.enum([
-  "male",
-  "female",
-  "non-binary",
-  "other",
-  "prefer-not-to-say",
-]);
-
-// Distance unit options
-export const DistanceUnitEnum = z.enum(["miles", "kilometers"]);
 
 // Update user profile schema
 export const userProfileUpdateSchema = z.object({
   gender: GenderEnum.optional(),
-  birthday: z.string().optional(),
+  birthday: z.string().datetime().optional(),
   preferredDistanceUnit: DistanceUnitEnum.optional(),
   personalBests: z.array(personalBestSchema).optional(),
-  runningExperience: RunningExperienceLevelEnum.optional(),
-  fitnessLevel: FitnessLevelEnum.optional(),
-  preferredCoachingStyle: CoachingStyleEnum.optional(),
+  runningExperience: runningExperienceSchema.optional(),
+  fitnessLevel: FitnessLevelEnum.optional()
 });
 
 // Training plans table
@@ -205,10 +215,7 @@ export const targetRaceSchema = z.object({
   goalTime: z.string().optional(),
 });
 
-export const runningExperienceSchema = z.object({
-  level: z.string(),
-  fitnessLevel: z.string(),
-});
+
 
 export const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number(),
@@ -287,3 +294,6 @@ export type InsertStravaActivity = z.infer<typeof insertStravaActivitySchema>;
 export type Workout = typeof workouts.$inferSelect;
 export type InsertWorkout = z.infer<typeof insertWorkoutSchema>;
 export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>;
+export type PersonalBest = z.infer<typeof personalBestSchema>;
+export type RunningExperience = z.infer<typeof runningExperienceSchema>;
+export type StravaStats = z.infer<typeof stravaStatsSchema>;

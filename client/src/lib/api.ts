@@ -6,6 +6,10 @@ interface RequestOptions {
   body?: any;
 }
 
+interface GetQueryFnOptions {
+  on401: "throw" | "returnNull";
+}
+
 export async function apiRequest(
   method: string,
   endpoint: string,
@@ -37,6 +41,35 @@ export async function apiRequest(
   }
 
   return response;
+}
+
+export async function getQueryFn<T = any>({ on401 = "throw" }: GetQueryFnOptions = { on401: "throw" }) {
+  return async (endpoint: string): Promise<T> => {
+    try {
+      const response = await fetch(endpoint, {
+        credentials: 'include'
+      });
+
+      if (response.status === 401) {
+        if (on401 === "returnNull") {
+          return null as T;
+        }
+        throw new Error("Unauthorized");
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          error: `HTTP error! status: ${response.status}`
+        }));
+        throw new Error(error.error || error.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`API Error (${endpoint}):`, error);
+      throw error;
+    }
+  };
 }
 
 export function invalidateQueries(queryKey: string | string[]) {

@@ -352,14 +352,20 @@ export class StravaService {
         tokens: 'REDACTED'
       });
 
+      // Transform gender from Strava format to our schema format
+      let normalizedGender = data.sex;
+      if (normalizedGender === 'M') normalizedGender = 'male';
+      if (normalizedGender === 'F') normalizedGender = 'female';
+
       // Extract personal bests from activities
       const personalBests = await this.analyzePersonalBests(this.userId);
+
       // Analyze running profile
       const runningProfile = await this.analyzeRunningProfile(this.userId);
 
       const profile: AthleteProfile = {
-        gender: data.sex || null,
-        birthday: data.birthday || null,
+        gender: normalizedGender || null,
+        birthday: data.birthday ? new Date(data.birthday).toISOString() : null,
         measurementPreference: data.measurement_preference || 'miles',
         weight: data.weight || null,
         profile: {
@@ -370,7 +376,11 @@ export class StravaService {
           country: data.country || null,
           profilePicture: data.profile_medium || null
         },
-        personalBests,
+        personalBests: personalBests.map(pb => ({
+          ...pb,
+          // Ensure date is in ISO format
+          date: new Date(pb.date).toISOString()
+        })),
         stravaStats: {
           totalDistance: Math.round(data.total_running_distance || 0),
           totalRuns: data.total_runs || 0,
@@ -381,7 +391,8 @@ export class StravaService {
           level: runningProfile.fitnessLevel,
           weeklyMileage: runningProfile.weeklyMileage,
           preferredRunDays: runningProfile.preferredRunDays,
-          commonWorkoutTypes: runningProfile.commonWorkoutTypes
+          commonWorkoutTypes: runningProfile.commonWorkoutTypes,
+          fitnessLevel: runningProfile.fitnessLevel
         }
       };
 
@@ -402,7 +413,6 @@ export class StravaService {
     time: string;
     date: string;
   }>> {
-    // Get all activities
     const activities = await db
       .select()
       .from(stravaActivities)
@@ -414,7 +424,6 @@ export class StravaService {
       )
       .orderBy(desc(stravaActivities.startDate));
 
-    // Standard race distances in meters
     const raceDistances = {
       '5K': 5000,
       '10K': 10000,
@@ -424,13 +433,10 @@ export class StravaService {
 
     const personalBests = new Map<string, { time: number; date: string }>();
 
-    // Analyze each activity for PBs
     for (const activity of activities) {
-      // Find closest standard distance
       for (const [raceName, raceDistance] of Object.entries(raceDistances)) {
-        // Allow 1% variance in distance
         if (Math.abs(activity.distance - raceDistance) / raceDistance <= 0.01) {
-          const time = activity.movingTime; // in seconds
+          const time = activity.movingTime;
           const existingPB = personalBests.get(raceName);
 
           if (!existingPB || time < existingPB.time) {
@@ -443,7 +449,6 @@ export class StravaService {
       }
     }
 
-    // Convert to array format
     return Array.from(personalBests.entries()).map(([distance, record]) => ({
       distance,
       time: this.formatTime(record.time),

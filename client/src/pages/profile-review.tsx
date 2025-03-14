@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useStravaProfile } from "@/hooks/use-strava-profile";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { userProfileUpdateSchema } from "@shared/schema";
+import { userProfileUpdateSchema, GenderEnum, RunningExperienceLevelEnum, FitnessLevelEnum } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -39,8 +39,13 @@ export default function ProfileReview() {
       birthday: "",
       preferredDistanceUnit: "miles",
       personalBests: [],
-      runningExperience: "",
-      fitnessLevel: ""
+      runningExperience: {
+        level: "beginner",
+        weeklyMileage: 0,
+        preferredRunDays: [],
+        commonWorkoutTypes: [],
+        fitnessLevel: "building-base"
+      }
     },
   });
 
@@ -59,8 +64,13 @@ export default function ProfileReview() {
         birthday: stravaProfile.birthday || "",
         preferredDistanceUnit: stravaProfile.measurementPreference || "miles",
         personalBests: stravaProfile.personalBests || [],
-        runningExperience: stravaProfile.runningExperience?.level || "",
-        fitnessLevel: stravaProfile.runningExperience?.fitnessLevel || ""
+        runningExperience: stravaProfile.runningExperience || {
+          level: "beginner",
+          weeklyMileage: 0,
+          preferredRunDays: [],
+          commonWorkoutTypes: [],
+          fitnessLevel: "building-base"
+        }
       });
     }
   }, [stravaProfile, form]);
@@ -130,16 +140,25 @@ export default function ProfileReview() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="M">Male</SelectItem>
-                          <SelectItem value="F">Female</SelectItem>
-                          <SelectItem value="O">Other</SelectItem>
+                          {Object.values(GenderEnum.Values).map((gender) => (
+                            <SelectItem
+                              key={gender}
+                              value={gender}
+                              className="capitalize"
+                            >
+                              {gender.replace(/-/g, " ")}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>
@@ -243,8 +262,8 @@ export default function ProfileReview() {
                       <div className="grid gap-2">
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <div>Experience Level</div>
-                          <div className="font-medium">
-                            {stravaProfile.runningExperience.level}
+                          <div className="font-medium capitalize">
+                            {stravaProfile.runningExperience.level.replace(/-/g, " ")}
                           </div>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -255,14 +274,18 @@ export default function ProfileReview() {
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <div>Preferred Run Days</div>
-                          <div className="font-mono">
-                            {stravaProfile.runningExperience.preferredRunDays.length} days/week
+                          <div className="font-mono capitalize">
+                            {stravaProfile.runningExperience.preferredRunDays.map(day => 
+                              day.charAt(0).toUpperCase() + day.slice(1)
+                            ).join(", ")}
                           </div>
                         </div>
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <div>Common Workouts</div>
-                          <div className="font-medium">
-                            {stravaProfile.runningExperience.commonWorkoutTypes.join(", ")}
+                          <div className="font-medium capitalize">
+                            {stravaProfile.runningExperience.commonWorkoutTypes.map(type => 
+                              type.replace(/-/g, " ")
+                            ).join(", ")}
                           </div>
                         </div>
                       </div>
