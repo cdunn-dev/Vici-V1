@@ -99,19 +99,24 @@ export async function registerRoutes(app: Express) {
       const tokens = await exchangeStravaCode(code.toString());
       console.log("[Strava Callback] Successfully received tokens");
 
-      // If user is authenticated, update their Strava tokens
+      // If user is authenticated, update their Strava tokens and profile
       if (req.isAuthenticated() && req.user) {
         console.log("[Strava Callback] Updating tokens for user:", req.user.id);
 
-        // Initialize Strava service
-        const stravaService = new StravaService(req.user.id);
-
         try {
+          // Initialize Strava service
+          const stravaService = new StravaService(req.user.id);
+
           // Fetch complete profile data
           const [profile, runningProfile] = await Promise.all([
             stravaService.getAthleteProfile(),
             stravaService.analyzeRunningProfile(req.user.id)
           ]);
+
+          console.log("[Strava Callback] Retrieved profile data:", {
+            profile: { ...profile, stravaTokens: "REDACTED" },
+            runningProfile
+          });
 
           // Update user profile with Strava data
           await storage.updateUser(req.user.id, {
@@ -135,15 +140,16 @@ export async function registerRoutes(app: Express) {
           await syncStravaActivities(req.user.id, tokens.accessToken);
           console.log("[Strava Callback] Successfully synced activities");
 
+          // Redirect to profile review page
+          return res.redirect('/profile/review');
         } catch (syncError) {
           console.error("[Strava Callback] Error during profile sync:", syncError);
+          // Continue with redirect even if sync fails
+          return res.redirect('/profile/review');
         }
-
-        // Redirect to profile review page
-        return res.redirect('/profile/review');
       }
 
-      // Redirect back to training plan with preserved state
+      // If not authenticated, redirect back with preserved state
       const returnPath = state ? decodeURIComponent(state) : '/training';
       res.redirect(returnPath);
     } catch (error) {

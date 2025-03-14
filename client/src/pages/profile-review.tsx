@@ -19,14 +19,15 @@ import { userProfileUpdateSchema } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Activity } from "lucide-react";
 import { apiRequest, invalidateQueries } from "@/lib/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfileReview() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { data: stravaProfile, isLoading: isLoadingStrava } = useStravaProfile();
-  
+
   const { data: user, isLoading: isLoadingUser } = useQuery({
     queryKey: ["/api/user"],
   });
@@ -39,27 +40,35 @@ export default function ProfileReview() {
       preferredDistanceUnit: "miles",
       personalBests: [],
       runningExperience: "",
-      fitnessLevel: "",
+      fitnessLevel: ""
     },
   });
+
+  // Debug log for Strava profile data
+  useEffect(() => {
+    if (stravaProfile) {
+      console.log("Strava profile data:", stravaProfile);
+    }
+  }, [stravaProfile]);
 
   // Update form when Strava profile loads
   useEffect(() => {
     if (stravaProfile) {
       form.reset({
-        gender: stravaProfile.gender,
-        birthday: stravaProfile.birthday,
-        preferredDistanceUnit: stravaProfile.measurementPreference,
+        gender: stravaProfile.gender || "",
+        birthday: stravaProfile.birthday || "",
+        preferredDistanceUnit: stravaProfile.measurementPreference || "miles",
         personalBests: stravaProfile.personalBests || [],
-        runningExperience: stravaProfile.runningExperience?.level,
-        fitnessLevel: stravaProfile.runningExperience?.fitnessLevel,
+        runningExperience: stravaProfile.runningExperience?.level || "",
+        fitnessLevel: stravaProfile.runningExperience?.fitnessLevel || ""
       });
     }
   }, [stravaProfile, form]);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data) => {
-      const response = await apiRequest("PATCH", `/api/users/${user?.id}`, data);
+      if (!user?.id) throw new Error("User ID not found");
+      const response = await apiRequest("PATCH", `/api/users/${user.id}`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -68,7 +77,6 @@ export default function ProfileReview() {
         title: "Success",
         description: "Profile updated successfully",
       });
-      // Redirect to training page after successful update
       setLocation("/training");
     },
     onError: (error) => {
@@ -92,15 +100,24 @@ export default function ProfileReview() {
     <div className="container py-6 space-y-8">
       <Card>
         <CardHeader>
-          <CardTitle>Review Your Strava Profile</CardTitle>
-          <CardDescription>
-            We've imported your data from Strava. Please review and confirm these details.
-          </CardDescription>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={stravaProfile?.profile?.profilePicture} />
+              <AvatarFallback>
+                <Activity className="h-8 w-8" />
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle>Review Your Strava Profile</CardTitle>
+              <CardDescription>
+                We've imported your data from Strava. Please review and confirm these details.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit((data) => updateProfileMutation.mutateAsync(data))} className="space-y-6">
-              {/* Profile Information */}
               <div className="grid gap-6">
                 <FormField
                   control={form.control}
@@ -120,7 +137,12 @@ export default function ProfileReview() {
                           <SelectItem value="O">Other</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Imported from Strava</FormDescription>
+                      <FormDescription>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Imported from Strava
+                        </div>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -139,7 +161,12 @@ export default function ProfileReview() {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>Imported from Strava</FormDescription>
+                      <FormDescription>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Imported from Strava
+                        </div>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -162,51 +189,25 @@ export default function ProfileReview() {
                           <SelectItem value="kilometers">Kilometers</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormDescription>Based on your Strava settings</FormDescription>
+                      <FormDescription>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Based on your Strava settings
+                        </div>
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Running Experience */}
+              {/* Running Profile */}
               <Card>
                 <CardHeader>
                   <CardTitle>Running Profile</CardTitle>
                   <CardDescription>Based on analysis of your Strava activities</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="runningExperience"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Running Experience</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select experience level" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="beginner">Beginner</SelectItem>
-                            <SelectItem value="intermediate">Intermediate</SelectItem>
-                            <SelectItem value="advanced">Advanced</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          {stravaProfile?.runningExperience && (
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              Based on your recent Strava activities
-                            </div>
-                          )}
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* Personal Bests */}
                   {stravaProfile?.personalBests && stravaProfile.personalBests.length > 0 && (
                     <div className="space-y-2">
@@ -229,6 +230,27 @@ export default function ProfileReview() {
                       </div>
                     </div>
                   )}
+
+                  {/* Running Stats */}
+                  {stravaProfile?.runningExperience && (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Running Stats</h4>
+                      <div className="grid gap-2">
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>Weekly Mileage</div>
+                          <div className="font-mono">
+                            {stravaProfile.runningExperience.weeklyMileage} miles
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div>Preferred Run Days</div>
+                          <div className="font-mono">
+                            {stravaProfile.runningExperience.preferredRunDays.length} days/week
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -236,7 +258,7 @@ export default function ProfileReview() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setLocation("/profile")}
+                  onClick={() => setLocation("/training")}
                 >
                   Skip for Now
                 </Button>

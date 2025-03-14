@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "./components/layout/navbar";
 import Training from "./pages/training";
 import Profile from "./pages/profile";
+import ProfileReview from "./pages/profile-review";
 import Log from "./pages/log";
 import Auth from "./pages/auth";
 import NotFound from "./pages/not-found";
@@ -46,6 +47,10 @@ function Router() {
 
           <ProtectedRoute path="/profile">
             <Profile />
+          </ProtectedRoute>
+
+          <ProtectedRoute path="/profile/review">
+            <ProfileReview />
           </ProtectedRoute>
 
           <ProtectedRoute path="/log">

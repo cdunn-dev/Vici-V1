@@ -251,7 +251,7 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         const startDate = new Date(activity.start_date);
 
         // Prepare activity data with proper type conversions
-        const insertActivity = {
+        const insertActivity: InsertStravaActivity = {
           userId,
           stravaId: activity.id.toString(),
           name: activity.name,
@@ -347,33 +347,52 @@ export class StravaService {
       }
 
       const data = await response.json();
+      console.log('[StravaService] Raw athlete data:', {
+        ...data,
+        tokens: 'REDACTED'
+      });
 
       // Extract personal bests from activities
       const personalBests = await this.analyzePersonalBests(this.userId);
+      // Analyze running profile
+      const runningProfile = await this.analyzeRunningProfile(this.userId);
 
-      return {
-        gender: data.sex,
-        birthday: data.birthday,
-        measurementPreference: data.measurement_preference,
-        weight: data.weight,
+      const profile: AthleteProfile = {
+        gender: data.sex || null,
+        birthday: data.birthday || null,
+        measurementPreference: data.measurement_preference || 'miles',
+        weight: data.weight || null,
         profile: {
-          firstName: data.firstname,
-          lastName: data.lastname,
-          city: data.city,
-          state: data.state,
-          country: data.country,
-          profilePicture: data.profile_medium // Add profile picture URL
+          firstName: data.firstname || '',
+          lastName: data.lastname || '',
+          city: data.city || null,
+          state: data.state || null,
+          country: data.country || null,
+          profilePicture: data.profile_medium || null
         },
         personalBests,
         stravaStats: {
-          totalDistance: data.total_distance || 0,
+          totalDistance: Math.round(data.total_running_distance || 0),
           totalRuns: data.total_runs || 0,
           recentRaces: [],
           predictedRaces: []
+        },
+        runningExperience: {
+          level: runningProfile.fitnessLevel,
+          weeklyMileage: runningProfile.weeklyMileage,
+          preferredRunDays: runningProfile.preferredRunDays,
+          commonWorkoutTypes: runningProfile.commonWorkoutTypes
         }
       };
+
+      console.log('[StravaService] Processed profile:', {
+        ...profile,
+        tokens: 'REDACTED'
+      });
+
+      return profile;
     } catch (error) {
-      console.error('Error fetching athlete profile:', error);
+      console.error('[StravaService] Error fetching athlete profile:', error);
       throw error;
     }
   }
