@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp, integer, real, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, real, doublePrecision, jsonb } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
@@ -19,7 +19,31 @@ export const activities = pgTable('strava_activities', {
   maxHeartrate: doublePrecision('max_heartrate'),
   startLatitude: text('start_latitude'),
   startLongitude: text('start_longitude'),
-  mapPolyline: text('map_polyline'),
+  gearId: text('gear_id'),
+  deviceName: text('device_name'),
+  averageCadence: doublePrecision('average_cadence'),
+  averageTemp: doublePrecision('average_temp'),
+  sufferScore: integer('suffer_score'),
+  perceivedExertion: integer('perceived_exertion'),
+  elevationHigh: doublePrecision('elevation_high'),
+  elevationLow: doublePrecision('elevation_low'),
+  startAddress: text('start_address'),
+  achievementCount: integer('achievement_count'),
+  kudosCount: integer('kudos_count'),
+  commentCount: integer('comment_count'),
+  athleteCount: integer('athlete_count'),
+  photoCount: integer('photo_count'),
+  deviceWatts: boolean('device_watts'),
+  hasHeartrate: boolean('has_heartrate'),
+
+  // Complex data types stored as JSONB
+  map: jsonb('map'),
+  laps: jsonb('laps'),
+  splitMetrics: jsonb('split_metrics'),
+  heartrateZones: jsonb('heartrate_zones'),
+  paceZones: jsonb('pace_zones'),
+
+  workoutId: integer('workout_id'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });
