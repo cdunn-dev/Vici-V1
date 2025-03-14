@@ -417,6 +417,19 @@ export async function syncStravaActivities(userId: number, accessToken: string):
         console.log(`[Strava] Processing activity ${activity.id}`);
         const detailedActivity = await fetchDetailedActivity(activity.id, accessToken);
 
+        // Add detailed logging for API response and database insertion
+        console.log('[Strava] Raw detailed activity response:', JSON.stringify({
+          id: detailedActivity.id,
+          name: detailedActivity.name,
+          type: detailedActivity.type,
+          has_heartrate: detailedActivity.has_heartrate,
+          laps: detailedActivity.laps?.length || 0,
+          splits_count: detailedActivity.splits_metric?.length || 0,
+          has_map: Boolean(detailedActivity.map),
+          rawData: detailedActivity // Log complete raw data
+        }, null, 2));
+
+
         // Process heart rate zones if available
         const heartrateZones = detailedActivity.has_heartrate
           ? calculateHeartRateZones({
@@ -551,15 +564,24 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           workoutId: null
         };
 
-        // Log the final processed activity data
-        console.log('[Strava] Final processed activity data:', JSON.stringify({
+        // After preparing insertActivity object
+        console.log('[Strava] Final processed activity data for insertion:', JSON.stringify({
           id: insertActivity.stravaId,
           name: insertActivity.name,
+          type: insertActivity.type,
           hasHeartrate: insertActivity.hasHeartrate,
-          heartrateZones: insertActivity.heartrateZones.length,
-          laps: insertActivity.laps.length,
-          splitMetrics: insertActivity.splitMetrics.length,
-          paceZones: insertActivity.paceZones.length
+          heartrateZones: insertActivity.heartrateZones?.length || 0,
+          laps: insertActivity.laps?.length || 0,
+          splitMetrics: insertActivity.splitMetrics?.length || 0,
+          paceZones: insertActivity.paceZones?.length || 0,
+          hasMap: Boolean(insertActivity.map),
+          // Log numeric fields to verify they're not null
+          distance: insertActivity.distance,
+          movingTime: insertActivity.movingTime,
+          elapsedTime: insertActivity.elapsedTime,
+          totalElevationGain: insertActivity.totalElevationGain,
+          averageSpeed: insertActivity.averageSpeed,
+          maxSpeed: insertActivity.maxSpeed
         }, null, 2));
 
         processedActivities.push(insertActivity);
@@ -581,6 +603,10 @@ export async function syncStravaActivities(userId: number, accessToken: string):
 
       await db.insert(stravaActivities).values(processedActivities);
       console.log('[Strava] Successfully inserted activities');
+
+      // After database insertion
+      processedActivities.forEach(activity => console.log('[Strava] Successfully inserted activity:', activity.stravaId));
+
     }
 
     if (errors.length > 0) {
@@ -885,34 +911,34 @@ export class StravaService {
             workoutTypes.set('easy', (workoutTypes.get('easy') || 0) + 1);
           }
         }
-
-        // Calculate average weekly mileage
-        const avgWeeklyMileage = totalMileage / 4; // 4 weeks
-
-        // Determine fitness level based on weekly mileage and workout variety
-        let fitnessLevel = 'beginner';
-        if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
-          fitnessLevel = 'advanced';
-        } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
-          fitnessLevel = 'intermediate';
-        }
-
-        // Get most common workout types
-        const sortedWorkouts = Array.from(workoutTypes.entries())
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
-          .map(([type]) => type);
-
-        return {
-          weeklyMileage: Math.round(avgWeeklyMileage),
-          preferredRunDays: Array.from(runDays),
-          fitnessLevel,
-          commonWorkoutTypes: sortedWorkouts
-        };
-      } catch (error) {
-        console.error('Error analyzing running profile:', error);
-        throw error;
       }
+
+      // Calculate average weekly mileage
+      const avgWeeklyMileage = totalMileage / 4; // 4 weeks
+
+      // Determine fitness level based on weekly mileage and workout variety
+      let fitnessLevel = 'beginner';
+      if (avgWeeklyMileage > 40 && workoutTypes.size >= 3) {
+        fitnessLevel = 'advanced';
+      } else if (avgWeeklyMileage > 20 && workoutTypes.size >= 2) {
+        fitnessLevel = 'intermediate';
+      }
+
+      // Get most common workout types
+      const sortedWorkouts = Array.from(workoutTypes.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([type]) => type);
+
+      return {
+        weeklyMileage: Math.round(avgWeeklyMileage),
+        preferredRunDays: Array.from(runDays),
+        fitnessLevel,
+        commonWorkoutTypes: sortedWorkouts
+      };
+    } catch (error) {
+      console.error('Error analyzing running profile:', error);
+      throw error;
     }
   }
 }

@@ -859,5 +859,45 @@ describe('Activity Sync', () => {
       expect(insertedActivity.heartrateZones).toEqual([]);
       expect(insertedActivity.map).toBeNull();
     });
+
+    // Test required numeric fields
+    it('should handle missing required numeric fields with defaults', async () => {
+      const activityWithMissingFields = {
+        id: 1234567890,
+        name: "Morning Run",
+        type: "Run",
+        start_date: "2025-03-15T08:00:00Z",
+        // Missing required numeric fields
+        distance: undefined,
+        moving_time: undefined,
+        elapsed_time: undefined,
+        total_elevation_gain: undefined,
+        average_speed: undefined,
+        max_speed: undefined
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(activityWithMissingFields)
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      const insertedActivity = insertCall[1].values[0];
+
+      // Verify defaults are applied
+      expect(insertedActivity.distance).toBe(0);
+      expect(insertedActivity.movingTime).toBe(0);
+      expect(insertedActivity.elapsedTime).toBe(0);
+      expect(insertedActivity.totalElevationGain).toBe(0);
+      expect(insertedActivity.averageSpeed).toBe(0);
+      expect(insertedActivity.maxSpeed).toBe(0);
+    });
   });
 });
