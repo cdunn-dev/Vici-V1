@@ -11,6 +11,63 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
 
+// Add type definitions for Strava API responses
+interface StravaTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  athlete?: {
+    id: number;
+    firstname?: string;
+    lastname?: string;
+  };
+}
+
+interface StravaActivity {
+  id: number;
+  name: string;
+  type: string;
+  start_date: string;
+  distance: number;
+  moving_time: number;
+  elapsed_time: number;
+  total_elevation_gain: number;
+  average_speed: number;
+  max_speed: number;
+  average_heartrate?: number;
+  max_heartrate?: number;
+  start_latitude?: number;
+  start_longitude?: number;
+  map?: {
+    summary_polyline?: string;
+  };
+}
+
+// Rate limiting configuration
+const RATE_LIMIT = {
+  MAX_REQUESTS_PER_WINDOW: 100,
+  WINDOW_SIZE_MS: 15 * 60 * 1000, // 15 minutes
+  REQUESTS: new Map<number, number[]>()
+};
+
+function checkRateLimit(userId: number): boolean {
+  const now = Date.now();
+  const requests = RATE_LIMIT.REQUESTS.get(userId) || [];
+
+  // Clean up old requests
+  const validRequests = requests.filter(time =>
+    now - time < RATE_LIMIT.WINDOW_SIZE_MS
+  );
+
+  if (validRequests.length >= RATE_LIMIT.MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+
+  validRequests.push(now);
+  RATE_LIMIT.REQUESTS.set(userId, validRequests);
+  return true;
+}
+
 // Update getAppDomain to handle Replit.dev domains
 function getAppDomain() {
   // Use environment variable if set (for production)
@@ -110,15 +167,21 @@ export async function exchangeStravaCode(code: string): Promise<StravaTokens> {
     });
 
     if (!response.ok) {
-      console.error('[Strava] Token exchange failed:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('[Strava] Token exchange failed:', response.status, response.statusText, errorText);
       throw new StravaError(
-        `${ERROR_MESSAGES.FAILED_EXCHANGE}: ${response.statusText}`,
+        `${ERROR_MESSAGES.FAILED_EXCHANGE}: ${response.statusText}. Details: ${errorText}`,
         'AUTH_ERROR'
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as StravaTokenResponse;
     console.log('[Strava] Token exchange successful');
+
+    // Validate response data
+    if (!data.access_token || !data.refresh_token || !data.expires_at) {
+      throw new StravaError('Invalid token response format', 'API_ERROR');
+    }
 
     return {
       accessToken: data.access_token,
@@ -140,6 +203,10 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
   console.log('[Strava] Refreshing access token');
 
   try {
+    if (!process.env.STRAVA_CLIENT_ID || !process.env.STRAVA_CLIENT_SECRET) {
+      throw new StravaError(ERROR_MESSAGES.MISSING_CLIENT_SECRET, 'CONFIG_ERROR');
+    }
+
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,15 +219,21 @@ export async function refreshStravaToken(refreshToken: string): Promise<StravaTo
     });
 
     if (!response.ok) {
-      console.error('[Strava] Token refresh failed:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('[Strava] Token refresh failed:', response.status, response.statusText, errorText);
       throw new StravaError(
-        `${ERROR_MESSAGES.FAILED_REFRESH}: ${response.statusText}`,
+        `${ERROR_MESSAGES.FAILED_REFRESH}: ${response.statusText}. Details: ${errorText}`,
         'AUTH_ERROR'
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as StravaTokenResponse;
     console.log('[Strava] Token refresh successful');
+
+    // Validate response data
+    if (!data.access_token || !data.refresh_token || !data.expires_at) {
+      throw new StravaError('Invalid token response format', 'API_ERROR');
+    }
 
     return {
       accessToken: data.access_token,
@@ -183,6 +256,10 @@ export async function syncStravaActivities(userId: number, accessToken: string):
   console.log('[Strava] Starting activity sync for user:', userId);
 
   try {
+    if (!checkRateLimit(userId)) {
+      throw new StravaError('Rate limit exceeded. Please try again later.', 'API_ERROR');
+    }
+
     // Get latest synced activity
     const [latestActivity] = await db
       .select()
@@ -212,20 +289,24 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     );
 
     if (!response.ok) {
-      console.error('[Strava] Activities fetch failed:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('[Strava] Activities fetch failed:', response.status, response.statusText, errorText);
       throw new StravaError(
-        `${ERROR_MESSAGES.FAILED_FETCH}: ${response.statusText}`,
+        `${ERROR_MESSAGES.FAILED_FETCH}: ${response.statusText}. Details: ${errorText}`,
         'API_ERROR'
       );
     }
 
-    const activities = await response.json();
+    const activities = await response.json() as StravaActivity[];
     console.log(`[Strava] Retrieved ${activities.length} activities from API`);
 
     if (!Array.isArray(activities)) {
       console.error('[Strava] Invalid activities response:', activities);
       throw new StravaError(ERROR_MESSAGES.INVALID_RESPONSE, 'DATA_ERROR');
     }
+
+    const processedActivities: InsertStravaActivity[] = [];
+    const errors: Error[] = [];
 
     for (const activity of activities) {
       try {
@@ -235,20 +316,17 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           continue;
         }
 
-        // Check if activity already exists
-        const [existingActivity] = await db
-          .select()
-          .from(stravaActivities)
-          .where(eq(stravaActivities.stravaId, activity.id.toString()))
-          .limit(1);
-
-        if (existingActivity) {
-          console.log('[Strava] Activity already exists:', activity.id);
-          continue;
+        // Validate required fields
+        if (!activity.id || !activity.start_date || activity.distance === undefined) {
+          console.error('[Strava] Invalid activity data:', activity);
+          throw new Error('Missing required activity fields');
         }
 
         // Convert the start date string to a Date object for proper formatting
         const startDate = new Date(activity.start_date);
+        if (isNaN(startDate.getTime())) {
+          throw new Error('Invalid start date');
+        }
 
         // Prepare activity data with proper type conversions
         const insertActivity: InsertStravaActivity = {
@@ -270,13 +348,23 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           mapPolyline: activity.map?.summary_polyline || null,
         };
 
-        // Insert the activity
-        await db.insert(stravaActivities).values(insertActivity);
-        console.log('[Strava] Successfully inserted activity:', activity.id);
+        processedActivities.push(insertActivity);
       } catch (error) {
-        console.error('[Strava] Failed to insert activity:', error);
+        console.error('[Strava] Failed to process activity:', error);
+        errors.push(error as Error);
         // Continue with next activity even if one fails
       }
+    }
+
+    // Batch insert activities
+    if (processedActivities.length > 0) {
+      await db.insert(stravaActivities).values(processedActivities);
+      console.log('[Strava] Successfully inserted', processedActivities.length, 'activities');
+    }
+
+    // Log any errors that occurred during processing
+    if (errors.length > 0) {
+      console.error('[Strava] Encountered errors while processing activities:', errors);
     }
 
     console.log('[Strava] Activity sync completed');
