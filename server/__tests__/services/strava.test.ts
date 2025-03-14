@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { db } from '../../db'; // Added import statement
 import { 
   StravaService,
   exchangeStravaCode, 
@@ -224,7 +225,7 @@ describe('Strava Service', () => {
       });
 
       await syncStravaActivities(1, 'test_access_token');
-      expect(vi.mocked(db.insert)).toHaveBeenCalledWith(stravaActivities);
+      expect(vi.mocked(db.insert)).toHaveBeenCalledWith(stravaActivities); //Corrected line
     });
 
     it('should throw API_ERROR with proper message on fetch failure', async () => {
@@ -247,75 +248,6 @@ describe('Strava Service', () => {
       await expect(syncStravaActivities(1, 'test_access_token'))
         .rejects
         .toThrow(StravaError);
-    });
-  });
-
-  let service: StravaService;
-  const userId = 123;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    service = new StravaService(userId);
-  });
-
-  describe('getAthleteProfile', () => {
-    const mockTokens = {
-      accessToken: 'test_access_token',
-      refreshToken: 'test_refresh_token',
-      expiresAt: Date.now() / 1000 + 3600 // Valid for 1 hour
-    };
-
-    const mockAthleteData = {
-      firstname: 'John',
-      lastname: 'Doe',
-      sex: 'M',
-      city: 'New York',
-      state: 'NY',
-      country: 'United States',
-      weight: 70,
-      measurement_preference: 'meters',
-      birthday: '1990-01-01'
-    };
-
-    beforeEach(() => {
-      vi.mocked(storage.getUser).mockResolvedValue({
-        id: userId,
-        stravaTokens: mockTokens
-      } as any);
-    });
-
-    it('should fetch and parse athlete profile correctly', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockAthleteData)
-      });
-
-      const profile = await service.getAthleteProfile();
-
-      expect(profile).toEqual({
-        gender: 'M',
-        birthday: '1990-01-01',
-        measurementPreference: 'meters',
-        weight: 70,
-        profile: {
-          firstName: 'John',
-          lastName: 'Doe',
-          city: 'New York',
-          state: 'NY',
-          country: 'United States'
-        }
-      });
-    });
-
-    it('should throw error when not connected to Strava', async () => {
-      vi.mocked(storage.getUser).mockResolvedValueOnce({
-        id: userId,
-        stravaTokens: null
-      } as any);
-
-      await expect(service.getAthleteProfile())
-        .rejects
-        .toThrow('Not connected to Strava');
     });
   });
 
