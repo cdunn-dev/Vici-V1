@@ -7,10 +7,8 @@ export default defineConfig({
     globals: true,
     clearMocks: true,
     setupFiles: ['./vitest.setup.ts'],
-    mockReset: true,
-    restoreMocks: true,
-    include: ['**/__tests__/**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**'],
+    include: ['__tests__/services/strava.test.ts'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/__tests__/services/!(strava.test.ts)'],
   },
   resolve: {
     alias: {

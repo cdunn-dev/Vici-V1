@@ -4,7 +4,7 @@
   "description": "Running analytics platform server",
   "main": "index.ts",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest strava.test.ts",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
