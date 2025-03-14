@@ -396,11 +396,18 @@ export async function registerRoutes(app: Express) {
       const limit = 20;
       const offset = (page - 1) * limit;
 
-      // Get activities with their matched workouts
+      // Get activities with their matched workouts and include all fields
       const activities = await db
         .select({
-          activity: stravaActivities,
-          workout: workouts,
+          activity: {
+            ...stravaActivities,
+            laps: stravaActivities.laps,
+            splitMetrics: stravaActivities.splitMetrics,
+            heartrateZones: stravaActivities.heartrateZones,
+            paceZones: stravaActivities.paceZones,
+            map: stravaActivities.map
+          },
+          workout: workouts
         })
         .from(stravaActivities)
         .leftJoin(workouts, eq(stravaActivities.workoutId, workouts.id))
@@ -408,6 +415,8 @@ export async function registerRoutes(app: Express) {
         .orderBy(desc(stravaActivities.startDate))
         .limit(limit)
         .offset(offset);
+
+      console.log('[API] Activities response:', activities[0]); // Debug log
 
       res.json(activities);
     } catch (error) {

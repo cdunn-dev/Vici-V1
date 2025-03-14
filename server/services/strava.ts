@@ -340,8 +340,6 @@ async function fetchDetailedActivity(activityId: number, accessToken: string): P
   return await response.json();
 }
 
-
-// Update syncStravaActivities to properly handle types and add debug logging
 export async function syncStravaActivities(userId: number, accessToken: string): Promise<void> {
   console.log('[Strava] Starting activity sync for user:', userId);
 
@@ -416,6 +414,47 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           throw new Error('Invalid start date');
         }
 
+        // Calculate heart rate zones if heart rate data is available
+        const heartrateZones = detailedActivity.has_heartrate ? calculateHeartRateZones({
+          avgHeartrate: detailedActivity.average_heartrate || 0,
+          maxHeartrate: detailedActivity.max_heartrate || 0
+        }) : [];
+
+        // Calculate pace zones from splits if available
+        const paceZones = detailedActivity.splits_metric ? calculatePaceZones(
+          detailedActivity.splits_metric.map(split => ({
+            distance: split.distance,
+            time: split.moving_time
+          }))
+        ) : [];
+
+        // Process lap data with strict typing
+        const laps = detailedActivity.laps?.map(lap => ({
+          lapIndex: lap.lap_index,
+          splitIndex: lap.split_index,
+          distance: lap.distance,
+          elapsedTime: lap.elapsed_time,
+          movingTime: lap.moving_time,
+          startDate: new Date(lap.start_date).toISOString(),
+          averageSpeed: lap.average_speed,
+          maxSpeed: lap.max_speed || null,
+          averageHeartrate: lap.average_heartrate || null,
+          maxHeartrate: lap.max_heartrate || null,
+          paceZone: lap.pace_zone || null
+        })) || [];
+
+        // Process split metrics with strict typing
+        const splitMetrics = detailedActivity.splits_metric?.map(split => ({
+          distance: split.distance,
+          elapsedTime: split.elapsed_time,
+          elevationDifference: split.elevation_difference,
+          movingTime: split.moving_time,
+          split: split.split,
+          averageSpeed: split.average_speed,
+          averageHeartrate: split.average_heartrate || null,
+          paceZone: split.pace_zone || null
+        })) || [];
+
         // Prepare activity data with proper type conversions
         const insertActivity: InsertStravaActivity = {
           userId,
@@ -434,8 +473,6 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           maxHeartrate: detailedActivity.max_heartrate ? Math.round(detailedActivity.max_heartrate) : null,
           startLatitude: detailedActivity.start_latitude?.toString() || null,
           startLongitude: detailedActivity.start_longitude?.toString() || null,
-
-          // Additional fields
           gearId: detailedActivity.gear_id || null,
           deviceName: detailedActivity.device_name || null,
           averageCadence: detailedActivity.average_cadence ? Math.round(detailedActivity.average_cadence) : null,
@@ -452,50 +489,21 @@ export async function syncStravaActivities(userId: number, accessToken: string):
           photoCount: detailedActivity.photo_count || null,
           deviceWatts: detailedActivity.device_watts || false,
           hasHeartrate: detailedActivity.has_heartrate || false,
-
-          // Map data
           map: detailedActivity.map ? {
             summaryPolyline: detailedActivity.map.summary_polyline || '',
             resourceState: detailedActivity.map.resource_state || 1,
-            streamData: null // Fetch stream data separately if needed
           } : null,
-
-          // Laps and splits
-          laps: detailedActivity.laps?.map(lap => ({
-            lapIndex: lap.lap_index,
-            splitIndex: lap.split_index,
-            distance: lap.distance,
-            elapsedTime: lap.elapsed_time,
-            movingTime: lap.moving_time,
-            startDate: lap.start_date,
-            averageSpeed: lap.average_speed,
-            maxSpeed: lap.max_speed,
-            averageHeartrate: lap.average_heartrate,
-            maxHeartrate: lap.max_heartrate,
-            paceZone: lap.pace_zone
-          })) || [],
-
-          splitMetrics: detailedActivity.splits_metric?.map(split => ({
-            distance: split.distance,
-            elapsedTime: split.elapsed_time,
-            elevationDifference: split.elevation_difference,
-            movingTime: split.moving_time,
-            split: split.split,
-            averageSpeed: split.average_speed,
-            averageHeartrate: split.average_heartrate,
-            paceZone: split.pace_zone
-          })) || [],
-
-          // Initialize empty arrays for zones
-          heartrateZones: [],
-          paceZones: []
+          laps,
+          splitMetrics,
+          heartrateZones,
+          paceZones,
+          workoutId: null, // Will be linked later if matching workout exists
         };
 
         processedActivities.push(insertActivity);
       } catch (error) {
         console.error('[Strava] Failed to process activity:', error);
         errors.push(error as Error);
-        // Continue with next activity even if one fails
       }
     }
 
@@ -515,6 +523,32 @@ export async function syncStravaActivities(userId: number, accessToken: string):
     console.error('[Strava] Error during activity sync:', error);
     throw error;
   }
+}
+
+// Helper function to calculate heart rate zones
+function calculateHeartRateZones(heartRate: { avgHeartrate: number; maxHeartrate: number }) {
+  // Using standard heart rate zone calculations
+  return [
+    { zone: 1, min: 0, max: Math.round(heartRate.maxHeartrate * 0.6) },
+    { zone: 2, min: Math.round(heartRate.maxHeartrate * 0.6), max: Math.round(heartRate.maxHeartrate * 0.7) },
+    { zone: 3, min: Math.round(heartRate.maxHeartrate * 0.7), max: Math.round(heartRate.maxHeartrate * 0.8) },
+    { zone: 4, min: Math.round(heartRate.maxHeartrate * 0.8), max: Math.round(heartRate.maxHeartrate * 0.9) },
+    { zone: 5, min: Math.round(heartRate.maxHeartrate * 0.9), max: heartRate.maxHeartrate }
+  ];
+}
+
+// Helper function to calculate pace zones
+function calculatePaceZones(splits: Array<{ distance: number; time: number }>) {
+  const paces = splits.map(split => (split.time / 60) / (split.distance / 1609.34));
+  const avgPace = paces.reduce((a, b) => a + b, 0) / paces.length;
+
+  return [
+    { zone: 1, description: 'Recovery', pace: avgPace * 1.2 },
+    { zone: 2, description: 'Easy', pace: avgPace * 1.1 },
+    { zone: 3, description: 'Steady', pace: avgPace },
+    { zone: 4, description: 'Tempo', pace: avgPace * 0.9 },
+    { zone: 5, description: 'Interval', pace: avgPace * 0.85 }
+  ];
 }
 
 export interface StravaTokens {
