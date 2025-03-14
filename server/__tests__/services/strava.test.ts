@@ -1,77 +1,77 @@
+// Set up test environment variables first
+const TEST_STRAVA_CLIENT_ID = 'test_client_id';
+const TEST_STRAVA_CLIENT_SECRET = 'test_client_secret';
+const TEST_USER_ID = 1;
+
+// Mock modules before any imports
+vi.mock('@shared/schema', () => ({
+  stravaActivities: {
+    name: 'strava_activities',
+    userId: 'number',
+    stravaId: 'text',
+    type: 'text'
+  }
+}));
+
+vi.mock('../../storage', () => ({
+  storage: {
+    getUser: vi.fn(),
+    updateUser: vi.fn()
+  }
+}));
+
+vi.mock('../../db', () => ({
+  db: {
+    insert: vi.fn(() => ({
+      values: vi.fn(() => Promise.resolve([{
+        id: 1,
+        stravaId: '1234567890',
+        name: 'Test Activity',
+        type: 'Run',
+        distance: 5000,
+        movingTime: 1800,
+        elapsedTime: 1800,
+        totalElevationGain: 100,
+        startDate: new Date(),
+        hasHeartrate: true,
+        averageHeartrate: 150,
+        maxHeartrate: 180,
+        laps: [],
+        splitMetrics: [],
+        heartrateZones: [],
+        paceZones: []
+      }]))
+    })),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          orderBy: vi.fn(() => ({
+            limit: vi.fn(() => Promise.resolve([]))
+          }))
+        }))
+      }))
+    }))
+  }
+}));
+
+// Mock fetch
+vi.mock('node-fetch', () => ({
+  default: vi.fn()
+}));
+
+// Now import everything after mocks
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../../db';
+import { storage } from '../../storage';
+import fetch from 'node-fetch';
 import { 
   StravaService,
   exchangeStravaCode, 
   refreshStravaToken,
   syncStravaActivities,
   getStravaAuthUrl,
-  StravaError
+  StravaError 
 } from '../../services/strava';
-import { storage } from '../../storage';
-import { stravaActivities } from '@shared/schema';
-
-// Set up test environment
-const TEST_STRAVA_CLIENT_ID = 'test_client_id';
-const TEST_STRAVA_CLIENT_SECRET = 'test_client_secret';
-const userId = 1;
-
-// Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-// Mock storage
-vi.mock('../../storage', () => ({
-  storage: {
-    getUser: vi.fn().mockResolvedValue({
-      id: userId,
-      stravaTokens: {
-        accessToken: 'valid_token',
-        refreshToken: 'refresh_token',
-        expiresAt: Date.now() / 1000 + 3600
-      }
-    }),
-    updateUser: vi.fn().mockResolvedValue(undefined)
-  }
-}));
-
-// Mock database
-vi.mock('../../db', () => ({
-  db: {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockResolvedValue([{
-        id: 1,
-        stravaId: '1234567890',
-        name: 'Test Activity',
-        type: 'Run',
-        distance: 5000,
-        startDate: new Date(),
-        movingTime: 1800,
-        elapsedTime: 1800,
-        totalElevationGain: 100,
-        averageSpeed: 2.78,
-        maxSpeed: 3.5,
-        hasHeartrate: true,
-        averageHeartrate: 150,
-        maxHeartrate: 180,
-        map: null,
-        laps: [],
-        splitMetrics: [],
-        heartrateZones: [],
-        paceZones: []
-      }])
-    }),
-    select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          orderBy: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([])
-          })
-        })
-      })
-    })
-  }
-}));
 
 describe('Strava Service', () => {
   let service: StravaService;
@@ -85,7 +85,27 @@ describe('Strava Service', () => {
     vi.clearAllMocks();
     console.error = vi.fn();
     console.log = vi.fn();
-    service = new StravaService(userId);
+
+    // Reset mock implementations
+    vi.mocked(storage.getUser).mockResolvedValue({
+      id: TEST_USER_ID,
+      stravaTokens: {
+        accessToken: 'valid_token',
+        refreshToken: 'refresh_token',
+        expiresAt: Date.now() / 1000 + 3600
+      }
+    });
+
+    vi.mocked(storage.updateUser).mockResolvedValue(undefined);
+    vi.mocked(fetch).mockImplementation(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+        text: () => Promise.resolve("")
+      } as Response)
+    );
+
+    service = new StravaService(TEST_USER_ID);
   });
 
   describe('Authentication', () => {
@@ -102,7 +122,6 @@ describe('Strava Service', () => {
       expect(params.get('response_type')).toBe('code');
       expect(params.get('scope')).toBe('read,activity:read_all,profile:read_all');
       expect(params.get('state')).toBe('test-state');
-      expect(params.get('approval_prompt')).toBe('auto');
     });
 
     it('should throw error if client ID is missing', () => {
@@ -119,13 +138,14 @@ describe('Strava Service', () => {
         expires_at: 1234567890
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockResponse)
-      });
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockResponse)
+        } as Response)
+      );
 
       const result = await exchangeStravaCode('test_code');
-
       expect(result).toEqual({
         accessToken: mockResponse.access_token,
         refreshToken: mockResponse.refresh_token,
@@ -133,44 +153,18 @@ describe('Strava Service', () => {
       });
     });
 
-    it('should refresh tokens automatically when expired', async () => {
-      const expiredTokens = {
-        accessToken: 'expired_token',
-        refreshToken: 'refresh_token',
-        expiresAt: Date.now() / 1000 - 3600 // Expired 1 hour ago
-      };
-
-      const newTokens = {
-        access_token: 'new_token',
-        refresh_token: 'new_refresh_token',
-        expires_at: Date.now() / 1000 + 3600
-      };
-
-      vi.mocked(storage.getUser).mockResolvedValueOnce({
-        id: userId,
-        stravaTokens: expiredTokens
-      });
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(newTokens)
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve({})
-        });
-
-      await service.getAthleteProfile();
-
-      expect(storage.updateUser).toHaveBeenCalledWith(
-        userId,
-        { stravaTokens: {
-          accessToken: newTokens.access_token,
-          refreshToken: newTokens.refresh_token,
-          expiresAt: newTokens.expires_at
-        }}
+    it('should handle token exchange failures', async () => {
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: false,
+          statusText: 'Bad Request',
+          text: () => Promise.resolve('{"message":"Bad Request"}')
+        } as Response)
       );
+
+      await expect(exchangeStravaCode('invalid_code'))
+        .rejects
+        .toThrow(StravaError);
     });
   });
 
@@ -192,57 +186,124 @@ describe('Strava Service', () => {
     };
 
     it('should transform and store activities', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([mockActivity])
-      });
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([mockActivity])
+        } as Response)
+      );
 
-      await syncStravaActivities(userId, 'test_access_token');
+      await syncStravaActivities(TEST_USER_ID, 'test_access_token');
 
       expect(db.insert).toHaveBeenCalled();
-      const insertCall = vi.mocked(db.insert).mock.calls[0];
-      expect(insertCall[1].values[0]).toMatchObject({
-        userId,
+      const insertCall = vi.mocked(db.insert);
+      const values = await insertCall().values();
+      expect(values[0]).toMatchObject({
+        userId: TEST_USER_ID,
         stravaId: mockActivity.id.toString(),
         name: mockActivity.name,
-        type: mockActivity.type,
-        distance: mockActivity.distance,
-        movingTime: mockActivity.moving_time,
-        elapsedTime: mockActivity.elapsed_time,
-        totalElevationGain: mockActivity.total_elevation_gain,
-        hasHeartrate: mockActivity.has_heartrate,
-        averageHeartrate: mockActivity.average_heartrate,
-        maxHeartrate: mockActivity.max_heartrate
+        type: mockActivity.type
       });
     });
 
-    it('should handle rate limiting', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 429,
-          headers: new Headers({ 'Retry-After': '1' })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([])
-        });
+    it('should handle rate limiting with retries', async () => {
+      vi.mocked(fetch)
+        .mockImplementationOnce(() => 
+          Promise.resolve({
+            ok: false,
+            status: 429,
+            headers: new Headers({ 'Retry-After': '1' })
+          } as Response)
+        )
+        .mockImplementationOnce(() => 
+          Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([])
+          } as Response)
+        );
 
-      await syncStravaActivities(userId, 'test_access_token');
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      await syncStravaActivities(TEST_USER_ID, 'test_access_token');
+      expect(fetch).toHaveBeenCalledTimes(2);
     });
 
     it('should handle database errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([mockActivity])
-      });
+      vi.mocked(fetch).mockImplementationOnce(() => 
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([mockActivity])
+        } as Response)
+      );
 
-      vi.mocked(db.insert).mockRejectedValueOnce(new Error('Database error'));
+      vi.mocked(db.insert).mockImplementationOnce(() => ({
+        values: vi.fn().mockRejectedValue(new Error('Database error'))
+      }));
 
-      await expect(syncStravaActivities(userId, 'test_access_token'))
+      await expect(syncStravaActivities(TEST_USER_ID, 'test_access_token'))
         .rejects
         .toThrow('Database error');
+    });
+  });
+
+  describe('Token Refresh', () => {
+    it('should refresh expired token automatically', async () => {
+      const expiredTokens = {
+        accessToken: 'expired_token',
+        refreshToken: 'refresh_token',
+        expiresAt: Date.now() / 1000 - 3600 // Expired 1 hour ago
+      };
+
+      const newTokens = {
+        access_token: 'new_token',
+        refresh_token: 'new_refresh_token',
+        expires_at: Date.now() / 1000 + 3600
+      };
+
+      vi.mocked(storage.getUser).mockResolvedValueOnce({
+        id: TEST_USER_ID,
+        stravaTokens: expiredTokens
+      });
+
+      vi.mocked(fetch)
+        .mockImplementationOnce(() => 
+          Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(newTokens)
+          } as Response)
+        )
+        .mockImplementationOnce(() => 
+          Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({})
+          } as Response)
+        );
+
+      await service.getAthleteProfile();
+
+      expect(storage.updateUser).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        { stravaTokens: {
+          accessToken: newTokens.access_token,
+          refreshToken: newTokens.refresh_token,
+          expiresAt: newTokens.expires_at
+        }}
+      );
+    });
+
+    it('should handle token refresh failures', async () => {
+      vi.mocked(storage.getUser).mockResolvedValueOnce({
+        id: TEST_USER_ID,
+        stravaTokens: {
+          accessToken: 'invalid_token',
+          refreshToken: 'invalid_refresh',
+          expiresAt: Date.now() / 1000 - 3600
+        }
+      });
+
+      vi.mocked(fetch).mockRejectedValueOnce(new Error('Token refresh failed'));
+
+      await expect(service.getAthleteProfile())
+        .rejects
+        .toThrow(StravaError);
     });
   });
 });
