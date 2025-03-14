@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { db } from '../../db'; // Added import statement
+import { db } from '../../db';
 import { 
   StravaService,
   exchangeStravaCode, 
@@ -198,11 +198,12 @@ describe('Strava Service', () => {
   });
 
   describe('syncStravaActivities', () => {
-    const mockActivity = {
+    const mockDetailedActivity = {
       id: 1234567890,
-      name: 'Morning Run',
-      type: 'Run',
-      start_date: '2025-03-15T08:00:00Z',
+      name: "Morning Run",
+      description: "Great run today!",
+      type: "Run",
+      start_date: "2025-03-15T08:00:00Z",
       distance: 5000,
       moving_time: 1800,
       elapsed_time: 1800,
@@ -211,43 +212,135 @@ describe('Strava Service', () => {
       max_speed: 3.5,
       average_heartrate: 150,
       max_heartrate: 175,
-      start_latitude: '40.7128',
-      start_longitude: '-74.0060',
+      start_latitude: 40.7128,
+      start_longitude: -74.0060,
+      device_name: "Garmin Forerunner",
+      average_cadence: 180,
+      average_temp: 20,
+      suffer_score: 80,
+      perceived_exertion: 7,
+      elevation_high: 100,
+      elevation_low: 0,
       map: {
-        summary_polyline: 'test_polyline'
-      }
+        summary_polyline: "test_polyline",
+        resource_state: 2
+      },
+      laps: [
+        {
+          lap_index: 1,
+          split_index: 1,
+          distance: 1000,
+          elapsed_time: 360,
+          moving_time: 360,
+          start_date: "2025-03-15T08:05:00Z",
+          average_speed: 2.8,
+          max_speed: 3.2,
+          average_heartrate: 155,
+          max_heartrate: 165
+        }
+      ],
+      splits_metric: [
+        {
+          distance: 1000,
+          elapsed_time: 360,
+          elevation_difference: 10,
+          moving_time: 360,
+          split: 1,
+          average_speed: 2.8,
+          average_heartrate: 155
+        }
+      ]
     };
 
-    it('should fetch and store activities successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([mockActivity])
-      });
+    it('should fetch and store detailed activity data successfully', async () => {
+      // Mock the initial activities list response
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+        })
+        // Mock the detailed activity fetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockDetailedActivity)
+        });
 
       await syncStravaActivities(1, 'test_access_token');
-      expect(vi.mocked(db.insert)).toHaveBeenCalledWith(stravaActivities); //Corrected line
+
+      // Verify db insert was called with processed activity data
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      expect(insertCall[0]).toBe(stravaActivities);
+
+      const insertedActivity = insertCall[1].values[0];
+      expect(insertedActivity).toMatchObject({
+        stravaId: '1234567890',
+        name: 'Morning Run',
+        description: 'Great run today!',
+        type: 'Run',
+        laps: expect.any(Array),
+        splitMetrics: expect.any(Array)
+      });
     });
 
-    it('should throw API_ERROR with proper message on fetch failure', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Too Many Requests'
-      });
+    it('should handle rate limiting with retries', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: new Headers({ 'Retry-After': '1' })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([])
+        });
 
-      await expect(syncStravaActivities(1, 'test_access_token'))
-        .rejects
-        .toThrow(StravaError);
+      await syncStravaActivities(1, 'test_access_token');
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw DATA_ERROR on invalid response format', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ invalid: 'response' }) // Not an array
-      });
+    it('should batch process multiple activities', async () => {
+      const activities = [
+        { id: 1, type: "Run" },
+        { id: 2, type: "Run" },
+        { id: 3, type: "Run" }
+      ];
 
-      await expect(syncStravaActivities(1, 'test_access_token'))
-        .rejects
-        .toThrow(StravaError);
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(activities)
+        })
+        // Mock detailed activity fetches
+        .mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve({ ...mockDetailedActivity })
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      expect(insertCall[1].values).toHaveLength(3);
+    });
+
+    it('should continue processing on individual activity failures', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve([
+            { id: 1, type: "Run" },
+            { id: 2, type: "Run" }
+          ])
+        })
+        .mockRejectedValueOnce(new Error('Failed to fetch'))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockDetailedActivity)
+        });
+
+      await syncStravaActivities(1, 'test_access_token');
+
+      const insertCall = vi.mocked(db.insert).mock.calls[0];
+      expect(insertCall[1].values).toHaveLength(1);
     });
   });
 
@@ -367,6 +460,40 @@ describe('Strava Service', () => {
         userId,
         { stravaTokens: newTokens }
       );
+    });
+  });
+
+  describe('automatic sync', () => {
+    let service: StravaService;
+    const userId = 1;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      service = new StravaService(userId);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should start automatic sync on initialization', () => {
+      vi.mocked(storage.getUser).mockResolvedValue({
+        id: userId,
+        stravaTokens: {
+          accessToken: 'test_token',
+          refreshToken: 'refresh_token',
+          expiresAt: Date.now() / 1000 + 3600
+        }
+      } as any);
+
+      vi.advanceTimersByTime(15 * 60 * 1000); // 15 minutes
+      expect(storage.getUser).toHaveBeenCalled();
+    });
+
+    it('should cleanup sync interval on stopAutoSync', async () => {
+      await service.stopAutoSync();
+      vi.advanceTimersByTime(15 * 60 * 1000);
+      expect(storage.getUser).not.toHaveBeenCalled();
     });
   });
 });
