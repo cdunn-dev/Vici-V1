@@ -2,6 +2,9 @@ import { BaseActivityService } from './base';
 import { Activity, ProviderCredentials, AthleteProfile } from './types';
 import axios from 'axios';
 import { exchangeStravaCode, refreshStravaToken, syncStravaActivities } from '../strava';
+import { storage } from '../../storage';
+import { db } from '../../db';
+import { StravaError, ERROR_MESSAGES } from '../errors';
 
 interface StravaTokens extends ProviderCredentials {
   accessToken: string;
@@ -13,6 +16,8 @@ export class StravaService extends BaseActivityService {
   private clientId: string;
   private clientSecret: string;
   private userId: number;
+  private syncInterval: NodeJS.Timeout | null = null;
+  private static readonly SYNC_INTERVAL = 15 * 60 * 1000; // 15 minutes
 
   constructor(userId: number) {
     super('strava');
@@ -21,8 +26,42 @@ export class StravaService extends BaseActivityService {
     this.userId = userId;
 
     if (!this.clientId || !this.clientSecret) {
-      throw new Error('Strava credentials not configured');
+      throw new StravaError(ERROR_MESSAGES.MISSING_CLIENT_SECRET, 'CONFIG_ERROR');
     }
+
+    // Start automatic sync when service is initialized
+    this.startAutoSync();
+  }
+
+  private startAutoSync() {
+    // Clear any existing sync interval
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+    }
+
+    // Start new sync interval
+    this.syncInterval = setInterval(async () => {
+      try {
+        console.log('[StravaService] Starting automatic sync for user:', this.userId);
+        const user = await storage.getUser(this.userId);
+        if (user?.stravaTokens) {
+          await syncStravaActivities(this.userId, user.stravaTokens.accessToken);
+        }
+      } catch (error) {
+        console.error('[StravaService] Auto-sync failed:', error);
+      }
+    }, StravaService.SYNC_INTERVAL);
+  }
+
+  async stopAutoSync() {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+  }
+
+  async cleanup() {
+    await this.stopAutoSync();
   }
 
   protected async validateCredentials(credentials: StravaTokens): Promise<boolean> {
