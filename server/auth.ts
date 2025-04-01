@@ -11,6 +11,7 @@ import { db } from "./db";
 import { AuthError, ERROR_MESSAGES } from "./services/auth/types";
 import { sendPasswordResetEmail } from "./services/email";
 import { Pool } from "@neondatabase/serverless";
+import { authLimiter, passwordResetLimiter } from './middleware/rateLimiter';
 
 const scryptAsync = promisify(scrypt);
 
@@ -91,7 +92,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res) => {
+  app.post("/api/register", authLimiter, async (req, res) => {
     try {
       const registerResult = registerUserSchema.safeParse(req.body);
       if (!registerResult.success) {
@@ -149,7 +150,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", authLimiter, (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) {
         console.error('[Auth] Login error:', err);
@@ -192,7 +193,7 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
-  app.post("/api/reset-password", async (req, res) => {
+  app.post("/api/reset-password", passwordResetLimiter, async (req, res) => {
     try {
       const { email } = req.body;
 

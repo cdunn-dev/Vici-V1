@@ -3,6 +3,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import cors from 'cors';
+import { setupErrorHandling } from './errorHandling';
+import { apiLimiter, rateLimitErrorHandler } from './middleware/rateLimiter';
 
 const app = express();
 console.log("[Startup] Express app created");
@@ -98,6 +101,15 @@ async function ensureDefaultUser() {
     } else {
       serveStatic(app);
     }
+
+    // Apply rate limiting to all routes
+    app.use(apiLimiter);
+
+    // Setup error handling
+    setupErrorHandling(app);
+
+    // Rate limit error handling
+    app.use(rateLimitErrorHandler);
 
     const port = 5000;
     server.listen({

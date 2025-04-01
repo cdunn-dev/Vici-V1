@@ -181,6 +181,8 @@ export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>;
 export type PersonalBest = z.infer<typeof personalBestSchema>;
 export type RunningExperience = z.infer<typeof runningExperienceSchema>;
 export type StravaStats = z.infer<typeof stravaStatsSchema>;
+export type WorkoutNote = typeof workoutNotes.$inferSelect;
+export type InsertWorkoutNote = z.infer<typeof insertWorkoutNoteSchema>;
 
 export const personalBestSchema = z.object({
   distance: z.string(),
@@ -235,7 +237,6 @@ export const stravaStatsSchema = z.object({
   }).optional()
 });
 
-
 export const DistanceUnitEnum = z.enum(["miles", "kilometers"]);
 
 export const trainingPlans = pgTable("training_plans", {
@@ -266,6 +267,8 @@ export const trainingPlans = pgTable("training_plans", {
     preferredLongRunDay: string;
   }>(),
   active: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
 });
 
 export const LapSchema = z.object({
@@ -407,7 +410,6 @@ export const targetRaceSchema = z.object({
   goalTime: z.string().optional(),
 });
 
-
 export const trainingPreferencesSchema = z.object({
   weeklyRunningDays: z.number(),
   maxWeeklyMileage: z.number(),
@@ -432,20 +434,6 @@ export const insertStravaActivitySchema = createInsertSchema(stravaActivities);
 export const insertWorkoutSchema = createInsertSchema(workouts);
 
 export type RegisterUser = z.infer<typeof registerUserSchema>;
-
-
-export type TrainingPlanWithWeeklyPlans = TrainingPlan & {
-  weeklyPlans: WeeklyPlan[];
-};
-
-export type InsertStravaActivity = z.infer<typeof insertStravaActivitySchema>;
-export type Workout = typeof workouts.$inferSelect;
-export type InsertWorkout = z.infer<typeof insertWorkoutSchema>;
-export type UserProfileUpdate = z.infer<typeof userProfileUpdateSchema>;
-export type PersonalBest = z.infer<typeof personalBestSchema>;
-export type RunningExperience = z.infer<typeof runningExperienceSchema>;
-export type StravaStats = z.infer<typeof stravaStatsSchema>;
-export type StravaAthlete = z.infer<typeof stravaAthleteSchema>;
 
 export const userProfileUpdateSchema = z.object({
   gender: GenderEnum.optional(),
@@ -476,3 +464,27 @@ export const stravaActivitySchema = z.object({
     resourceState: z.number(),
   }).optional(),
 });
+
+// Workout Notes and Feedback Schema
+export const workoutNotes = pgTable("workout_notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  workoutId: integer("workout_id").notNull().references(() => workouts.id),
+  content: text("content").notNull(),
+  type: text("type").notNull(), // 'note' or 'feedback'
+  rating: integer("rating"), // 1-5 rating for feedback
+  tags: jsonb("tags").$type<string[]>().default([]),
+  metrics: jsonb("metrics").$type<{
+    perceivedEffort?: number; // 1-10
+    energyLevel?: number; // 1-10
+    sleepQuality?: number; // 1-10
+    nutritionQuality?: number; // 1-10
+    stressLevel?: number; // 1-10
+    recoveryStatus?: number; // 1-10
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+// Create insert schema for workout notes
+export const insertWorkoutNoteSchema = createInsertSchema(workoutNotes);

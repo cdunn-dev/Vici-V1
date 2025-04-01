@@ -6,6 +6,8 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
   emailVerified: boolean('email_verified').default(false),
+  resetToken: text('reset_token'),
+  resetTokenExpires: timestamp('reset_token_expires'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });
@@ -124,6 +126,38 @@ export const performanceMetricsRelations = relations(performanceMetrics, ({ one 
   }),
   workout: one(workouts, {
     fields: [performanceMetrics.workoutId],
+    references: [workouts.id]
+  })
+}));
+
+// Workout notes and feedback
+export const workoutNotes = pgTable('workout_notes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  workoutId: uuid('workout_id').notNull().references(() => workouts.id),
+  content: text('content').notNull(),
+  type: text('type').notNull(), // note, feedback
+  rating: integer('rating'), // 1-5 rating for feedback
+  tags: text('tags').array(),
+  metrics: jsonb('metrics').$type<{
+    perceivedEffort?: number;
+    energyLevel?: number;
+    sleepQuality?: number;
+    nutritionQuality?: number;
+    stressLevel?: number;
+    recoveryStatus?: number;
+  }>(),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const workoutNotesRelations = relations(workoutNotes, ({ one }: { one: any }) => ({
+  user: one(users, {
+    fields: [workoutNotes.userId],
+    references: [users.id]
+  }),
+  workout: one(workouts, {
+    fields: [workoutNotes.workoutId],
     references: [workouts.id]
   })
 }));

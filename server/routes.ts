@@ -13,6 +13,7 @@ import path from "path";
 import { setupAuth } from "./auth";
 import { addWeeks } from "date-fns";
 import { StravaService } from "./services/strava";
+import workoutNotesRouter from "./routes/workout-notes";
 
 // Configure multer for profile picture uploads
 const upload = multer({
