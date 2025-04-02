@@ -22,4 +22,60 @@ afterAll(async () => {
 
 // Set up test environment variables
 process.env.NODE_ENV = 'test';
-process.env.SESSION_SECRET = 'test-secret'; 
+process.env.SESSION_SECRET = 'test-secret';
+
+// Extend NodeJS.Global interface
+declare global {
+  namespace NodeJS {
+    interface Global {
+      flushPromises: () => Promise<void>;
+    }
+  }
+}
+
+// Mock environment variables
+process.env.REDIS_HOST = 'localhost';
+process.env.REDIS_PORT = '6379';
+process.env.REDIS_PASSWORD = '';
+
+// Global test setup
+beforeAll(() => {
+  // Add any global setup here
+});
+
+afterAll(() => {
+  // Add any global cleanup here
+});
+
+// Global mocks
+jest.mock('../utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn()
+  }
+}));
+
+// Global test utilities
+(global as any).flushPromises = () => new Promise(resolve => setImmediate(resolve));
+
+// Add custom matchers if needed
+expect.extend({
+  toBeWithinRange(received: number, floor: number, ceiling: number) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () =>
+          `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () =>
+          `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+}); 

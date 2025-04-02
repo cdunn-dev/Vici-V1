@@ -62,7 +62,7 @@ describe('Authentication Service', () => {
 
   describe('User Authentication', () => {
     const mockUser = {
-      id: 1,
+      id: '1',
       email: 'test@example.com',
       password: 'hashedPassword.salt',
       emailVerified: false,
@@ -119,7 +119,7 @@ describe('Authentication Service', () => {
 
       vi.mocked(storage.getUserByEmail).mockResolvedValue(undefined);
       vi.mocked(storage.createUser).mockResolvedValue({
-        id: 1,
+        id: '1',
         email: newUser.email,
         password: expect.any(String),
         emailVerified: false,
@@ -140,7 +140,7 @@ describe('Authentication Service', () => {
       };
 
       vi.mocked(storage.getUserByEmail).mockResolvedValue({
-        id: 1,
+        id: '1',
         email: existingUser.email,
         password: 'hashedPassword',
         emailVerified: false,
@@ -193,7 +193,7 @@ describe('Authentication Service', () => {
 
   describe('Session Management', () => {
     const mockUser = {
-      id: 1,
+      id: '1',
       email: 'test@example.com',
       password: 'hashedPassword',
       emailVerified: false,
@@ -203,7 +203,7 @@ describe('Authentication Service', () => {
 
     it('should retrieve user by id', async () => {
       vi.mocked(storage.getUser).mockResolvedValue(mockUser);
-      const result = await storage.getUser(1);
+      const result = await storage.getUser('1');
       expect(result).toEqual(mockUser);
     });
 
@@ -211,7 +211,7 @@ describe('Authentication Service', () => {
       vi.mocked(storage.getUser).mockResolvedValue(undefined);
 
       try {
-        await storage.getUser(999);
+        await storage.getUser('999');
         fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(AuthError);
@@ -223,7 +223,7 @@ describe('Authentication Service', () => {
       vi.mocked(storage.getUser).mockRejectedValue(new Error('Session store error'));
 
       try {
-        await storage.getUser(1);
+        await storage.getUser('1');
         fail('Should have thrown an error');
       } catch (error) {
         expect(error).toBeInstanceOf(AuthError);

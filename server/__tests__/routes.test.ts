@@ -38,7 +38,7 @@ describe('Strava OAuth Routes', () => {
           code: 'valid_code',
           state: '123'
         })
-        .set('user', JSON.stringify({ id: 123 }));
+        .set('user', JSON.stringify({ id: '123' }));
 
       expect(response.status).toBe(302);
       expect(response.header.location).toBe('/profile/review');
@@ -125,7 +125,7 @@ describe('Strava OAuth Routes', () => {
       const callbackResponse = await request(app)
         .get('/api/auth/strava/callback')
         .query({ code: 'valid_code' })
-        .set('user', JSON.stringify({ id: 123 }));
+        .set('user', JSON.stringify({ id: '123' }));
 
       expect(callbackResponse.status).toBe(302);
       expect(callbackResponse.header.location).toBe('/profile/review');
@@ -134,7 +134,7 @@ describe('Strava OAuth Routes', () => {
       const profileResponse = await request(app)
         .get('/api/strava/profile')
         .set('user', JSON.stringify({
-          id: 123,
+          id: '123',
           stravaTokens: tokens
         }));
 
@@ -155,7 +155,7 @@ describe('Strava OAuth Routes', () => {
 
       const response = await request(app)
         .patch('/api/users/123')
-        .set('user', JSON.stringify({ id: 123 }))
+        .set('user', JSON.stringify({ id: '123' }))
         .send({
           gender: 'M',
           birthday: '1990-01-01',
@@ -170,7 +170,7 @@ describe('Strava OAuth Routes', () => {
   describe('Continuous Sync', () => {
     it('should handle activity sync requests', async () => {
       const user = {
-        id: 123,
+        id: '123',
         stravaTokens: {
           accessToken: 'valid_token',
           refreshToken: 'refresh_token',
@@ -190,7 +190,7 @@ describe('Strava OAuth Routes', () => {
 
     it('should handle sync failures appropriately', async () => {
       const user = {
-        id: 123,
+        id: '123',
         stravaTokens: {
           accessToken: 'invalid_token',
           refreshToken: 'refresh_token',
@@ -208,6 +208,51 @@ describe('Strava OAuth Routes', () => {
 
       expect(response.status).toBe(500);
       expect(response.body.error).toBe('Failed to sync activities');
+    });
+  });
+
+  describe('GET /api/health', () => {
+    it('should return 200 OK', async () => {
+      const response = await request(app)
+        .get('/api/health')
+        .set('user', JSON.stringify({ id: '123' }));
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ status: 'ok' });
+    });
+  });
+
+  describe('GET /api/metrics', () => {
+    it('should return 200 OK', async () => {
+      const response = await request(app)
+        .get('/api/metrics')
+        .set('user', JSON.stringify({ id: '123' }));
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: '123',
+        metrics: {
+          activeUsers: 0,
+          totalUsers: 0,
+          totalRequests: 0,
+          averageResponseTime: 0,
+          errorRate: 0
+        }
+      });
+    });
+  });
+
+  describe('GET /api/status', () => {
+    it('should return 200 OK', async () => {
+      const response = await request(app)
+        .get('/api/status')
+        .set('user', JSON.stringify({ id: '123' }))
+        .expect(200);
+
+      expect(response.body).toEqual({
+        id: '123',
+        status: 'ok',
+        uptime: expect.any(Number),
+        timestamp: expect.any(String)
+      });
     });
   });
 });

@@ -1,6 +1,21 @@
-import { pgTable, serial, text, boolean, timestamp, integer, jsonb, decimal, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, jsonb, decimal, uuid, PgTableWithColumns } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+// Common fields for all tables
+const commonFields = {
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+  createdBy: integer('created_by'),
+  updatedBy: integer('updated_by'),
+  deletedBy: integer('deleted_by'),
+  version: integer('version').default(1),
+  isArchived: boolean('is_archived').default(false),
+  archivedAt: timestamp('archived_at'),
+  archivedBy: integer('archived_by')
+} as const;
+
+// Define users table first since it's referenced by other tables
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -8,9 +23,17 @@ export const users = pgTable('users', {
   emailVerified: boolean('email_verified').default(false),
   resetToken: text('reset_token'),
   resetTokenExpires: timestamp('reset_token_expires'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFields
 });
+
+// Now we can add the references to users table
+const commonFieldsWithRefs = {
+  ...commonFields,
+  createdBy: integer('created_by').references(() => users.id),
+  updatedBy: integer('updated_by').references(() => users.id),
+  deletedBy: integer('deleted_by').references(() => users.id),
+  archivedBy: integer('archived_by').references(() => users.id)
+} as const;
 
 export const usersRelations = relations(users, ({ many }: { many: any }) => ({
   runnerProfiles: many(runnerProfiles),
@@ -27,8 +50,7 @@ export const runnerProfiles = pgTable('runner_profiles', {
   targetRace: text('target_race'),
   targetDate: timestamp('target_date'),
   preferredTrainingDays: jsonb('preferred_training_days'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const runnerProfilesRelations = relations(runnerProfiles, ({ one }: { one: any }) => ({
@@ -49,8 +71,7 @@ export const trainingPlans = pgTable('training_plans', {
   status: text('status').notNull(), // draft, active, completed
   type: text('type').notNull(), // 5k, 10k, half, full, custom
   difficulty: text('difficulty').notNull(), // beginner, intermediate, advanced
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const trainingPlansRelations = relations(trainingPlans, ({ one, many }: { one: any; many: any }) => ({
@@ -71,8 +92,7 @@ export const workoutTemplates = pgTable('workout_templates', {
   duration: integer('duration'), // in minutes
   distance: decimal('distance', { precision: 5, scale: 2 }), // in kilometers
   instructions: text('instructions'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const workoutTemplatesRelations = relations(workoutTemplates, ({ many }: { many: any }) => ({
@@ -90,8 +110,7 @@ export const workouts = pgTable('workouts', {
   actualDuration: integer('actual_duration'), // in minutes
   actualDistance: decimal('actual_distance', { precision: 5, scale: 2 }), // in kilometers
   actualPace: decimal('actual_pace', { precision: 5, scale: 2 }), // minutes per kilometer
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const workoutsRelations = relations(workouts, ({ one, many }: { one: any; many: any }) => ({
@@ -115,8 +134,7 @@ export const performanceMetrics = pgTable('performance_metrics', {
   value: decimal('value', { precision: 10, scale: 2 }).notNull(),
   unit: text('unit').notNull(), // km, min/km, etc.
   recordedAt: timestamp('recorded_at').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const performanceMetricsRelations = relations(performanceMetrics, ({ one }: { one: any }) => ({
@@ -147,8 +165,7 @@ export const workoutNotes = pgTable('workout_notes', {
     stressLevel?: number;
     recoveryStatus?: number;
   }>(),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow()
+  ...commonFieldsWithRefs
 });
 
 export const workoutNotesRelations = relations(workoutNotes, ({ one }: { one: any }) => ({
@@ -161,3 +178,17 @@ export const workoutNotesRelations = relations(workoutNotes, ({ one }: { one: an
     references: [workouts.id]
   })
 }));
+
+// Audit trail table
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  action: text('action').notNull(), // create, update, delete, archive, restore
+  entityType: text('entity_type').notNull(), // user, trainingPlan, workout, etc.
+  entityId: text('entity_id').notNull(),
+  changes: jsonb('changes'),
+  metadata: jsonb('metadata'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow()
+});

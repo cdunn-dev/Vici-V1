@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="17" failures="17" errors="0" time="25.95">
+  <testsuite name="RedisService" errors="0" failures="17" skipped="0" timestamp="2025-04-02T04:50:24" time="3.587" tests="17">
+    <testcase classname="RedisService getInstance returns the same instance" name="RedisService getInstance returns the same instance" time="0.004">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService get returns the expected value" name="RedisService get returns the expected value" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService set stores the value" name="RedisService set stores the value" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService delete removes the key" name="RedisService delete removes the key" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService exists checks if the key exists" name="RedisService exists checks if the key exists" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService clear flushes the database" name="RedisService clear flushes the database" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService healthCheck returns true when Redis is healthy" name="RedisService healthCheck returns true when Redis is healthy" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService getMemoryUsage returns memory usage information" name="RedisService getMemoryUsage returns memory usage information" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService getEvictionPolicy returns eviction policy information" name="RedisService getEvictionPolicy returns eviction policy information" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisService disconnect closes the Redis connection" name="RedisService disconnect closes the Redis connection" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor getInstance returns the same instance" name="RedisMonitor getInstance returns the same instance" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor startMonitoring starts the monitoring interval" name="RedisMonitor startMonitoring starts the monitoring interval" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor stopMonitoring stops the monitoring interval" name="RedisMonitor stopMonitoring stops the monitoring interval" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor getStats returns the collected stats" name="RedisMonitor getStats returns the collected stats" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor getLatestStats returns the most recent stats" name="RedisMonitor getLatestStats returns the most recent stats" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor getAverageHitRate returns the average hit rate" name="RedisMonitor getAverageHitRate returns the average hit rate" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+    <testcase classname="RedisMonitor getMemoryUsageTrend returns the memory usage trend" name="RedisMonitor getMemoryUsageTrend returns the memory usage trend" time="0">
+      <failure>Error: Can&apos;t find meta/_journal.json file
+    at readMigrationFiles (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/migrator.ts:29:9)
+    at migrate (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/src/postgres-js/migrator.ts:9:21)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:15:16
+    at Generator.next (&lt;anonymous&gt;)
+    at /Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:8:71
+    at new Promise (&lt;anonymous&gt;)
+    at Object.&lt;anonymous&gt;.__awaiter (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:4:12)
+    at Object.&lt;anonymous&gt; (/Users/chrisdunn/Documents/GitHub/Vici-V1/server/__tests__/setup.ts:14:22)
+    at Promise.then.completed (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:298:28)
+    at new Promise (&lt;anonymous&gt;)
+    at callAsyncCircusFn (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/utils.js:231:10)
+    at _callCircusHook (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:281:40)
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at _runTestsForDescribeBlock (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:95:7)
+    at run (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/run.js:71:3)
+    at runAndTransformResultsToJestFormat (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+    at jestAdapter (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+    at runTestInternal (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:367:16)
+    at runTest (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/runTest.js:444:34)
+    at Object.worker (/Users/chrisdunn/Documents/GitHub/Vici-V1/node_modules/jest-runner/build/testWorker.js:106:12)</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

@@ -364,7 +364,7 @@ describe('Strava Service', () => {
 
     beforeEach(() => {
       vi.mocked(storage.getUser).mockResolvedValue({
-        id: userId,
+        id: '1234567890',
         stravaTokens: {
           accessToken: 'valid_token',
           refreshToken: 'refresh_token',
@@ -436,7 +436,7 @@ describe('Strava Service', () => {
       };
 
       vi.mocked(storage.getUser).mockResolvedValueOnce({
-        id: userId,
+        id: '1234567890',
         stravaTokens: expiredTokens
       } as any);
 
@@ -453,7 +453,7 @@ describe('Strava Service', () => {
       await service.getAthleteProfile();
 
       expect(vi.mocked(storage.updateUser)).toHaveBeenCalledWith(
-        userId,
+        '1234567890',
         { stravaTokens: newTokens }
       );
     });
@@ -461,7 +461,7 @@ describe('Strava Service', () => {
 
   describe('automatic sync', () => {
     let service: StravaService;
-    const userId = 1;
+    const userId = '1234567890';
 
     beforeEach(() => {
       vi.useFakeTimers();
@@ -474,7 +474,7 @@ describe('Strava Service', () => {
 
     it('should start automatic sync on initialization', () => {
       vi.mocked(storage.getUser).mockResolvedValue({
-        id: userId,
+        id: '1234567890',
         stravaTokens: {
           accessToken: 'test_token',
           refreshToken: 'refresh_token',
@@ -495,7 +495,7 @@ describe('Strava Service', () => {
 
   describe('fetchDetailedActivity', () => {
     const mockDetailedActivity = {
-      id: 1234567890,
+      id: '1234567890',
       name: "Morning Run",
       description: "Great run today!",
       type: "Run",
@@ -552,14 +552,14 @@ describe('Strava Service', () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+          json: () => Promise.resolve([{ id: '1234567890', type: "Run" }])
         })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(mockDetailedActivity)
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities('1234567890', 'test_access_token');
 
       // Verify db insert was called with processed activity data
       const insertCall = vi.mocked(db.insert).mock.calls[0];
@@ -594,14 +594,14 @@ describe('Strava Service', () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+          json: () => Promise.resolve([{ id: '1234567890', type: "Run" }])
         })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(activityWithoutOptionals)
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities('1234567890', 'test_access_token');
 
       const insertCall = vi.mocked(db.insert).mock.calls[0];
       const insertedActivity = insertCall[1].values[0];
@@ -616,14 +616,14 @@ describe('Strava Service', () => {
       mockFetch
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve([{ id: 1234567890, type: "Run" }])
+          json: () => Promise.resolve([{ id: '1234567890', type: "Run" }])
         })
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(mockDetailedActivity)
         });
 
-      await syncStravaActivities(1, 'test_access_token');
+      await syncStravaActivities('1234567890', 'test_access_token');
 
       const insertCall = vi.mocked(db.insert).mock.calls[0];
       const insertedActivity = insertCall[1].values[0];
@@ -635,6 +635,162 @@ describe('Strava Service', () => {
         { zone: 4, min: 140, max: 158 },
         { zone: 5, min: 158, max: 175 }
       ]);
+    });
+  });
+
+  describe('StravaService', () => {
+    it('should fetch athlete profile', async () => {
+      const mockResponse = {
+        ok: true,
+        json: () => Promise.resolve([{ id: '1234567890', type: "Run" }])
+      };
+      global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+      const profile = await stravaService.getAthleteProfile();
+      expect(profile).toEqual({
+        id: '1234567890',
+        type: "Run"
+      });
+    });
+
+    it('should analyze running profile', async () => {
+      const mockActivities = [
+        { id: '1', type: "Run" },
+        { id: '2', type: "Run" },
+        { id: '3', type: "Run" }
+      ];
+
+      const mockResponse = {
+        ok: true,
+        json: () => Promise.resolve({
+          id: '1234567890',
+          name: "Morning Run",
+          description: "Great run today!",
+          type: "Run",
+          start_date: "2025-03-15T08:00:00Z",
+          distance: 5000,
+          moving_time: 1800,
+          elapsed_time: 1800,
+          total_elevation_gain: 50
+        })
+      };
+
+      global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+      const analysis = await stravaService.analyzeRunningProfile(mockActivities);
+      expect(analysis).toBeDefined();
+      expect(analysis.totalRuns).toBe(3);
+    });
+
+    it('should handle API errors', async () => {
+      const mockErrorResponse = {
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized'
+      };
+      global.fetch = vi.fn().mockResolvedValue(mockErrorResponse);
+
+      await expect(stravaService.getAthleteProfile()).rejects.toThrow('API request failed');
+    });
+
+    it('should handle rate limits', async () => {
+      const mockRateLimitResponse = {
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests'
+      };
+      global.fetch = vi.fn().mockResolvedValue(mockRateLimitResponse);
+
+      await expect(stravaService.getAthleteProfile()).rejects.toThrow('Rate limit exceeded');
+    });
+
+    it('should refresh tokens when expired', async () => {
+      const mockExpiredResponse = {
+        ok: false,
+        status: 401,
+        statusText: 'Token Expired'
+      };
+      const mockRefreshResponse = {
+        ok: true,
+        json: () => Promise.resolve({
+          access_token: 'new_token',
+          refresh_token: 'new_refresh_token'
+        })
+      };
+      const mockDataResponse = {
+        ok: true,
+        json: () => Promise.resolve({ id: '1234567890', type: "Run" })
+      };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce(mockExpiredResponse)
+        .mockResolvedValueOnce(mockRefreshResponse)
+        .mockResolvedValueOnce(mockDataResponse);
+
+      const profile = await stravaService.getAthleteProfile();
+      expect(profile).toEqual({
+        id: '1234567890',
+        type: "Run"
+      });
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle network errors', async () => {
+      global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      await expect(stravaService.getAthleteProfile()).rejects.toThrow('Network error');
+    });
+
+    it('should handle malformed responses', async () => {
+      const mockInvalidResponse = {
+        ok: true,
+        json: () => Promise.resolve(null)
+      };
+      global.fetch = vi.fn().mockResolvedValue(mockInvalidResponse);
+
+      await expect(stravaService.getAthleteProfile()).rejects.toThrow('Invalid response format');
+    });
+
+    it('should handle pagination', async () => {
+      const mockFirstPage = {
+        ok: true,
+        json: () => Promise.resolve([{ id: '1', type: "Run" }, { id: '2', type: "Run" }])
+      };
+      const mockSecondPage = {
+        ok: true,
+        json: () => Promise.resolve([])
+      };
+
+      global.fetch = vi.fn()
+        .mockResolvedValueOnce(mockFirstPage)
+        .mockResolvedValueOnce(mockSecondPage);
+
+      const activities = await stravaService.getActivities();
+      expect(activities).toHaveLength(2);
+    });
+
+    it('should analyze activity details', async () => {
+      const mockActivityResponse = {
+        ok: true,
+        json: () => Promise.resolve({
+          id: '1234567890',
+          name: "Morning Run",
+          description: "Great run today!",
+          type: "Run",
+          start_date: "2025-03-15T08:00:00Z",
+          distance: 5000,
+          moving_time: 1800,
+          elapsed_time: 1800,
+          total_elevation_gain: 50
+        })
+      };
+
+      global.fetch = vi.fn().mockResolvedValue(mockActivityResponse);
+
+      const activity = await stravaService.getActivityDetails('1234567890');
+      expect(activity).toBeDefined();
+      expect(activity.id).toBe('1234567890');
+      expect(activity.type).toBe('Run');
     });
   });
 });

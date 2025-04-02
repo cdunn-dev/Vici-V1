@@ -6,13 +6,20 @@ import { setupAuth } from "./auth";
 import cors from 'cors';
 import { setupErrorHandling } from './errorHandling';
 import { apiLimiter, rateLimitErrorHandler } from './middleware/rateLimiter';
+import monitoringRoutes from './routes/monitoring';
+import { logger } from './utils/logger';
+import helmet from 'helmet';
 
 const app = express();
 console.log("[Startup] Express app created");
 
+// Security middleware
+app.use(helmet());
+app.use(cors());
+
 // Body parsing middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 console.log("[Startup] Body parsing middleware configured");
 
 // Request logging middleware with enhanced error tracking
@@ -54,22 +61,21 @@ app.get('/health', (req, res) => {
 
 async function ensureDefaultUser() {
   try {
-    console.log("[Startup] Checking for default user");
-    const user = await storage.getUser(1);
+    logger.info('Checking for default user');
+    const user = await storage.getUser('1');
     if (!user) {
-      console.log("[Startup] Creating default user...");
+      logger.info('Creating default user...');
       await storage.createUser({
-        email: "default@example.com",
-        password: "password",
-        connectedApps: [],
-        stravaTokens: null
+        email: 'default@example.com',
+        password: 'password',
+        emailVerified: true
       });
-      console.log("[Startup] Default user created successfully");
+      logger.info('Default user created successfully');
     } else {
-      console.log("[Startup] Default user already exists");
+      logger.info('Default user already exists');
     }
   } catch (error) {
-    console.error("[Startup] Error ensuring default user:", error);
+    logger.error('Error ensuring default user:', error);
   }
 }
 
@@ -111,13 +117,11 @@ async function ensureDefaultUser() {
     // Rate limit error handling
     app.use(rateLimitErrorHandler);
 
-    const port = 5000;
-    server.listen({
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    }, () => {
-      console.log(`[Startup] Server listening on port ${port}`);
+    app.use('/api/monitoring', monitoringRoutes);
+
+    const port = process.env.PORT || '5000';
+    server.listen(parseInt(port), () => {
+      logger.info(`Server is running on port ${port}`);
       console.log(`[Startup] Server URL: http://0.0.0.0:${port}`);
       console.log("[Startup] Environment:", app.get("env"));
     });

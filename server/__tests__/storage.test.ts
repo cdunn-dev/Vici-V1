@@ -307,7 +307,7 @@ describe('DatabaseStorage', () => {
 
     it('should handle non-existent user for plan creation', async () => {
       const planData = {
-        userId: 999999, // Use a number instead of string
+        userId: '999999',
         name: 'Test Plan',
         startDate: new Date(),
         endDate: new Date(Date.now() + 86400000),
@@ -1350,6 +1350,22 @@ describe('DatabaseStorage', () => {
       expect(restoredPlans.length).toBe(2);
       expect(restoredPlans.map(p => p.name)).toContain('Plan 1');
       expect(restoredPlans.map(p => p.name)).toContain('Plan 2');
+    });
+  });
+
+  describe('Storage', () => {
+    it('should store and retrieve user data', async () => {
+      const userData = {
+        userId: '999999',
+        data: {
+          name: 'Test User',
+          email: 'test@example.com'
+        }
+      };
+
+      await storage.storeUserData(userData);
+      const retrievedData = await storage.getUserData(userData.userId);
+      expect(retrievedData).toEqual(userData);
     });
   });
 }); 

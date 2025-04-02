@@ -1,25 +1,42 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from './utils/logger';
 
-export function setupErrorHandling(app: any) {
-  // 404 handler
-  app.use((req: Request, res: Response) => {
-    res.status(404).json({ error: 'Not Found' });
+export class AppError extends Error {
+  constructor(
+    public statusCode: number,
+    public message: string,
+    public isOperational = true
+  ) {
+    super(message);
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+export const errorHandler = (
+  err: Error | AppError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (err instanceof AppError) {
+    logger.error(`${err.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+    return res.status(err.statusCode).json({
+      status: 'error',
+      message: err.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
+
+  // Log unexpected errors
+  logger.error('Unexpected error:', err);
+  
+  return res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
+};
 
-  // Global error handler
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    console.error(err.stack);
-    
-    // Handle specific error types
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({ error: err.message });
-    }
-    
-    if (err.name === 'UnauthorizedError') {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Default error
-    res.status(500).json({ error: 'Internal Server Error' });
-  });
-} 
+export const setupErrorHandling = (app: any) => {
+  app.use(errorHandler);
+}; 
